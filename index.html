@@ -1078,7 +1078,6 @@ function renderMenuItems(){
 function updMC(mi){const tipo=document.getElementById(`mc-t-${mi}`).value,sel=document.getElementById(`mc-n-${mi}`);sel.innerHTML='<option value="">...</option>';if(tipo==='ing')PRODS.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);});else preps.forEach(p=>{const o=document.createElement('option');o.value=p.nom;o.textContent=p.nom;sel.appendChild(o);});}
 async function addComp(mi){const tipo=document.getElementById(`mc-t-${mi}`).value,nom=document.getElementById(`mc-n-${mi}`).value,cant=parseFloat(document.getElementById(`mc-c-${mi}`).value);if(!nom||isNaN(cant)||cant<=0)return alert('Completa nombre y cantidad');menuItems[mi].comps.push({tipo,nom,cant,pg:null});await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById(`mb${menuItems[mi].id}`);if(el)el.classList.add('open');},50);}
 async function actualizarPV(mi,val){const pv=parseFloat(val);if(isNaN(pv)||pv<=0)return;menuItems[mi].pv=pv;await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById("mb"+menuItems[mi].id);if(el)el.classList.add("open");},50);}
-function updMC(mi){
 async function delMenu(mi){if(!confirm('Eliminar ítem?'))return;menuItems.splice(mi,1);await saveInv_db();renderMenuItems();}
 
 // ─── POS ─────────────────────────────────────────────────────
