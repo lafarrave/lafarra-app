@@ -3,213 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Farra - Gestión</title>
+    <title>La Farra - Sistema Integral</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         :root{--naranja:#E8621A;--naranja-dark:#c0501a;--negro:#111111;--gris-dark:#1a1a1a;--gris-mid:#2a2a2a;--gris-light:#3a3a3a;--texto:#f0f0f0;--texto-dim:#aaaaaa;--verde:#4CAF50;--amarillo:#FFC107;--rojo:#e53935;--azul:#2196F3}
-        .app{background:var(--negro);min-height:100vh;font-family:'Barlow',sans-serif;color:var(--texto)}
-        .header{display:flex;align-items:center;gap:12px;padding:.8rem 1rem;background:var(--gris-dark);border-bottom:2px solid var(--naranja);margin-bottom:1rem}
-        .logo-text{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;letter-spacing:2px;color:var(--naranja);text-transform:uppercase}
+        body{background:var(--negro);color:var(--texto);font-family:'Barlow',sans-serif;font-size:14px}
+        .header{display:flex;align-items:center;gap:12px;padding:.8rem 1rem;background:var(--gris-dark);border-bottom:2px solid var(--naranja)}
+        .logo-text{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;letter-spacing:2px;color:var(--naranja);text-transform:uppercase}
         .logo-text span{color:var(--texto)}
-        .wrap{padding:0 1rem 1rem}
-        .tabs-local{display:flex;gap:0;background:var(--gris-mid);border-radius:8px;padding:3px;margin-bottom:1rem;width:fit-content;overflow-x:auto;max-width:100%}
-        .tl{padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--texto-dim);transition:all .15s;white-space:nowrap}
-        .tl.active{background:var(--naranja);color:#fff}
-        .card{background:var(--gris-dark);border:1px solid var(--gris-mid);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:.9rem}
-        .card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:var(--naranja);margin-bottom:.8rem}
-        .card-title.azul{color:var(--azul)}
-        .card.azul-border{border-color:#1a3a5a}
-        .fg label{display:block;font-size:11px;color:var(--texto-dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px}
-        .fg input,.fg select{width:100%;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:6px;padding:7px 10px;font-size:13px;font-family:'Barlow',sans-serif}
-        .fg input:focus,.fg select:focus{outline:none;border-color:var(--naranja)}
-        .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:.8rem}
-        .btn{background:var(--naranja);color:#fff;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;text-transform:uppercase}
-        .btn:disabled{opacity:0.5;cursor:not-allowed}
-        .btn-azul{background:#1565C0;color:#fff;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;text-transform:uppercase}
-        .tw{overflow-x:auto}
-        table{width:100%;border-collapse:collapse;font-size:12px;min-width:500px}
-        th{text-align:left;padding:7px 10px;color:var(--texto-dim);border-bottom:1px solid var(--gris-mid)}
-        td{padding:8px 10px;border-bottom:1px solid var(--gris-mid);color:var(--texto)}
-        .semaforo{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px}
-        .sem-verde{background:#0d2b0d;color:#4CAF50;border:1px solid #2a5a2a}
-        .sem-amarillo{background:#2b2200;color:#FFC107;border:1px solid #5a4800}
-        .sem-rojo{background:#2b0d0d;color:#e53935;border:1px solid #5a2020}
-        .dot{width:8px;height:8px;border-radius:50%}
-        .dot-verde{background:#4CAF50}.dot-amarillo{background:#FFC107}.dot-rojo{background:#e53935}
-        .panel{display:none}.panel.visible{display:block}
-        .loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000}
+        
+        /* Navegación Principal */
+        .nav-scroll{overflow-x:auto;display:flex;background:var(--gris-dark);padding:5px;position:sticky;top:0;z-index:100}
+        .tab{padding:8px 15px;cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-weight:600;text-transform:uppercase;color:var(--texto-dim);border-radius:5px}
+        .tab.active{background:var(--naranja);color:white}
+        
+        .panel{display:none;padding:15px}
+        .panel.active{display:block}
+        
+        .card{background:var(--gris-dark);border:1px solid var(--gris-mid);border-radius:10px;padding:15px;margin-bottom:15px}
+        .card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--naranja);text-transform:uppercase;margin-bottom:10px}
+        
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th{text-align:left;color:var(--texto-dim);padding:8px;border-bottom:1px solid var(--gris-mid)}
+        td{padding:8px;border-bottom:1px solid var(--gris-mid)}
+        
+        input,select,button{width:100%;padding:8px;margin-top:5px;border-radius:5px;border:1px solid var(--gris-light);background:var(--gris-mid);color:white}
+        button{background:var(--naranja);font-weight:700;cursor:pointer;border:none}
+        
+        .semaforo{padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase}
+        .sem-ok{background:rgba(76,175,80,0.2);color:var(--verde)}
+        .sem-alerta{background:rgba(255,193,7,0.2);color:var(--amarillo)}
+        .sem-critico{background:rgba(229,57,53,0.2);color:var(--rojo)}
+        
+        #loading{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;justify-content:center;align-items:center;z-index:1000}
     </style>
 </head>
 <body>
-    <div id="loading" class="loading-overlay">⌛ Cargando datos...</div>
-    <div class="app">
-        <div class="header">
-            <div class="logo-text">La<span>:</span>Farra</div>
-            <div style="font-size:10px;color:var(--texto-dim);margin-left:2px;letter-spacing:1px;text-transform:uppercase">nube</div>
-            <div style="margin-left:auto;font-size:11px;color:var(--texto-dim)" id="sync-status">Sincronizado</div>
-        </div>
 
-        <div class="wrap">
-            <div class="tabs-local">
-                <div class="tl active" onclick="showPanel('inventario',this)">📦 Inventario</div>
-                <div class="tl" onclick="showPanel('stock-inicial',this)">🔵 Stock inicial</div>
-                <div class="tl" onclick="showPanel('nueva-compra',this)">🛒 Nueva compra</div>
-                <div class="tl" onclick="showPanel('historial',this)">📋 Historial</div>
-            </div>
+<div id="loading">⌛ Sincronizando La Farra...</div>
 
-            <div id="panel-inventario" class="panel visible">
-                <div class="card">
-                    <div class="card-title">Estado en tiempo real</div>
-                    <div class="tw">
-                        <table>
-                            <thead><tr><th>Estado</th><th>Producto</th><th>Stock</th><th>Unidad</th></tr></thead>
-                            <tbody id="tabla-inv"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+<div class="header">
+    <div class="logo-text">LA<span>:</span>FARRA</div>
+    <div style="font-size:10px;color:var(--texto-dim)">CLOUD SYSTEM v3.0</div>
+</div>
 
-            <div id="panel-stock-inicial" class="panel">
-                <div class="card azul-border">
-                    <div class="card-title azul">Cargar Stock Inicial a la Nube</div>
-                    <div class="fgrid">
-                        <div class="fg"><label>Producto</label><select id="si-prod"></select></div>
-                        <div class="fg"><label>Cantidad</label><input type="number" id="si-cant"></div>
-                        <div class="fg"><label>Unidad</label>
-                            <select id="si-unit">
-                                <option value="g">Gramos (g)</option>
-                                <option value="ud">Unidades (ud)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button class="btn-azul" id="btn-si" onclick="cargarStockInicial()">Guardar en Nube</button>
-                </div>
-            </div>
+<div class="nav-scroll">
+    <div class="tab active" onclick="changeTab('tab-pos', this)">💰 POS/Ventas</div>
+    <div class="tab" onclick="changeTab('tab-inv', this)">📦 Inventario</div>
+    <div class="tab" onclick="changeTab('tab-compras', this)">🛒 Compras</div>
+    <div class="tab" onclick="changeTab('tab-envios', this)">🛵 Envíos</div>
+    <div class="tab" onclick="changeTab('tab-config', this)">⚙️ Config</div>
+</div>
 
-            <div id="panel-nueva-compra" class="panel">
-                <div class="card">
-                    <div class="card-title">Registrar Compra</div>
-                    <div class="fgrid">
-                        <div class="fg"><label>Producto</label><select id="c-prod"></select></div>
-                        <div class="fg"><label>Cantidad</label><input type="number" id="c-cant"></div>
-                        <div class="fg"><label>Precio Total $</label><input type="number" id="c-precio"></div>
-                        <div class="fg"><label>Tienda</label><input type="text" id="c-tienda"></div>
-                    </div>
-                    <button class="btn" id="btn-compra" onclick="registrarCompra()">Registrar en Nube</button>
-                </div>
-            </div>
+<div id="tab-pos" class="panel active">
+    <div class="card">
+        <div class="card-title">Nueva Venta</div>
+        <input type="text" id="v-cliente" placeholder="Cliente">
+        <select id="v-producto"></select>
+        <button onclick="registrarVenta()">Registrar Venta</button>
+    </div>
+    <div class="card">
+        <div class="card-title">Resumen Financiero</div>
+        <div id="resumen-caja" style="font-size:18px;font-weight:800">Cargando...</div>
+    </div>
+</div>
 
-            <div id="panel-historial" class="panel">
-                <div class="card">
-                    <div class="card-title">Últimos Movimientos</div>
-                    <div class="tw">
-                        <table>
-                            <thead><tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Tienda</th></tr></thead>
-                            <tbody id="tabla-historial"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+<div id="tab-inv" class="panel">
+    <div class="card">
+        <div class="card-title">Estado de Insumos</div>
+        <div style="overflow-x:auto">
+            <table>
+                <thead><tr><th>Estado</th><th>Producto</th><th>Stock</th><th>Unidad</th></tr></thead>
+                <tbody id="tabla-inventario"></tbody>
+            </table>
         </div>
     </div>
+</div>
 
-    <script>
-        // CONFIGURACIÓN SUPABASE
-        const SB_URL = "https://ljgjpmlvjnqfpstltjmy.supabase.co";
-        const SB_KEY = "sb_publishable_Wsf4mUEtX0W6LEyJDpuIaw_vbr_jZU6";
-        const supabase = typeof supabase !== 'undefined' ? supabase : window.supabase.createClient(SB_URL, SB_KEY);
+<div id="tab-compras" class="panel">
+    <div class="card">
+        <div class="card-title">Registrar Gasto/Compra</div>
+        <select id="c-insumo"></select>
+        <input type="number" id="c-cantidad" placeholder="Cantidad">
+        <input type="number" id="c-monto" placeholder="Monto total $">
+        <button onclick="registrarCompra()">Guardar Compra</button>
+    </div>
+</div>
 
-        const PRODS=["Carne 1ra","Papada Ahuma","Pan Brioche","Cheddar","Tomate","Cebolla","Lechuga Criolla","Chorizo","Pre Mayonesa","Ketchup","Aceite","Vinagre Manz","Perejil Polvo","Cebolla Polvo","Paprika","Ajo Polvo","Aceituna M","Pepinillo","BBQ","Teriyaki","Ajonjoli","Facilistas","Salsa Inglesa","Sal","Azucar","Limon","Ajo","Cebolla Morada","Cilantro","Perejil Fresco","Miel","Mostaza","Papas Fritas","Pechuga Pollo","Pimenton hojuela","Mantequilla","Mayonesa","Tocineta Ahuma","Pimenton","Maizena","Stickers","Botes Salsa","Bolsa Papa Marron","Servilletas","Conos Papas","Papel Alum 43x35","Bolsa Kraft 3kg","Glup 400ml","Glup 1L"];
+<div id="tab-envios" class="panel">
+    <div class="card">
+        <div class="card-title">Control de Deliveries</div>
+        <table>
+            <thead><tr><th>Fecha</th><th>Cliente</th><th>Estado</th></tr></thead>
+            <tbody id="tabla-envios"></tbody>
+        </table>
+    </div>
+</div>
 
-        let db_compras = [];
-        let db_inventario = [];
+<div id="tab-config" class="panel">
+    <div class="card">
+        <div class="card-title">Configuración del Sistema</div>
+        <button style="background:var(--azul)" onclick="fetchData()">🔄 Forzar Sincronización</button>
+        <p style="margin-top:10px;font-size:11px;color:var(--texto-dim)">Base de datos: Supabase Cloud</p>
+    </div>
+</div>
 
-        async function fetchData() {
-            document.getElementById('loading').style.display = 'flex';
-            const { data: compras } = await supabase.from('compras').select('*').order('created_at', { ascending: false });
-            const { data: inv } = await supabase.from('inventario').select('*');
-            db_compras = compras || [];
-            db_inventario = inv || [];
-            renderAll();
-            document.getElementById('loading').style.display = 'none';
-        }
+<script>
+    // CONFIGURACIÓN SUPABASE
+    const SB_URL = "https://ljgjpmlvjnqfpstltjmy.supabase.co";
+    const SB_KEY = "sb_publishable_Wsf4mUEtX0W6LEyJDpuIaw_vbr_jZU6";
+    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-        async function registrarCompra() {
-            const btn = document.getElementById('btn-compra');
-            btn.disabled = true;
-            const doc = {
-                prod: document.getElementById('c-prod').value,
-                cant: parseFloat(document.getElementById('c-cant').value),
-                precio: parseFloat(document.getElementById('c-precio').value),
-                tienda: document.getElementById('c-tienda').value,
-                fecha: new Date().toISOString()
-            };
+    const INSUMOS = ["Carne 1ra","Papada Ahuma","Pan Brioche","Cheddar","Tomate","Cebolla","Lechuga Criolla","Chorizo","Papas Fritas","Tocineta Ahuma","Mayonesa","Ketchup"];
+
+    // Estados de la App (Las keys que mencionó Claude)
+    let appData = {
+        compras: [], ventas: [], inventario: [], envios: [], configuracion: {}, saldo: 0, umbrales: {}
+    };
+
+    // Función para cambiar pestañas
+    function changeTab(panelId, el) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(panelId).classList.add('active');
+        el.classList.add('active');
+    }
+
+    // Cargar datos desde Supabase
+    async function fetchData() {
+        document.getElementById('loading').style.display = 'flex';
+        
+        // Traemos todas las tablas de una vez
+        const [com, ven, inv, env, cfg] = await Promise.all([
+            supabase.from('compras').select('*'),
+            supabase.from('ventas').select('*'),
+            supabase.from('inventario').select('*'),
+            supabase.from('envios').select('*'),
+            supabase.from('config').select('*')
+        ]);
+
+        appData.compras = com.data || [];
+        appData.ventas = ven.data || [];
+        appData.inventario = inv.data || [];
+        appData.envios = env.data || [];
+        
+        renderAll();
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    async function registrarCompra() {
+        const doc = {
+            prod: document.getElementById('c-insumo').value,
+            cant: parseFloat(document.getElementById('c-cantidad').value),
+            monto: parseFloat(document.getElementById('c-monto').value),
+            fecha: new Date().toISOString()
+        };
+        
+        const { error } = await supabase.from('compras').insert([{ data: doc }]);
+        if (error) alert("Error");
+        else { alert("Compra guardada"); fetchData(); }
+    }
+
+    function renderAll() {
+        // Render Inventario con Lógica de Semáforos
+        const tInv = document.getElementById('tabla-inventario');
+        tInv.innerHTML = INSUMOS.map(p => {
+            const item = appData.inventario.find(i => i.id === p);
+            const cant = item ? item.data.cant : 0;
+            let semClass = "sem-ok", semText = "OK";
             
-            const { error } = await supabase.from('compras').insert([{ data: doc }]);
-            if (error) alert("Error al guardar");
-            else {
-                alert("¡Compra guardada!");
-                fetchData();
-            }
-            btn.disabled = false;
-        }
+            // Lógica básica de alertas (puedes ajustarla en el modal después)
+            if(cant < 1000 && cant > 0) { semClass="sem-alerta"; semText="Bajo"; }
+            if(cant <= 0) { semClass="sem-critico"; semText="Agotado"; }
 
-        async function cargarStockInicial() {
-            const prod = document.getElementById('si-prod').value;
-            const cant = parseFloat(document.getElementById('si-cant').value);
-            const unit = document.getElementById('si-unit').value;
-            
-            const { error } = await supabase.from('inventario').upsert([{ id: prod, data: { prod, cant, unit } }]);
-            if (error) alert("Error");
-            else {
-                alert("Stock actualizado");
-                fetchData();
-            }
-        }
+            return `<tr>
+                <td><span class="semaforo ${semClass}">${semText}</span></td>
+                <td>${p}</td>
+                <td>${cant}</td>
+                <td>${item ? item.data.unit : '—'}</td>
+            </tr>`;
+        }).join('');
 
-        function renderAll() {
-            const tbInv = document.getElementById('tabla-inv');
-            tbInv.innerHTML = db_inventario.map(i => `
-                <tr>
-                    <td><span class="semaforo sem-verde"><div class="dot dot-verde"></div>OK</span></td>
-                    <td>${i.data.prod}</td>
-                    <td>${i.data.cant}</td>
-                    <td>${i.data.unit}</td>
-                </tr>
-            `).join('');
+        // Render Finanzas
+        const totalVentas = appData.ventas.reduce((acc, v) => acc + (v.data.monto || 0), 0);
+        document.getElementById('resumen-caja').innerHTML = `Saldo: $${totalVentas.toFixed(2)}`;
 
-            const tbHist = document.getElementById('tabla-historial');
-            tbHist.innerHTML = db_compras.map(c => `
-                <tr>
-                    <td>${new Date(c.created_at).toLocaleDateString()}</td>
-                    <td>${c.data.prod}</td>
-                    <td>${c.data.cant}</td>
-                    <td>${c.data.tienda}</td>
-                </tr>
-            `).join('');
-        }
-
-        function showPanel(name, el) {
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('visible'));
-            document.querySelectorAll('.tl').forEach(t => t.classList.remove('active'));
-            document.getElementById('panel-' + name).classList.add('visible');
-            el.classList.add('active');
-        }
-
-        function init() {
-            ['c-prod', 'si-prod'].forEach(id => {
-                const s = document.getElementById(id);
-                PRODS.forEach(p => {
+        // Llenar Selects
+        const fills = ['v-producto', 'c-insumo'];
+        fills.forEach(id => {
+            const s = document.getElementById(id);
+            if(s.options.length === 0) {
+                INSUMOS.forEach(p => {
                     const o = document.createElement('option');
                     o.value = p; o.textContent = p; s.appendChild(o);
                 });
-            });
-            fetchData();
-        }
+            }
+        });
+    }
 
-        init();
-    </script>
+    // Inicializar
+    fetchData();
+</script>
+
 </body>
 </html>
