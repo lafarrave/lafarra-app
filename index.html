@@ -231,6 +231,15 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <div id="emp-total" style="font-size:12px;color:var(--texto-dim);margin-top:.5rem"></div>
       </div>
       <div class="card">
+        <div class="card-title">Lista de productos (ingredientes)</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Agrega nuevos ingredientes o insumos a la lista global. Los productos base no se pueden eliminar.</div>
+        <div id="prods-extra-lista"></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:.5rem">
+          <div class="fg"><label>Nombre del nuevo producto</label><input type="text" id="nuevo-prod-nom" placeholder="ej: Jalapeños" style="width:200px"/></div>
+          <button class="btn" onclick="agregarProducto()">Agregar producto</button>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-title">Productos extra del POS</div>
         <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Refrescos, extras y cualquier producto con precio fijo.</div>
         <div id="pvp-lista"></div>
@@ -555,7 +564,10 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 // ─── STATE ──────────────────────────────────────────────────
-const PRODS=["Carne 1ra","Papada Ahuma","Pan Brioche","Cheddar","Tomate","Cebolla","Lechuga Criolla","Chorizo","Pre Mayonesa","Ketchup","Aceite","Vinagre Manz","Perejil Polvo","Cebolla Polvo","Paprika","Ajo Polvo","Aceituna M","Pepinillo","BBQ","Teriyaki","Ajonjoli","Facilistas","Salsa Inglesa","Sal","Azucar","Limon","Ajo","Cebolla Morada","Cilantro","Perejil Fresco","Miel","Mostaza","Papas Fritas","Pechuga Pollo","Pimenton hojuela","Mantequilla","Mayonesa","Tocineta Ahuma","Pimenton","Maizena","Stickers","Botes Salsa","Bolsa Papa Marron","Servilletas","Conos Papas","Papel Alum 43x35","Bolsa Kraft 3kg","Glup 400ml","Glup 1L"];
+const PRODS_BASE=["Aceite","Aceituna M","Ajo","Ajo Polvo","Ajonjoli","Azucar","BBQ","Bolsa Kraft 3kg","Bolsa Papa Marron","Botes Salsa","Carne 1ra","Cebolla","Cebolla Morada","Cebolla Polvo","Cheddar","Chorizo","Cilantro","Conos Papas","Facilistas","Glup 1L","Glup 400ml","Ketchup","Lechuga Criolla","Limon","Maizena","Mantequilla","Mayonesa","Miel","Mostaza","Pan Brioche","Papada Ahuma","Papel Alum 43x35","Papas Fritas","Paprika","Pechuga Pollo","Pepinillo","Perejil Fresco","Perejil Polvo","Pimenton","Pimenton hojuela","Pre Mayonesa","Sal","Salsa Inglesa","Servilletas","Stickers","Teriyaki","Tocineta Ahuma","Tomate","Vinagre Manz"];
+let productosExtra=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
+function getProds(){return[...PRODS_BASE,...productosExtra].sort((a,b)=>a.localeCompare(b,'es'));}
+let PRODS=getProds();
 const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'},{key:'bebida',label:'🥤 Bebidas'},{key:'extra',label:'➕ Extras'},{key:'otro',label:'📦 Otros'}];
 
 let cfg={gan:50,papas:'',gp:150,gp2:250};
@@ -733,7 +745,7 @@ function showTab(n,el){
   el.classList.add('active');
   if(n==='preparados')renderPreps();
   if(n==='menu')renderMenuItems();
-  if(n==='config'){renderEmp();renderPVPLista();}
+  if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();}
   if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();}
   if(n==='envios')renderEnvios();
   if(n==='saldo'){renderSaldoResumen();renderMovs();}
@@ -769,6 +781,37 @@ function refreshPapasSelect(){
 function setToday(){
   const t=new Date().toISOString().split('T')[0];
   ['v-fecha','c-fecha','gasto-fecha','env-fecha','pos-fecha','transfer-fecha'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+}
+
+function agregarProducto(){
+  const nom=document.getElementById('nuevo-prod-nom').value.trim();
+  if(!nom)return alert('Escribe el nombre del producto');
+  if(PRODS_BASE.map(p=>p.toLowerCase()).includes(nom.toLowerCase()))return alert('Ese producto ya existe en la lista base');
+  if(productosExtra.map(p=>p.toLowerCase()).includes(nom.toLowerCase()))return alert('Ese producto ya fue agregado');
+  productosExtra.push(nom);
+  localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+  PRODS=getProds();
+  initSelects();
+  renderProdsExtra();
+  document.getElementById('nuevo-prod-nom').value='';
+}
+
+function renderProdsExtra(){
+  const el=document.getElementById('prods-extra-lista');if(!el)return;
+  if(!productosExtra.length){el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin productos personalizados aún.</div>';return;}
+  el.innerHTML=productosExtra.sort((a,b)=>a.localeCompare(b,'es')).map((p)=>{
+    const i=productosExtra.indexOf(p);
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px"><span style="flex:1">${p}</span><span class="badge bi">personalizado</span><button class="db" onclick="delProducto(${i})">✕</button></div>`;
+  }).join('');
+}
+
+function delProducto(i){
+  if(!confirm('Eliminar este producto de la lista?'))return;
+  productosExtra.splice(i,1);
+  localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+  PRODS=getProds();
+  initSelects();
+  renderProdsExtra();
 }
 
 // ─── CONFIG ──────────────────────────────────────────────────
@@ -1120,6 +1163,7 @@ async function init(){
   setToday();
   renderEmp();
   renderPVPLista();
+  renderProdsExtra();
   fetchBCV();
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('main-app').style.display='flex';
