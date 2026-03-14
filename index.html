@@ -3,70 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>La Farra - Sistema Blindado</title>
+    <title>La Farra - Sistema Integral v2</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800&family=Barlow:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        :root{--naranja:#E8621A;--negro:#111111;--gris:#1a1a1a;--gris-m:#2a2a2a;--texto:#f0f0f0;--verde:#4CAF50;--rojo:#e53935}
-        body{background:var(--negro);color:var(--texto);font-family:'Barlow',sans-serif;font-size:14px;min-height:100vh}
+        :root{--naranja:#E8621A;--negro:#111111;--gris-dark:#1a1a1a;--gris-mid:#2a2a2a;--gris-light:#3a3a3a;--texto:#f0f0f0;--verde:#4CAF50;--amarillo:#FFC107;--rojo:#e53935;--azul:#2196F3}
+        body{background:var(--negro);color:var(--texto);font-family:'Barlow',sans-serif;font-size:14px;overflow-x:hidden}
         
-        /* HEADER */
-        .header{display:flex;align-items:center;padding:12px 16px;background:var(--gris);border-bottom:2px solid var(--naranja);position:sticky;top:0;z-index:1000}
-        .logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:var(--naranja);text-transform:uppercase;letter-spacing:1px}
-        .status{margin-left:auto;font-size:10px;color:#555;font-weight:bold}
-
-        /* NAVEGACIÓN INDEPENDIENTE */
-        .nav-container{display:flex;overflow-x:auto;background:var(--gris);padding:5px;gap:5px;position:sticky;top:50px;z-index:999;border-bottom:1px solid var(--gris-m)}
-        .tab-btn{padding:10px 18px;cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-weight:600;text-transform:uppercase;color:#888;border-radius:4px;border:none;background:none;transition:0.2s}
+        .header{display:flex;align-items:center;gap:12px;padding:.8rem 1rem;background:var(--gris-dark);border-bottom:2px solid var(--naranja);position:sticky;top:0;z-index:1001}
+        .logo-text{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;letter-spacing:2px;color:var(--naranja);text-transform:uppercase}
+        .logo-text span{color:var(--texto)}
+        
+        .nav-scroll{overflow-x:auto;display:flex;background:var(--gris-dark);padding:5px;position:sticky;top:50px;z-index:1000;border-bottom:1px solid var(--gris-mid);gap:5px}
+        .tab-btn{padding:10px 18px;cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-weight:600;text-transform:uppercase;color:var(--texto-dim);border-radius:5px;background:none;border:none;transition:0.3s}
         .tab-btn.active{background:var(--naranja);color:white}
         
-        /* PANELES */
-        .panel{display:none;padding:16px}
+        .panel{display:none;padding:15px}
         .panel.active{display:block !important}
         
-        .card{background:var(--gris);border:1px solid var(--gris-m);border-radius:12px;padding:16px;margin-bottom:16px}
-        .card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--naranja);text-transform:uppercase;margin-bottom:12px;font-size:16px}
+        .card{background:var(--gris-dark);border:1px solid var(--gris-mid);border-radius:10px;padding:15px;margin-bottom:15px}
+        .card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--naranja);text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between}
         
-        table{width:100%;border-collapse:collapse}
-        th{text-align:left;color:#888;padding:10px;font-size:11px;border-bottom:1px solid var(--gris-m)}
-        td{padding:12px 10px;border-bottom:1px solid var(--gris-m)}
-        input,select,button{width:100%;padding:12px;margin-top:8px;border-radius:8px;border:1px solid var(--gris-m);background:var(--gris-m);color:white}
-        .btn-main{background:var(--naranja);font-weight:700;border:none;cursor:pointer;text-transform:uppercase;color:white}
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th{text-align:left;color:var(--texto-dim);padding:10px;border-bottom:1px solid var(--gris-mid);text-transform:uppercase;font-size:10px}
+        td{padding:10px;border-bottom:1px solid var(--gris-mid)}
+        
+        input,select,button{width:100%;padding:12px;margin-top:8px;border-radius:6px;border:1px solid var(--gris-light);background:var(--gris-mid);color:white}
+        .btn-p{background:var(--naranja);font-weight:700;border:none;cursor:pointer;text-transform:uppercase}
+        
+        .semaforo{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:800;text-transform:uppercase}
+        .sem-verde{background:rgba(76,175,80,0.15);color:var(--verde)}
+        .sem-amarillo{background:rgba(255,193,7,0.15);color:var(--amarillo)}
+        .sem-rojo{background:rgba(229,57,53,0.15);color:var(--rojo)}
 
-        .semaforo{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:800}
-        .bg{background:rgba(76,175,80,0.15);color:var(--verde)}
-        .br{background:rgba(229,57,51,0.15);color:var(--rojo)}
+        .status-bar{position:fixed;bottom:0;width:100%;background:rgba(0,0,0,0.85);padding:6px 15px;font-size:10px;display:flex;justify-content:space-between;border-top:1px solid var(--gris-mid);z-index:2000}
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div class="logo">LA<span>:</span>FARRA</div>
-    <div class="status" id="cloud-status">MODO LOCAL</div>
+    <div class="logo-text">LA<span>:</span>FARRA</div>
+    <div id="bcv-display" style="margin-left:auto;font-size:12px;color:var(--verde);font-weight:bold">BCV: --</div>
 </div>
 
-<div class="nav-container">
-    <button class="tab-btn active" onclick="cambiarSeccion('saldo', this)">Saldo</button>
-    <button class="tab-btn" onclick="cambiarSeccion('vidriera', this)">Vidriera</button>
-    <button class="tab-btn" onclick="cambiarSeccion('inv', this)">Inventario</button>
-    <button class="tab-btn" onclick="cambiarSeccion('pos', this)">POS</button>
+<div class="nav-scroll">
+    <button class="tab-btn active" onclick="showTab('saldo', this)">Saldo</button>
+    <button class="tab-btn" onclick="showTab('inventario', this)">Inventario v2</button>
+    <button class="tab-btn" onclick="showTab('pos', this)">POS / Ventas</button>
+    <button class="tab-btn" onclick="showTab('config', this)">Config</button>
 </div>
 
 <div id="saldo" class="panel active">
     <div class="card">
-        <div class="card-title">Resumen de Caja</div>
-        <div id="val-saldo" style="font-size:36px;font-weight:800">$0.00</div>
+        <div class="card-title">Caja Total</div>
+        <div id="caja-monto" style="font-size:36px;font-weight:800">$0.00</div>
+        <p style="color:var(--texto-dim);font-size:11px;margin-top:5px">Balance total de ventas registradas</p>
     </div>
 </div>
 
-<div id="inv" class="panel">
+<div id="inventario" class="panel">
     <div class="card">
-        <div class="card-title">Estado de Insumos</div>
-        <p style="font-size:11px;color:#888;margin-bottom:10px">* Basado en compras y stock inicial.</p>
+        <div class="card-title">Estado de Stock</div>
         <div style="overflow-x:auto">
             <table>
-                <thead><tr><th>Producto</th><th>Stock</th><th>Estado</th></tr></thead>
-                <tbody id="tabla-body-inv"></tbody>
+                <thead>
+                    <tr><th>Producto</th><th>Stock Actual</th><th>Estado</th></tr>
+                </thead>
+                <tbody id="tabla-inv"></tbody>
             </table>
         </div>
     </div>
@@ -74,78 +78,120 @@
 
 <div id="pos" class="panel">
     <div class="card">
-        <div class="card-title">Nueva Venta</div>
-        <input type="text" id="cliente" placeholder="Nombre Cliente">
-        <input type="number" id="monto" placeholder="Monto total $">
-        <button class="btn-main" onclick="registrarVentaLocal()">Guardar en Local</button>
+        <div class="card-title">Registrar Venta</div>
+        <label style="font-size:11px;color:var(--texto-dim)">CLIENTE</label>
+        <input type="text" id="v-cliente" placeholder="Nombre">
+        <label style="font-size:11px;color:var(--texto-dim);margin-top:10px;display:block">PRODUCTO</label>
+        <select id="v-producto"></select>
+        <label style="font-size:11px;color:var(--texto-dim);margin-top:10px;display:block">MONTO ($)</label>
+        <input type="number" id="v-monto" placeholder="0.00">
+        <button class="btn-p" onclick="guardarVenta()">Confirmar Venta</button>
     </div>
 </div>
 
-<div id="vidriera" class="panel">
-    <div class="card"><div class="card-title">Vidriera</div><p>Próximamente...</p></div>
+<div id="config" class="panel">
+    <div class="card">
+        <div class="card-title">Nube y Sincronización</div>
+        <p id="cloud-info">Estado: Local</p>
+        <button style="background:var(--azul)" onclick="location.reload()">🔄 Refrescar Sistema</button>
+    </div>
+</div>
+
+<div class="status-bar">
+    <span id="sync-msg">Listo</span>
+    <span id="db-status" style="color:var(--rojo)">● DESCONECTADO</span>
 </div>
 
 <script>
-    // 1. NAVEGACIÓN INSTANTÁNEA (Funciona aunque nada más cargue)
-    function cambiarSeccion(id, btn) {
-        const paneles = document.querySelectorAll('.panel');
-        paneles.forEach(p => p.classList.remove('active'));
-        
-        const botones = document.querySelectorAll('.tab-btn');
-        botones.forEach(b => b.classList.remove('active'));
-        
+    // LISTA COMPLETA DE TU ARCHIVO V2
+    const PRODS = ["Carne 1ra","Papada Ahuma","Pan Brioche","Cheddar","Tomate","Cebolla","Lechuga Criolla","Chorizo","Pre Mayonesa","Ketchup","Aceite","Vinagre Manz","Perejil Polvo","Cebolla Polvo","Paprika","Ajo Polvo","Aceituna M","Pepinillo","BBQ","Teriyaki","Ajonjoli","Facilistas","Salsa Inglesa","Sal","Azucar","Limon","Ajo","Cebolla Morada","Cilantro","Perejil Fresco","Miel","Mostaza","Papas Fritas","Pechuga Pollo","Pimenton hojuela","Mantequilla","Mayonesa","Tocineta Ahuma","Pimenton","Maizena","Stickers","Botes Salsa","Bolsa Papa Marron","Servilletas","Conos Papas","Papel Alum 43x35","Bolsa Kraft 3kg","Glup 400ml","Glup 1L"];
+
+    const SB_URL = "https://ljgjpmlvjnqfpstltjmy.supabase.co";
+    const SB_KEY = "sb_publishable_Wsf4mUEtX0W6LEyJDpuIaw_vbr_jZU6";
+    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+
+    let appData = {
+        ventas: JSON.parse(localStorage.getItem('lf_v')) || [],
+        inv: JSON.parse(localStorage.getItem('lf_i')) || []
+    };
+
+    function showTab(id, btn) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
     }
 
-    // 2. DATOS DE JORGE (Archivo v2)
-    const PRODUCTOS = ["Carne 1ra", "Pan Brioche", "Cheddar", "Papas Fritas", "Tocineta", "Chorizo"];
-    let db_ventas = JSON.parse(localStorage.getItem('lf6_ven') || '[]');
-    let db_inv = JSON.parse(localStorage.getItem('lf7_si') || '[]');
+    function init() {
+        // Llenar select de POS
+        const select = document.getElementById('v-producto');
+        select.innerHTML = PRODS.map(p => `<option value="${p}">${p}</option>`).join('');
+        
+        render();
+        syncCloud();
+    }
 
     function render() {
-        // Saldo
-        const total = db_ventas.reduce((acc, v) => acc + (parseFloat(v.monto) || 0), 0);
-        document.getElementById('val-saldo').innerText = `$${total.toFixed(2)}`;
+        // Render Saldo
+        const total = appData.ventas.reduce((acc, v) => acc + (parseFloat(v.monto) || 0), 0);
+        document.getElementById('caja-monto').innerText = `$${total.toFixed(2)}`;
 
-        // Inventario
-        const tbody = document.getElementById('tabla-body-inv');
-        tbody.innerHTML = PRODUCTOS.map(p => {
-            const item = db_inv.find(i => i.prod === p);
+        // Render Inventario v2
+        const tbody = document.getElementById('tabla-inv');
+        tbody.innerHTML = PRODS.map(p => {
+            const item = appData.inv.find(i => i.prod === p);
             const cant = item ? item.cant : 0;
+            let clase = "sem-verde", txt = "OK";
+            if(cant < 500) { clase="sem-amarillo"; txt="ALERTA"; }
+            if(cant <= 0) { clase="sem-rojo"; txt="CRÍTICO"; }
+            
             return `<tr>
                 <td><strong>${p}</strong></td>
                 <td>${cant}g</td>
-                <td><span class="semaforo ${cant > 500 ? 'bg' : 'br'}">${cant > 500 ? 'OK' : 'BAJO'}</span></td>
+                <td><span class="semaforo ${clase}">${txt}</span></td>
             </tr>`;
         }).join('');
     }
 
-    function registrarVentaLocal() {
-        const c = document.getElementById('cliente').value;
-        const m = document.getElementById('monto').value;
-        if(!c || !m) return alert("Completa los datos");
-
-        db_ventas.push({cliente: c, monto: m, fecha: new Date()});
-        localStorage.setItem('lf6_ven', JSON.stringify(db_ventas));
-        render();
-        alert("Guardado localmente. Se subirá a la nube en segundos.");
+    async function syncCloud() {
+        try {
+            const { data: v } = await supabase.from('ventas').select('*').limit(100);
+            if(v) {
+                appData.ventas = v.map(row => row.data);
+                localStorage.setItem('lf_v', JSON.stringify(appData.ventas));
+                document.getElementById('db-status').innerText = "● NUBE CONECTADA";
+                document.getElementById('db-status').style.color = "var(--verde)";
+            }
+            render();
+        } catch (e) {
+            console.log("Offline mode");
+        }
     }
 
-    // 3. CARGA DIFERIDA DE SUPABASE (5 segundos después)
-    setTimeout(() => {
-        const script = document.createElement('script');
-        script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-        script.onload = () => {
-            console.log("Nube lista para conectar...");
-            document.getElementById('cloud-status').innerText = "NUBE DISPONIBLE";
-            document.getElementById('cloud-status').style.color = "var(--verde)";
-        };
-        document.head.appendChild(script);
-    }, 5000);
+    async function guardarVenta() {
+        const c = document.getElementById('v-cliente').value;
+        const m = document.getElementById('v-monto').value;
+        const p = document.getElementById('v-producto').value;
+        
+        if(!c || !m) return alert("Faltan datos");
 
-    // Inicializar
-    render();
+        const nuevaVenta = { cliente: c, monto: m, producto: p, fecha: new Date().toISOString() };
+        
+        // Guardar local
+        appData.ventas.push(nuevaVenta);
+        localStorage.setItem('lf_v', JSON.stringify(appData.ventas));
+        render();
+
+        // Subir a la nube
+        const { error } = await supabase.from('ventas').insert([{ data: nuevaVenta }]);
+        if(!error) {
+            document.getElementById('sync-msg').innerText = "Venta sincronizada";
+            document.getElementById('v-cliente').value = "";
+            document.getElementById('v-monto').value = "";
+        }
+    }
+
+    init();
 </script>
 </body>
 </html>
