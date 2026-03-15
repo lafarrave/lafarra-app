@@ -895,7 +895,9 @@ async function registrarTransferencia(){
   const monto=parseFloat(document.getElementById('transfer-monto').value),fecha=document.getElementById('transfer-fecha').value;
   if(isNaN(monto)||monto<=0)return alert('Ingresa el monto');if(!fecha)return alert('Indica la fecha');
   const gp=getGanPend();if(monto>gp+0.01)return alert('Solo tienes '+fUSD(gp)+' disponibles');
-  ganT+=monto;movs.unshift({fecha,desc:'Transferencia a cuenta personal',tipo:'transferencia',monto,sd:saldo,tasa});
+  ganT+=monto;
+  saldo-=monto;
+  movs.unshift({fecha,desc:'Transferencia a cuenta personal',tipo:'transferencia',monto,sd:saldo,tasa,esTransferencia:true});
   await saveSaldo_db();renderSaldoResumen();renderMovs();document.getElementById('transfer-monto').value='';
 }
 function renderMovs(){
@@ -907,7 +909,30 @@ function renderMovs(){
     return`<tr><td>${m.fecha}</td><td>${m.desc}</td><td><span class="badge ${cls[m.tipo]||'bi'}">${tipos[m.tipo]||m.tipo}</span></td><td class="${m.tipo==='transferencia'||m.esIngreso?'green':m.monto>0?'red':''}">${m.esIngreso?'+':m.monto>0?(m.tipo==='transferencia'?'→ -':'-'):''}}$${m.monto.toFixed(2)}</td><td style="color:var(--texto-dim)">${mBs}</td><td>$${m.sd.toFixed(2)}</td><td><button class="db" onclick="delMov(${i})">✕</button></td></tr>`;
   }).join('');
 }
-async function delMov(i){if(!confirm('Eliminar?'))return;movs.splice(i,1);await saveSaldo_db();renderMovs();renderSaldoResumen();}
+async function delMov(i){
+  if(!confirm('Eliminar?'))return;
+  const m=movs[i];
+  // Revert effect on saldo
+  if(m.esIngreso) saldo-=m.monto;
+  else if(m.tipo==='transferencia'||m.esTransferencia){ saldo+=m.monto; ganT-=m.monto; }
+  else if(m.monto>0 && m.tipo!=='ajuste') saldo+=m.monto;
+  // Floor to 0
+  saldo=Math.max(0,saldo);
+  ganT=Math.max(0,ganT);
+  movs.splice(i,1);
+  // Update sd (saldo after) on remaining movs — recalc from bottom up
+  let runSaldo=0;
+  for(let j=movs.length-1;j>=0;j--){
+    const mv=movs[j];
+    if(mv.tipo==='ajuste') runSaldo=mv.sd;
+    else if(mv.esIngreso) runSaldo+=mv.monto;
+    else if(mv.tipo==='transferencia'||mv.esTransferencia) runSaldo-=mv.monto;
+    else if(mv.monto>0) runSaldo-=mv.monto;
+    movs[j].sd=Math.max(0,runSaldo);
+  }
+  if(movs.length>0) saldo=movs[0].sd;
+  await saveSaldo_db();renderMovs();renderSaldoResumen();
+}
 
 // ─── INVENTARIO ───────────────────────────────────────────────
 function calcCpg(){
