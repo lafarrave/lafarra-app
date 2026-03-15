@@ -1103,13 +1103,9 @@ function renderPendientes(){
   const pends=ventas.filter(v=>v.estado==='pendiente');
   const el=document.getElementById('lista-pendientes');if(!el)return;
   const card=document.getElementById('card-pendientes');
-  if(!pends.length){
-    if(card)card.style.display='none';
-    return;
-  }
+  if(!pends.length){if(card)card.style.display='none';return;}
   if(card)card.style.display='block';
   el.innerHTML=pends.map(v=>{
-    const i=ventas.indexOf(v);
     const str=v.items.map(it=>`${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ');
     return`<div style="border:1px solid var(--amarillo);border-radius:8px;padding:.6rem .8rem;margin-bottom:.5rem;font-size:12px;background:#1a1600">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
@@ -1117,8 +1113,8 @@ function renderPendientes(){
         <div style="display:flex;gap:7px;align-items:center">
           <span style="color:var(--amarillo);font-weight:600;font-size:14px">$${v.total.toFixed(2)}</span>
           ${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}
-          <button class="btn" style="padding:4px 10px;font-size:11px" onclick="marcarCobrado(${i})">✓ Cobrar</button>
-          <button class="db" onclick="delVenta(${i})">✕</button>
+          <button class="btn" style="padding:4px 10px;font-size:11px" onclick="marcarCobrado('${v.vid}')">✓ Cobrar</button>
+          <button class="db" onclick="delVentaById('${v.vid}')">✕</button>
         </div>
       </div>
       <div style="color:var(--texto-dim)">${str}</div>
@@ -1126,17 +1122,23 @@ function renderPendientes(){
   }).join('');
 }
 
-async function marcarCobrado(i){
-  ventas[i].estado='cobrado';
-  const v=ventas[i];
+async function marcarCobrado(vid){
+  const idx=ventas.findIndex(v=>v.vid===vid);
+  if(idx<0)return;
+  ventas[idx].estado='cobrado';
+  const v=ventas[idx];
   saldo+=v.total;
   movs.unshift({fecha:getVEDate(),desc:'Cobro pendiente — '+v.cliente,tipo:'venta',monto:v.total,sd:saldo,tasa,esIngreso:true});
-  await Promise.all([addVenta_db(v),saveSaldo_db()]);
-  const {data}=await sb.from('ventas').select('*');
-  if(data){
-    const match=data.find(r=>r.data.fecha===v.fecha&&r.data.cliente===v.cliente&&r.data.estado==='pendiente');
-    if(match)await sb.from('ventas').update({data:v}).eq('id',match.id);
-  }
+  setSyncStatus('syncing');
+  try{
+    const {data}=await sb.from('ventas').select('*');
+    if(data){
+      const match=data.find(r=>r.data.vid===vid);
+      if(match)await sb.from('ventas').update({data:v}).eq('id',match.id);
+    }
+    await saveSaldo_db();
+    setSyncStatus('ok');
+  }catch(e){setSyncStatus('error');}
   renderVentas();renderPendientes();renderMetricsPOS();renderSaldoResumen();
 }
 
@@ -1173,7 +1175,7 @@ async function confirmarVenta(estado='cobrado'){
   const cliente=document.getElementById('pos-cliente').value.trim()||'Sin nombre',fecha=document.getElementById('pos-fecha').value;
   if(!fecha)return alert('Indica la fecha');
   const total=carrito.reduce((a,c)=>a+c.precio*c.qty,0),costo=carrito.reduce((a,c)=>a+c.costo*c.qty,0),gan=total-costo,totalBs=tasa>0?total*tasa:null;
-  const fechaVenta=fecha||getVEDate();const venta={fecha:fechaVenta,cliente,items:[...carrito],total,costo,gan,totalBs,tasa,estado};
+  const fechaVenta=fecha||getVEDate();const vid='v'+Date.now();const venta={fecha:fechaVenta,cliente,items:[...carrito],total,costo,gan,totalBs,tasa,estado,vid};
   ventas.unshift(venta);
   await addVenta_db(venta);
   if(estado==='cobrado'){
@@ -1201,7 +1203,8 @@ function renderVentas(){
     return`<div class="vcard"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><div><span style="font-weight:600">${v.cliente}</span><span style="color:var(--texto-dim);font-size:11px;margin-left:5px">${v.fecha}</span></div><div style="display:flex;gap:7px;align-items:center"><span class="hl">$${v.total.toFixed(2)}</span>${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}<span class="green" style="font-size:11px">+$${v.gan.toFixed(2)}</span><button class="db" onclick="delVenta(${i})">✕</button></div></div><div style="font-size:11px;color:var(--texto-dim)">${str}</div></div>`;
   }).join('');
 }
-async function delVenta(i){if(!confirm('Eliminar venta?'))return;const v=ventas[i];await deleteVenta_db(v.fecha,v.cliente);ventas.splice(i,1);renderVentas();renderMetricsPOS();renderSaldoResumen();}
+async function delVenta(i){if(!confirm('Eliminar venta?'))return;const v=ventas[i];await deleteVenta_db(v.fecha,v.cliente);ventas.splice(i,1);renderVentas();renderPendientes();renderMetricsPOS();renderSaldoResumen();}
+async function delVentaById(vid){if(!confirm('Eliminar esta venta pendiente?'))return;const idx=ventas.findIndex(v=>v.vid===vid);if(idx<0)return;const v=ventas[idx];await deleteVenta_db(v.fecha,v.cliente);ventas.splice(idx,1);renderVentas();renderPendientes();renderMetricsPOS();renderSaldoResumen();}
 
 // ─── ENVÍOS ──────────────────────────────────────────────────
 async function addEnvio(){
