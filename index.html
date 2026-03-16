@@ -833,28 +833,40 @@ function renderStats(){
       }).join('');
     }
   }
-  // Clients
-  const cliCount = {};
-  const cliTotal = {};
+  // Clients — fidelidad por ítems principales (burgers + papas), sin bebidas ni extras
+  const CAT_FIDELIDAD = ['burger','papas'];
+  const getAllPOSCats = () => {
+    const cats = {};
+    menuItems.forEach(item=>{ cats[item.nom]='burger'; });
+    pvProds.forEach(p=>{ cats[p.nom]=p.cat||'extra'; });
+    return cats;
+  };
+  const posCats = getAllPOSCats();
+  const cliItems = {};
   data.forEach(v=>{
     if(!v.cliente||v.cliente==='Sin nombre')return;
-    cliCount[v.cliente]=(cliCount[v.cliente]||0)+1;
-    cliTotal[v.cliente]=(cliTotal[v.cliente]||0)+v.total;
+    v.items.forEach(it=>{
+      const cat = posCats[it.nom] || 'burger'; // items del menú son burgers por defecto
+      if(CAT_FIDELIDAD.includes(cat)){
+        cliItems[v.cliente]=(cliItems[v.cliente]||0)+(it.qty||1);
+      }
+    });
   });
-  const clis = Object.entries(cliCount).sort((a,b)=>b[1]-a[1]);
+  const clis = Object.entries(cliItems).sort((a,b)=>b[1]-a[1]);
   const maxCli = clis.length?clis[0][1]:1;
   const cliEl = document.getElementById('stats-clientes');
   if(cliEl){
-    if(!clis.length){cliEl.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin datos aún.</div>';
+    if(!clis.length){
+      cliEl.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin datos aún.</div>';
     } else {
-      cliEl.innerHTML = clis.map(([nom,qty],i)=>{
-        const pct = Math.round(qty/maxCli*100);
-        const color = i===0?'var(--verde)':'var(--naranja)';
-        const label = i===0?'🏆 cliente #1':'';
-        return`<div style="margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
-            <span>${nom} ${label?`<span style="font-size:10px;color:${color}">${label}</span>`:''}</span>
-            <div style="text-align:right"><span style="font-weight:600;color:${color}">${qty} pedido${qty>1?'s':''}</span><span style="font-size:11px;color:var(--texto-dim);margin-left:5px">$${cliTotal[nom].toFixed(2)}</span></div>
+      cliEl.innerHTML = clis.map(([nom,items],i)=>{
+        const pct = Math.round(items/maxCli*100);
+        const color = i===0?'var(--verde)':i===1?'var(--amarillo)':'var(--naranja)';
+        const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+        return`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:3px">
+            <span style="font-weight:500">${medal} ${nom}</span>
+            <span style="font-weight:700;color:${color}">${items} ítem${items>1?'s':''}</span>
           </div>
           <div style="height:5px;background:var(--gris-mid);border-radius:3px;overflow:hidden">
             <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .3s"></div>
