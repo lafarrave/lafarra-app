@@ -188,6 +188,13 @@ tr:hover td{background:var(--gris-mid)}
 .sel-opt.hidden{display:none}
 .sel-empty{padding:10px 12px;font-size:12px;color:var(--texto-dim);text-align:center}
 
+
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--gris-dark);border:1px solid var(--naranja);border-radius:0 0 6px 6px;z-index:200;max-height:160px;overflow-y:auto;display:none}
+.autocomplete-list.open{display:block}
+.autocomplete-item{padding:7px 10px;font-size:13px;cursor:pointer;color:var(--texto)}
+.autocomplete-item:hover{background:var(--gris-mid);color:var(--naranja)}
+
 select.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px 7px}
 input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px 7px}
 </style>
@@ -221,6 +228,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div class="tab" onclick="showTab('menu',this)">🍔 Menú</div>
     <div class="tab" onclick="showTab('pos',this)">🧾 Ventas</div>
     <div class="tab" onclick="showTab('envios',this)">🚴 Envíos</div>
+    <div class="tab" onclick="showTab('stats',this)">📊 Estadísticas</div>
   </div>
 
   <div class="content">
@@ -491,7 +499,10 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <div class="card" style="margin-bottom:.7rem">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.7rem">
               <span class="card-title" style="margin:0;flex:1">Nuevo pedido</span>
-              <input class="inline" type="text" id="pos-cliente" placeholder="Cliente..." style="width:145px"/>
+              <div class="autocomplete-wrap" style="position:relative">
+  <input class="inline" type="text" id="pos-cliente" placeholder="Cliente..." style="width:145px" autocomplete="off" oninput="showClientSuggestions()" onblur="setTimeout(()=>hideClientSuggestions(),200)"/>
+  <div class="autocomplete-list" id="client-suggestions"></div>
+</div>
               <input class="inline" type="date" id="pos-fecha" style="width:128px"/>
             </div>
             <div id="pos-cats"></div>
@@ -526,7 +537,23 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
             <hr class="divider"/>
             <button class="btn" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('cobrado')">Confirmar cobrado</button>
             <button class="btns" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('pendiente')">Guardar pendiente</button>
-            <button class="btns" style="width:100%;margin-bottom:.4rem" onclick="toggleDelivery()">🚴 Agregar delivery</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:.4rem">
+              <button class="btns" style="width:100%" onclick="toggleDelivery()">🚴 Delivery</button>
+              <button class="btns" style="width:100%" onclick="toggleDescuento()">🏷 Descuento</button>
+            </div>
+            <div id="descuento-input-wrap" style="display:none;margin-bottom:.4rem">
+              <div style="display:flex;gap:6px;align-items:center">
+                <input type="number" id="descuento-pct" placeholder="% descuento" min="1" max="100" style="flex:1;background:var(--gris-mid);border:1px solid var(--verde);color:var(--texto);border-radius:6px;padding:6px 10px;font-size:13px" oninput="updateDescuentoDisplay()"/>
+                <button class="btn" style="padding:6px 12px;font-size:12px;background:var(--verde)" onclick="setDescuento()">OK</button>
+              </div>
+            </div>
+            <div id="cart-descuento-row" style="display:none;margin-bottom:4px">
+              <div style="display:flex;justify-content:space-between;align-items:center;background:#0d1f0d;border:1px solid var(--verde);border-radius:6px;padding:5px 8px">
+                <span style="font-size:12px;color:var(--verde);font-weight:600">🏷 Descuento</span>
+                <span style="font-size:13px;color:var(--verde);font-weight:600" id="cart-descuento-display">-$0.00</span>
+                <button onclick="toggleDescuento()" style="background:none;border:none;color:var(--texto-dim);cursor:pointer;font-size:13px">✕</button>
+              </div>
+            </div>
             <div id="delivery-input-wrap" style="display:none;margin-bottom:.4rem">
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="delivery-monto" placeholder="Monto delivery $" style="flex:1;background:var(--gris-mid);border:1px solid var(--amarillo);color:var(--texto);border-radius:6px;padding:6px 10px;font-size:13px" oninput="updateDeliveryDisplay()"/>
@@ -539,6 +566,22 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       </div>
     </div>
 
+    <!-- ESTADÍSTICAS -->
+    <div id="tab-stats" class="section">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+        <select class="inline" id="stats-mes" onchange="renderStats()"><option value="">Todos los meses</option></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="card">
+          <div class="card-title">🏆 Productos vendidos</div>
+          <div id="stats-productos"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">⭐ Clientes frecuentes</div>
+          <div id="stats-clientes"></div>
+        </div>
+      </div>
+    </div>
     <!-- ENVÍOS -->
     <div id="tab-envios" class="section">
       <div class="metrics" id="metrics-envios"></div>
@@ -685,6 +728,141 @@ function refreshSearchable(id){
   const orig = document.getElementById(id);
   if(orig){ orig.style.display=''; }
   makeSearchable(id, getProds(), 'Seleccionar...');
+}
+
+
+// ─── AUTOCOMPLETE CLIENTES ───────────────────────────────────
+function getClientesGuardados(){
+  const mesActual = getVEDate().slice(0,7);
+  const stored = JSON.parse(localStorage.getItem('lf_clientes')||'{}');
+  // Reset if new month
+  if(stored.mes !== mesActual) return {mes:mesActual, nombres:[]};
+  return stored;
+}
+function guardarCliente(nombre){
+  if(!nombre||nombre==='Sin nombre')return;
+  const data = getClientesGuardados();
+  if(!data.nombres.includes(nombre)){
+    data.nombres.push(nombre);
+    localStorage.setItem('lf_clientes', JSON.stringify(data));
+  }
+}
+function showClientSuggestions(){
+  const val = document.getElementById('pos-cliente').value.toLowerCase();
+  const list = document.getElementById('client-suggestions');
+  if(!list)return;
+  if(!val){list.classList.remove('open');return;}
+  const data = getClientesGuardados();
+  const matches = data.nombres.filter(n=>n.toLowerCase().includes(val));
+  if(!matches.length){list.classList.remove('open');return;}
+  list.innerHTML = matches.map(n=>`<div class="autocomplete-item" onmousedown="selectCliente('${n.replace(/'/g,"\'")}')">${n}</div>`).join('');
+  list.classList.add('open');
+}
+function selectCliente(nombre){
+  const inp = document.getElementById('pos-cliente');
+  if(inp) inp.value = nombre;
+  hideClientSuggestions();
+}
+function hideClientSuggestions(){
+  const list = document.getElementById('client-suggestions');
+  if(list) list.classList.remove('open');
+}
+
+// ─── DESCUENTO ───────────────────────────────────────────────
+let descuentoPct = 0;
+function toggleDescuento(){
+  const wrap = document.getElementById('descuento-input-wrap');
+  const row = document.getElementById('cart-descuento-row');
+  if(descuentoPct > 0){
+    descuentoPct = 0;
+    if(row) row.style.display='none';
+    const inp = document.getElementById('descuento-pct');if(inp)inp.value='';
+    renderCart();return;
+  }
+  if(wrap) wrap.style.display = wrap.style.display==='none'?'block':'none';
+  setTimeout(()=>{const inp=document.getElementById('descuento-pct');if(inp)inp.focus();},50);
+}
+function updateDescuentoDisplay(){
+  const pct = parseFloat(document.getElementById('descuento-pct')?.value)||0;
+  const total = carrito.reduce((a,c)=>a+c.precio*c.qty,0) + (deliveryMonto||0);
+  const desc = total * pct / 100;
+  const el = document.getElementById('cart-descuento-display');
+  if(el) el.textContent = '-$'+desc.toFixed(2)+' ('+pct+'%)';
+}
+function setDescuento(){
+  const pct = parseFloat(document.getElementById('descuento-pct')?.value)||0;
+  if(pct<=0||pct>100) return alert('Ingresa un % entre 1 y 100');
+  descuentoPct = pct;
+  const wrap = document.getElementById('descuento-input-wrap');
+  const row = document.getElementById('cart-descuento-row');
+  if(wrap) wrap.style.display='none';
+  if(row) row.style.display='block';
+  renderCart();
+}
+
+// ─── ESTADÍSTICAS ─────────────────────────────────────────────
+function renderStats(){
+  const mes = document.getElementById('stats-mes')?.value||'';
+  // Populate mes selector
+  const meses=[...new Set(ventas.map(v=>v.fecha.slice(0,7)))].sort().reverse();
+  const sel=document.getElementById('stats-mes');
+  if(sel){const cur=sel.value;sel.innerHTML='<option value="">Todos los meses</option>'+meses.map(m=>`<option ${m===cur?'selected':''} value="${m}">${m}</option>`).join('');}
+  const data = mes ? ventas.filter(v=>v.fecha.startsWith(mes)) : [...ventas];
+  // Products
+  const prodCount = {};
+  data.forEach(v=>v.items.forEach(it=>{prodCount[it.nom]=(prodCount[it.nom]||0)+(it.qty||1);}));
+  const prods = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]);
+  const maxProd = prods.length?prods[0][1]:1;
+  const prodEl = document.getElementById('stats-productos');
+  if(prodEl){
+    if(!prods.length){prodEl.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin datos aún.</div>';
+    } else {
+      prodEl.innerHTML = prods.map(([nom,qty],i)=>{
+        const pct = Math.round(qty/maxProd*100);
+        const color = i===0?'var(--verde)':i===prods.length-1?'var(--rojo)':'var(--naranja)';
+        const label = i===0?'⭐ más vendido':i===prods.length-1?'📉 menos vendido':'';
+        return`<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+            <span>${nom} ${label?`<span style="font-size:10px;color:${color}">${label}</span>`:''}</span>
+            <span style="font-weight:600;color:${color}">${qty}</span>
+          </div>
+          <div style="height:5px;background:var(--gris-mid);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .3s"></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+  // Clients
+  const cliCount = {};
+  const cliTotal = {};
+  data.forEach(v=>{
+    if(!v.cliente||v.cliente==='Sin nombre')return;
+    cliCount[v.cliente]=(cliCount[v.cliente]||0)+1;
+    cliTotal[v.cliente]=(cliTotal[v.cliente]||0)+v.total;
+  });
+  const clis = Object.entries(cliCount).sort((a,b)=>b[1]-a[1]);
+  const maxCli = clis.length?clis[0][1]:1;
+  const cliEl = document.getElementById('stats-clientes');
+  if(cliEl){
+    if(!clis.length){cliEl.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin datos aún.</div>';
+    } else {
+      cliEl.innerHTML = clis.map(([nom,qty],i)=>{
+        const pct = Math.round(qty/maxCli*100);
+        const color = i===0?'var(--verde)':'var(--naranja)';
+        const label = i===0?'🏆 cliente #1':'';
+        return`<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+            <span>${nom} ${label?`<span style="font-size:10px;color:${color}">${label}</span>`:''}</span>
+            <div style="text-align:right"><span style="font-weight:600;color:${color}">${qty} pedido${qty>1?'s':''}</span><span style="font-size:11px;color:var(--texto-dim);margin-left:5px">$${cliTotal[nom].toFixed(2)}</span></div>
+          </div>
+          <div style="height:5px;background:var(--gris-mid);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .3s"></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
 }
 
 // ─── SUPABASE ───────────────────────────────────────────────
@@ -933,6 +1111,7 @@ function showTab(n,el){
   if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();}
   if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();renderPendientes();}
   if(n==='envios')renderEnvios();
+  if(n==='stats')renderStats();
   if(n==='saldo'){renderSaldoResumen();renderMovs();}
   if(n==='inventario'){renderInventario();renderSI();renderInvHist();}
 }
@@ -1362,8 +1541,12 @@ function renderCart(){
   document.getElementById('cart-sub').textContent='$'+total.toFixed(2);
   document.getElementById('cart-gan').textContent='$'+gan.toFixed(2);
   const totalConDelivery=total+(deliveryMonto||0);
-  document.getElementById('cart-total').textContent='$'+totalConDelivery.toFixed(2);
-  document.getElementById('cart-bs').textContent=tasa>0?fBs(totalConDelivery):'(sin tasa)';
+  const descMonto=descuentoPct>0?totalConDelivery*descuentoPct/100:0;
+  const totalFinal=totalConDelivery-descMonto;
+  document.getElementById('cart-total').textContent='$'+totalFinal.toFixed(2);
+  document.getElementById('cart-bs').textContent=tasa>0?fBs(totalFinal):'(sin tasa)';
+  const drow=document.getElementById('cart-descuento-row');
+  if(descuentoPct>0&&drow){drow.style.display='block';const del=document.getElementById('cart-descuento-display');if(del)del.textContent='-$'+descMonto.toFixed(2)+' ('+descuentoPct+'%)';}
 }
 let deliveryMonto=0;
 function toggleDelivery(){
@@ -1395,15 +1578,17 @@ function setDelivery(){
   if(el)el.textContent='$'+v.toFixed(2);
   renderCart();
 }
-function limpiarCarrito(){carrito=[];deliveryMonto=0;const row=document.getElementById('cart-delivery-row');if(row)row.style.display='none';const inp=document.getElementById('delivery-monto');if(inp)inp.value='';renderCart();}
+function limpiarCarrito(){carrito=[];deliveryMonto=0;descuentoPct=0;const row=document.getElementById('cart-delivery-row');if(row)row.style.display='none';const drow=document.getElementById('cart-descuento-row');if(drow)drow.style.display='none';const inp=document.getElementById('delivery-monto');if(inp)inp.value='';const dinp=document.getElementById('descuento-pct');if(dinp)dinp.value='';renderCart();}
 async function confirmarVenta(estado='cobrado'){
   if(!carrito.length)return alert('Carrito vacío');
   const cliente=document.getElementById('pos-cliente').value.trim()||'Sin nombre',fecha=document.getElementById('pos-fecha').value;
   if(!fecha)return alert('Indica la fecha');
   const totalItems=carrito.reduce((a,c)=>a+c.precio*c.qty,0);
   const costo=carrito.reduce((a,c)=>a+c.costo*c.qty,0);
-  const gan=totalItems-costo;
-  const totalFinal=totalItems+(deliveryMonto||0);
+  const totalConDelivery=totalItems+(deliveryMonto||0);
+  const descMonto=descuentoPct>0?totalConDelivery*descuentoPct/100:0;
+  const totalFinal=totalConDelivery-descMonto;
+  const gan=totalFinal-costo;
   const totalBs=tasa>0?totalFinal*tasa:null;
   const fechaVenta=fecha||getVEDate();
   const vid='v'+Date.now();
@@ -1421,9 +1606,12 @@ async function confirmarVenta(estado='cobrado'){
     envios.unshift(envio);
     await saveInv_db();
   }
-  deliveryMonto=0;
+  guardarCliente(cliente);
+  deliveryMonto=0;descuentoPct=0;
   const row=document.getElementById('cart-delivery-row');if(row)row.style.display='none';
+  const drow=document.getElementById('cart-descuento-row');if(drow)drow.style.display='none';
   const inp=document.getElementById('delivery-monto');if(inp)inp.value='';
+  const dinp=document.getElementById('descuento-pct');if(dinp)dinp.value='';
   carrito=[];renderCart();renderVentas();renderMetricsPOS();renderSaldoResumen();renderPendientes();
   document.getElementById('pos-cliente').value='';
 }
