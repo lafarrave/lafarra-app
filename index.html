@@ -524,9 +524,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
             <div class="cart-title">Pedido actual</div>
             <div id="cart-items" style="min-height:50px;margin-bottom:.4rem"></div>
             <hr class="divider"/>
-            <div class="total-row main" style="margin-top:0"><span>Total</span><span class="hl" id="cart-total" style="font-size:22px">$0.00</span></div>
-            <div class="total-row" style="margin-top:4px"><span style="color:var(--texto-dim)">En Bs.</span><span id="cart-bs" style="font-size:18px;color:var(--texto)">—</span></div>
-            <div id="cart-delivery-row" style="display:none;margin-top:4px">
+            <div id="cart-delivery-row" style="display:none;margin-bottom:6px">
               <div style="display:flex;justify-content:space-between;align-items:center;background:#1a1600;border:1px solid var(--amarillo);border-radius:6px;padding:5px 8px">
                 <span style="font-size:12px;color:var(--amarillo);font-weight:600">🚴 Delivery</span>
                 <span style="font-size:13px;color:var(--amarillo);font-weight:600" id="cart-delivery-display">$0.00</span>
@@ -534,6 +532,15 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
               </div>
             </div>
             <div id="cart-gan" style="display:none"></div><div id="cart-sub" style="display:none"></div>
+            <div style="text-align:right">
+              <div id="cart-precio-original" style="display:none;font-size:15px;color:var(--texto-dim);text-decoration:line-through;margin-bottom:1px"></div>
+              <div id="cart-descuento-badge" style="display:none;font-size:11px;color:var(--verde);font-weight:600;margin-bottom:2px"></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span style="font-size:14px;font-weight:500;color:var(--texto)">Total</span>
+                <span class="hl" id="cart-total" style="font-size:26px;font-weight:700">$0.00</span>
+              </div>
+              <div style="font-size:17px;color:var(--texto);margin-top:1px" id="cart-bs">—</div>
+            </div>
             <hr class="divider"/>
             <button class="btn" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('cobrado')">Confirmar cobrado</button>
             <button class="btns" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('pendiente')">Guardar pendiente</button>
@@ -547,13 +554,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
                 <button class="btn" style="padding:6px 12px;font-size:12px;background:var(--verde)" onclick="setDescuento()">OK</button>
               </div>
             </div>
-            <div id="cart-descuento-row" style="display:none;margin-bottom:4px">
-              <div style="display:flex;justify-content:space-between;align-items:center;background:#0d1f0d;border:1px solid var(--verde);border-radius:6px;padding:5px 8px">
-                <span style="font-size:12px;color:var(--verde);font-weight:600">🏷 Descuento</span>
-                <span style="font-size:13px;color:var(--verde);font-weight:600" id="cart-descuento-display">-$0.00</span>
-                <button onclick="toggleDescuento()" style="background:none;border:none;color:var(--texto-dim);cursor:pointer;font-size:13px">✕</button>
-              </div>
-            </div>
+            <div id="cart-descuento-row" style="display:none"></div>
             <div id="delivery-input-wrap" style="display:none;margin-bottom:.4rem">
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="delivery-monto" placeholder="Monto delivery $" style="flex:1;background:var(--gris-mid);border:1px solid var(--amarillo);color:var(--texto);border-radius:6px;padding:6px 10px;font-size:13px" oninput="updateDeliveryDisplay()"/>
@@ -1547,7 +1548,14 @@ function addToCart(nom,precio,costo){const ex=carrito.find(c=>c.nom===nom);if(ex
 function changeQty(i,d){carrito[i].qty+=d;if(carrito[i].qty<=0)carrito.splice(i,1);renderCart();}
 function renderCart(){
   const el=document.getElementById('cart-items');if(!el)return;
-  if(!carrito.length){el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);text-align:center;padding:.5rem">Sin productos</div>';['cart-sub','cart-gan','cart-total'].forEach(id=>document.getElementById(id).textContent='$0.00');document.getElementById('cart-bs').textContent='—';return;}
+  if(!carrito.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);text-align:center;padding:.5rem">Sin productos</div>';
+    ['cart-sub','cart-gan','cart-total'].forEach(id=>document.getElementById(id).textContent='$0.00');
+    document.getElementById('cart-bs').textContent='—';
+    const po=document.getElementById('cart-precio-original');if(po)po.style.display='none';
+    const db=document.getElementById('cart-descuento-badge');if(db)db.style.display='none';
+    return;
+  }
   el.innerHTML=carrito.map((c,i)=>`<div class="citem"><span style="flex:1">${c.nom}</span><div class="qty-ctrl"><button class="qbtn" onclick="changeQty(${i},-1)">−</button><span style="font-size:12px;min-width:16px;text-align:center">${c.qty}</span><button class="qbtn" onclick="changeQty(${i},1)">+</button></div><span class="hl" style="min-width:44px;text-align:right">$${(c.precio*c.qty).toFixed(2)}</span></div>`).join('');
   const total=carrito.reduce((a,c)=>a+c.precio*c.qty,0),costo=carrito.reduce((a,c)=>a+c.costo*c.qty,0),gan=total-costo;
   document.getElementById('cart-sub').textContent='$'+total.toFixed(2);
@@ -1556,9 +1564,17 @@ function renderCart(){
   const descMonto=descuentoPct>0?totalConDelivery*descuentoPct/100:0;
   const totalFinal=totalConDelivery-descMonto;
   document.getElementById('cart-total').textContent='$'+totalFinal.toFixed(2);
-  document.getElementById('cart-bs').textContent=tasa>0?fBs(totalFinal):'(sin tasa)';
-  const drow=document.getElementById('cart-descuento-row');
-  if(descuentoPct>0&&drow){drow.style.display='block';const del=document.getElementById('cart-descuento-display');if(del)del.textContent='-$'+descMonto.toFixed(2)+' ('+descuentoPct+'%)';}
+  document.getElementById('cart-bs').textContent=tasa>0?fBs(totalFinal):'—';
+  // Strikethrough price when discount active
+  const precioOrig=document.getElementById('cart-precio-original');
+  const descBadge=document.getElementById('cart-descuento-badge');
+  if(descuentoPct>0){
+    if(precioOrig){precioOrig.style.display='block';precioOrig.textContent='$'+totalConDelivery.toFixed(2);}
+    if(descBadge){descBadge.style.display='block';descBadge.textContent='🏷 '+descuentoPct+'% descuento — ahorras $'+descMonto.toFixed(2);}
+  } else {
+    if(precioOrig)precioOrig.style.display='none';
+    if(descBadge)descBadge.style.display='none';
+  }
 }
 let deliveryMonto=0;
 function toggleDelivery(){
