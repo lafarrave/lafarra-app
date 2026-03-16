@@ -515,10 +515,24 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
             <hr class="divider"/>
             <div class="total-row main" style="margin-top:0"><span>Total</span><span class="hl" id="cart-total" style="font-size:22px">$0.00</span></div>
             <div class="total-row" style="margin-top:4px"><span style="color:var(--texto-dim)">En Bs.</span><span id="cart-bs" style="font-size:18px;color:var(--texto)">—</span></div>
+            <div id="cart-delivery-row" style="display:none;margin-top:4px">
+              <div style="display:flex;justify-content:space-between;align-items:center;background:#1a1600;border:1px solid var(--amarillo);border-radius:6px;padding:5px 8px">
+                <span style="font-size:12px;color:var(--amarillo);font-weight:600">🚴 Delivery</span>
+                <span style="font-size:13px;color:var(--amarillo);font-weight:600" id="cart-delivery-display">$0.00</span>
+                <button onclick="toggleDelivery()" style="background:none;border:none;color:var(--texto-dim);cursor:pointer;font-size:13px">✕</button>
+              </div>
+            </div>
             <div id="cart-gan" style="display:none"></div><div id="cart-sub" style="display:none"></div>
             <hr class="divider"/>
             <button class="btn" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('cobrado')">Confirmar cobrado</button>
             <button class="btns" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('pendiente')">Guardar pendiente</button>
+            <button class="btns" style="width:100%;margin-bottom:.4rem" onclick="toggleDelivery()">🚴 Agregar delivery</button>
+            <div id="delivery-input-wrap" style="display:none;margin-bottom:.4rem">
+              <div style="display:flex;gap:6px;align-items:center">
+                <input type="number" id="delivery-monto" placeholder="Monto delivery $" style="flex:1;background:var(--gris-mid);border:1px solid var(--amarillo);color:var(--texto);border-radius:6px;padding:6px 10px;font-size:13px" oninput="updateDeliveryDisplay()"/>
+                <button class="btn" style="padding:6px 12px;font-size:12px" onclick="setDelivery()">OK</button>
+              </div>
+            </div>
             <button class="btns" style="width:100%" onclick="limpiarCarrito()">Limpiar</button>
           </div>
         </div>
@@ -565,6 +579,25 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
 </div><!-- end app -->
 
 <!-- MODAL UMBRALES -->
+<div id="modal-envio" style="display:none" class="modal-bg" onclick="cerrarModalEnvio(event)">
+  <div class="modal">
+    <div class="modal-title">Editar envío</div>
+    <div class="fgrid">
+      <div class="fg"><label>Empresa delivery</label><input type="text" id="menv-emp" placeholder="ej: Yummy"/></div>
+      <div class="fg"><label>Estado</label>
+        <select id="menv-est">
+          <option value="pendiente">Pendiente (pago yo)</option>
+          <option value="pagado">Pagado por cliente</option>
+        </select>
+      </div>
+      <div class="fg"><label>Nota</label><input type="text" id="menv-nota" placeholder="ej: zona este"/></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:.5rem">
+      <button class="btn" onclick="guardarEditEnvio()">Guardar</button>
+      <button class="btns" onclick="document.getElementById('modal-envio').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
 <div id="modal-umbral" style="display:none" class="modal-bg" onclick="cerrarModal(event)">
   <div class="modal">
     <div class="modal-title" id="modal-nom">Editar umbrales</div>
@@ -1328,23 +1361,69 @@ function renderCart(){
   const total=carrito.reduce((a,c)=>a+c.precio*c.qty,0),costo=carrito.reduce((a,c)=>a+c.costo*c.qty,0),gan=total-costo;
   document.getElementById('cart-sub').textContent='$'+total.toFixed(2);
   document.getElementById('cart-gan').textContent='$'+gan.toFixed(2);
-  document.getElementById('cart-total').textContent='$'+total.toFixed(2);
-  document.getElementById('cart-bs').textContent=tasa>0?fBs(total):'(sin tasa)';
+  const totalConDelivery=total+(deliveryMonto||0);
+  document.getElementById('cart-total').textContent='$'+totalConDelivery.toFixed(2);
+  document.getElementById('cart-bs').textContent=tasa>0?fBs(totalConDelivery):'(sin tasa)';
 }
-function limpiarCarrito(){carrito=[];renderCart();}
+let deliveryMonto=0;
+function toggleDelivery(){
+  const wrap=document.getElementById('delivery-input-wrap');
+  const row=document.getElementById('cart-delivery-row');
+  if(deliveryMonto>0){
+    deliveryMonto=0;
+    if(row)row.style.display='none';
+    const inp=document.getElementById('delivery-monto');if(inp)inp.value='';
+    renderCart();return;
+  }
+  if(wrap)wrap.style.display=wrap.style.display==='none'?'block':'none';
+  setTimeout(()=>{const inp=document.getElementById('delivery-monto');if(inp)inp.focus();},50);
+}
+function updateDeliveryDisplay(){
+  const v=parseFloat(document.getElementById('delivery-monto')?.value)||0;
+  const el=document.getElementById('cart-delivery-display');
+  if(el)el.textContent='$'+v.toFixed(2);
+}
+function setDelivery(){
+  const v=parseFloat(document.getElementById('delivery-monto')?.value)||0;
+  if(v<=0)return alert('Ingresa un monto válido');
+  deliveryMonto=v;
+  const wrap=document.getElementById('delivery-input-wrap');
+  const row=document.getElementById('cart-delivery-row');
+  if(wrap)wrap.style.display='none';
+  if(row)row.style.display='block';
+  const el=document.getElementById('cart-delivery-display');
+  if(el)el.textContent='$'+v.toFixed(2);
+  renderCart();
+}
+function limpiarCarrito(){carrito=[];deliveryMonto=0;const row=document.getElementById('cart-delivery-row');if(row)row.style.display='none';const inp=document.getElementById('delivery-monto');if(inp)inp.value='';renderCart();}
 async function confirmarVenta(estado='cobrado'){
   if(!carrito.length)return alert('Carrito vacío');
   const cliente=document.getElementById('pos-cliente').value.trim()||'Sin nombre',fecha=document.getElementById('pos-fecha').value;
   if(!fecha)return alert('Indica la fecha');
-  const total=carrito.reduce((a,c)=>a+c.precio*c.qty,0),costo=carrito.reduce((a,c)=>a+c.costo*c.qty,0),gan=total-costo,totalBs=tasa>0?total*tasa:null;
-  const fechaVenta=fecha||getVEDate();const vid='v'+Date.now();const venta={fecha:fechaVenta,cliente,items:[...carrito],total,costo,gan,totalBs,tasa,estado,vid};
+  const totalItems=carrito.reduce((a,c)=>a+c.precio*c.qty,0);
+  const costo=carrito.reduce((a,c)=>a+c.costo*c.qty,0);
+  const gan=totalItems-costo;
+  const totalFinal=totalItems+(deliveryMonto||0);
+  const totalBs=tasa>0?totalFinal*tasa:null;
+  const fechaVenta=fecha||getVEDate();
+  const vid='v'+Date.now();
+  const venta={fecha:fechaVenta,cliente,items:[...carrito],total:totalFinal,totalItems,delivery:deliveryMonto||0,costo,gan,totalBs,tasa,estado,vid};
   ventas.unshift(venta);
   await addVenta_db(venta);
   if(estado==='cobrado'){
-    saldo+=total;
-    movs.unshift({fecha,desc:'Venta cobrada — '+cliente,tipo:'venta',monto:total,sd:saldo,tasa,esIngreso:true});
+    saldo+=totalFinal;
+    movs.unshift({fecha:fechaVenta,desc:'Venta cobrada — '+cliente,tipo:'venta',monto:totalFinal,sd:saldo,tasa,esIngreso:true});
     await saveSaldo_db();
   }
+  // Auto-crear envío si hay delivery
+  if(deliveryMonto>0){
+    const envio={fecha:fechaVenta,cli:cliente,emp:'',costo:deliveryMonto,est:'pendiente',nota:'',vid_venta:vid};
+    envios.unshift(envio);
+    await saveInv_db();
+  }
+  deliveryMonto=0;
+  const row=document.getElementById('cart-delivery-row');if(row)row.style.display='none';
+  const inp=document.getElementById('delivery-monto');if(inp)inp.value='';
   carrito=[];renderCart();renderVentas();renderMetricsPOS();renderSaldoResumen();renderPendientes();
   document.getElementById('pos-cliente').value='';
 }
@@ -1381,10 +1460,28 @@ function renderEnvios(){
   const f=document.getElementById('fenv')?.value||'',data=f?envios.filter(e=>e.est===f):[...envios];
   const tb=document.getElementById('tabla-envios');if(!tb)return;
   if(!data.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--texto-dim)">Sin envíos</td></tr>';return;}
-  tb.innerHTML=data.map(e=>{const i=envios.indexOf(e);return`<tr><td>${e.fecha}</td><td>${e.cli}</td><td>${e.emp||'—'}</td><td class="hl">$${e.costo.toFixed(2)}</td><td><span class="badge ${e.est==='pendiente'?'bw':'bm'}">${e.est==='pendiente'?'Pendiente':'Pagado'}</span></td><td>${e.nota||'—'}</td><td><button class="db" onclick="delEnv(${i})">✕</button>${e.est==='pendiente'?` <button class="btns" style="font-size:10px;padding:2px 7px" onclick="marcarPag(${i})">✓</button>`:''}</td></tr>`;}).join('');
+  tb.innerHTML=data.map(e=>{const i=envios.indexOf(e);const autoTag=e.vid_venta?'<span class="badge bi" style="margin-right:4px">auto</span>':'';return`<tr><td>${e.fecha}</td><td>${autoTag}${e.cli}</td><td>${e.emp||'—'}</td><td class="hl">$${e.costo.toFixed(2)}</td><td><span class="badge ${e.est==='pendiente'?'bw':'bm'}">${e.est==='pendiente'?'Pendiente':'Pagado'}</span></td><td>${e.nota||'—'}</td><td style="display:flex;gap:4px;flex-wrap:wrap"><button class="edit-btn" onclick="editarEnvio(${i})">✏</button><button class="db" onclick="delEnv(${i})">✕</button>${e.est==='pendiente'?`<button class="btns" style="font-size:10px;padding:2px 5px" onclick="marcarPag(${i})">✓</button>`:''}</td></tr>`;}).join('');
 }
 async function delEnv(i){if(!confirm('Eliminar?'))return;envios.splice(i,1);await saveInv_db();renderEnvios();}
 async function marcarPag(i){envios[i].est='pagado';await saveInv_db();renderEnvios();}
+let editEnvioIdx=null;
+function editarEnvio(i){
+  editEnvioIdx=i;
+  const e=envios[i];
+  document.getElementById('menv-emp').value=e.emp||'';
+  document.getElementById('menv-est').value=e.est||'pendiente';
+  document.getElementById('menv-nota').value=e.nota||'';
+  document.getElementById('modal-envio').style.display='flex';
+}
+async function guardarEditEnvio(){
+  if(editEnvioIdx===null)return;
+  envios[editEnvioIdx].emp=document.getElementById('menv-emp').value.trim();
+  envios[editEnvioIdx].est=document.getElementById('menv-est').value;
+  envios[editEnvioIdx].nota=document.getElementById('menv-nota').value.trim();
+  document.getElementById('modal-envio').style.display='none';
+  await saveInv_db();renderEnvios();editEnvioIdx=null;
+}
+function cerrarModalEnvio(e){if(e.target.id==='modal-envio')document.getElementById('modal-envio').style.display='none';}
 
 // ─── INIT ────────────────────────────────────────────────────
 async function init(){
