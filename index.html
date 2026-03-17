@@ -1372,7 +1372,8 @@ function calcCpg(){
 
 async function cargarStockInicial(){
   const prod=getSelVal('si-prod'),unit=document.getElementById('si-unit').value,cant=parseFloat(document.getElementById('si-cant').value),precio=parseFloat(document.getElementById('si-precio').value)||0,am=document.getElementById('si-am').value,ro=document.getElementById('si-ro').value;
-  if(!prod||isNaN(cant)||cant<=0)return alert('Completa producto y cantidad');
+  if(!prod) return alert('Falta seleccionar el Producto');
+  if(isNaN(cant)||cant<=0) return alert('Falta la Cantidad que tienes hoy');
   const idx=stockInicial.findIndex(s=>s.prod===prod);
   const entry={prod,unit,cant,precio,fecha:getVEDate()};
   if(idx>=0)stockInicial[idx]=entry;else stockInicial.push(entry);
@@ -1385,7 +1386,11 @@ async function cargarStockInicial(){
 
 async function registrarCompra(){
   const prod=getSelVal('c-prod'),marca=document.getElementById('c-marca').value.trim(),unit=document.getElementById('c-unit').value,cant=parseFloat(document.getElementById('c-cant').value),precio=parseFloat(document.getElementById('c-precio').value),tienda=document.getElementById('c-tienda').value.trim(),fecha=document.getElementById('c-fecha').value,desc=document.getElementById('c-desc').checked,am=document.getElementById('c-am').value,ro=document.getElementById('c-ro').value;
-  if(!prod||isNaN(cant)||cant<=0||isNaN(precio)||!tienda||!fecha)return alert('Completa todos los campos');
+  if(!prod) return alert('Falta seleccionar el Producto');
+  if(isNaN(cant)||cant<=0) return alert('Falta la Cantidad');
+  if(isNaN(precio)||precio<=0) return alert('Falta el Precio total');
+  if(!tienda) return alert('Falta la Tienda');
+  if(!fecha) return alert('Falta la Fecha');
   const pg=cant>0?precio/cant:null;
   const compra={fecha,prod,marca,stockunit:unit,cont:cant,precio,pg,tienda};
   compras.unshift(compra);
@@ -1461,7 +1466,10 @@ function getSelVal(id){
 }
 async function addVidriera(){
   const prod=getSelVal('v-prod'),marca=document.getElementById('v-marca').value.trim(),unidad=document.getElementById('v-unidad').value,cont=parseFloat(document.getElementById('v-cont').value),precio=parseFloat(document.getElementById('v-precio').value),tienda=document.getElementById('v-tienda').value.trim(),fecha=document.getElementById('v-fecha').value;
-  if(!prod||isNaN(precio)||!tienda||!fecha)return alert('Completa: producto, precio, tienda y fecha');
+  if(!prod) return alert('Falta seleccionar el Producto');
+  if(isNaN(precio)||precio<=0) return alert('Falta el Precio');
+  if(!tienda) return alert('Falta la Tienda');
+  if(!fecha) return alert('Falta la Fecha');
   const pg=(!isNaN(cont)&&cont>0)?precio/cont:null;
   vidriera.unshift({fecha,prod,marca,unidad,cont,precio,pg,tienda});
   await saveInv_db();renderVidriera();
