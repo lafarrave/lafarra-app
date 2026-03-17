@@ -725,6 +725,15 @@ function makeSearchable(inputId, items, placeholder, onSelect){
   dropdown.appendChild(list);
   wrap.appendChild(display);
   wrap.appendChild(dropdown);
+  // Populate original select with all options so value assignment works
+  orig.innerHTML = '<option value="">Seleccionar...</option>';
+  items.forEach(item => {
+    const txt = typeof item === 'string' ? item : item.label;
+    const val = typeof item === 'string' ? item : item.value;
+    const o = document.createElement('option');
+    o.value = val; o.textContent = txt;
+    orig.appendChild(o);
+  });
   orig.style.display = 'none';
   orig.parentNode.insertBefore(wrap, orig);
   wrap.appendChild(orig);
