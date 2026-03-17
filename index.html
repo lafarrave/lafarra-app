@@ -1247,11 +1247,12 @@ async function saveConfig(){
 }
 
 function addEmp(){
-  const prod=document.getElementById('emp-prod').value,cant=parseFloat(document.getElementById('emp-cant').value),pgI=document.getElementById('emp-pg').value;
+  const prod=getSelVal('emp-prod'),cant=parseFloat(document.getElementById('emp-cant').value),pgI=document.getElementById('emp-pg').value;
   if(!prod||isNaN(cant)||cant<=0)return alert('Completa producto y cantidad');
   empaque.push({prod,cant,pg:pgI?parseFloat(pgI):null});
   saveConfig_db();renderEmp();
   document.getElementById('emp-cant').value='';document.getElementById('emp-pg').value='';
+  document.getElementById('emp-prod').value='';const el2=document.getElementById('emp-prod_lbl');if(el2)el2.textContent='Seleccionar...';
 }
 function renderEmp(){
   const el=document.getElementById('emp-lista'),tot=document.getElementById('emp-total');if(!el)return;
@@ -1370,7 +1371,7 @@ function calcCpg(){
 }
 
 async function cargarStockInicial(){
-  const prod=document.getElementById('si-prod').value,unit=document.getElementById('si-unit').value,cant=parseFloat(document.getElementById('si-cant').value),precio=parseFloat(document.getElementById('si-precio').value)||0,am=document.getElementById('si-am').value,ro=document.getElementById('si-ro').value;
+  const prod=getSelVal('si-prod'),unit=document.getElementById('si-unit').value,cant=parseFloat(document.getElementById('si-cant').value),precio=parseFloat(document.getElementById('si-precio').value)||0,am=document.getElementById('si-am').value,ro=document.getElementById('si-ro').value;
   if(!prod||isNaN(cant)||cant<=0)return alert('Completa producto y cantidad');
   const idx=stockInicial.findIndex(s=>s.prod===prod);
   const entry={prod,unit,cant,precio,fecha:getVEDate()};
@@ -1379,10 +1380,11 @@ async function cargarStockInicial(){
   await Promise.all([saveInv_db(),saveUmbrales_db()]);
   renderSI();renderInventario();
   ['si-cant','si-precio','si-am','si-ro'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('si-prod').value='';const sl=document.getElementById('si-prod_lbl');if(sl)sl.textContent='Seleccionar...';
 }
 
 async function registrarCompra(){
-  const prod=document.getElementById('c-prod').value,marca=document.getElementById('c-marca').value.trim(),unit=document.getElementById('c-unit').value,cant=parseFloat(document.getElementById('c-cant').value),precio=parseFloat(document.getElementById('c-precio').value),tienda=document.getElementById('c-tienda').value.trim(),fecha=document.getElementById('c-fecha').value,desc=document.getElementById('c-desc').checked,am=document.getElementById('c-am').value,ro=document.getElementById('c-ro').value;
+  const prod=getSelVal('c-prod'),marca=document.getElementById('c-marca').value.trim(),unit=document.getElementById('c-unit').value,cant=parseFloat(document.getElementById('c-cant').value),precio=parseFloat(document.getElementById('c-precio').value),tienda=document.getElementById('c-tienda').value.trim(),fecha=document.getElementById('c-fecha').value,desc=document.getElementById('c-desc').checked,am=document.getElementById('c-am').value,ro=document.getElementById('c-ro').value;
   if(!prod||isNaN(cant)||cant<=0||isNaN(precio)||!tienda||!fecha)return alert('Completa todos los campos');
   const pg=cant>0?precio/cant:null;
   const compra={fecha,prod,marca,stockunit:unit,cont:cant,precio,pg,tienda};
@@ -1393,6 +1395,7 @@ async function registrarCompra(){
   renderInventario();renderInvHist();
   ['c-marca','c-precio','c-cant','c-tienda','c-am','c-ro'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('c-pg').value='';
+  document.getElementById('c-prod').value='';const cl=document.getElementById('c-prod_lbl');if(cl)cl.textContent='Seleccionar...';
 }
 
 function calcConsumo(){
