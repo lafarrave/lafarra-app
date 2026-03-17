@@ -288,23 +288,42 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
 
     <!-- SALDO -->
     <div id="tab-saldo" class="section">
-      <div class="summary-grid">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
         <div class="sbox">
-          <div class="slbl">Cuenta de insumos</div>
+          <div class="slbl">🏦 Bancaribe (insumos)</div>
           <div class="sval-bs" id="s-bs">Bs. —</div>
           <div class="sval-usd" id="s-usd">$—</div>
+          <div style="margin-top:6px;font-size:11px;color:var(--texto-dim)" id="s-pendiente-transferir"></div>
         </div>
-        <div class="sbox green-box">
-          <div class="slbl">Ganancia por transferir</div>
-          <div class="sval-bs" id="g-bs">Bs. —</div>
-          <div class="sval-usd" id="g-usd">$—</div>
+        <div class="sbox" style="border-color:#1a3a5a;background:#0d1520">
+          <div class="slbl" style="color:#60a0d0">🏦 Provincial (personal)</div>
+          <div class="sval-bs" id="p-bs" style="color:#60a0d0">Bs. —</div>
+          <div class="sval-usd" id="p-usd" style="color:#4080b0">$—</div>
+          <div style="margin-top:6px;font-size:11px;color:var(--texto-dim)" id="p-pendiente-transferir"></div>
         </div>
       </div>
+      <div class="sbox green-box" style="margin-bottom:1rem">
+        <div class="slbl">Ganancia acumulada por transferir</div>
+        <div class="sval-bs" id="g-bs">Bs. —</div>
+        <div class="sval-usd" id="g-usd">$—</div>
+      </div>
       <div class="card">
-        <div class="card-title">Actualizar saldo de insumos</div>
-        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-          <div class="fg"><label>Nuevo saldo ($)</label><input type="number" id="nuevo-saldo" placeholder="80.00" style="width:140px"/></div>
-          <button class="btn" onclick="actualizarSaldo()">Actualizar</button>
+        <div class="card-title">Actualizar saldos manualmente</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:5px">🏦 Bancaribe (insumos)</div>
+            <div style="display:flex;gap:6px;align-items:flex-end">
+              <div class="fg" style="flex:1"><label>Nuevo saldo ($)</label><input type="number" id="nuevo-saldo" placeholder="80.00"/></div>
+              <button class="btn" onclick="actualizarSaldo('bancaribe')">OK</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#60a0d0;font-weight:600;text-transform:uppercase;margin-bottom:5px">🏦 Provincial (personal)</div>
+            <div style="display:flex;gap:6px;align-items:flex-end">
+              <div class="fg" style="flex:1"><label>Nuevo saldo ($)</label><input type="number" id="nuevo-saldo-provincial" placeholder="0.00"/></div>
+              <button class="btn" style="background:#1565C0" onclick="actualizarSaldo('provincial')">OK</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -542,6 +561,13 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
               <div style="font-size:17px;color:var(--texto);margin-top:1px" id="cart-bs">—</div>
             </div>
             <hr class="divider"/>
+            <div style="background:var(--gris-mid);border-radius:6px;padding:6px 8px;margin-bottom:.4rem;font-size:12px">
+              <div style="color:var(--texto-dim);margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:.3px">Banco receptor</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+                <button id="banco-bancaribe-btn" onclick="setBanco('bancaribe')" style="padding:6px;border-radius:5px;border:2px solid var(--naranja);background:rgba(232,98,26,.15);color:var(--naranja);font-size:11px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">🏦 Bancaribe</button>
+                <button id="banco-provincial-btn" onclick="setBanco('provincial')" style="padding:6px;border-radius:5px;border:1px solid var(--gris-light);background:var(--gris-dark);color:var(--texto-dim);font-size:11px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">🏦 Provincial</button>
+              </div>
+            </div>
             <button class="btn" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('cobrado')">Confirmar cobrado</button>
             <button class="btns" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('pendiente')">Guardar pendiente</button>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:.4rem">
@@ -1233,16 +1259,39 @@ async function delPVP(i){if(!confirm('Eliminar?'))return;pvProds.splice(i,1);awa
 // ─── SALDO ───────────────────────────────────────────────────
 function renderSaldoResumen(){
   const gp=getGanPend();
+  // Bancaribe
   document.getElementById('s-bs').textContent=fBs(saldo);
   document.getElementById('s-usd').textContent=fUSD(saldo);
+  // Calculate pending transfer TO provincial from bancaribe ventas
+  const pendTransferirAProvincial=movs.filter(m=>m.banco==='bancaribe'&&m.esIngreso&&m.ganancia>0).reduce((a,m)=>a+m.ganancia,0)-ganT;
+  const spt=document.getElementById('s-pendiente-transferir');
+  if(spt&&pendTransferirAProvincial>0) spt.textContent='→ transferir a Provincial: '+fUSD(Math.max(0,pendTransferirAProvincial));
+  else if(spt) spt.textContent='';
+  // Provincial
+  document.getElementById('p-bs').textContent=fBs(saldoProvincial);
+  document.getElementById('p-usd').textContent=fUSD(saldoProvincial);
+  // Calculate pending transfer TO bancaribe from provincial ventas
+  const costosPendientes=movs.filter(m=>m.banco==='provincial'&&m.esIngreso&&m.costoATransferir>0).reduce((a,m)=>a+m.costoATransferir,0);
+  const ppt=document.getElementById('p-pendiente-transferir');
+  if(ppt&&costosPendientes>0) ppt.textContent='→ transferir a Bancaribe: '+fUSD(costosPendientes);
+  else if(ppt) ppt.textContent='';
+  // Ganancia
   document.getElementById('g-bs').textContent=fBs(gp);
   document.getElementById('g-usd').textContent=fUSD(gp);
   const gi=document.getElementById('gan-inline');if(gi)gi.textContent=fBs(gp)+' ('+fUSD(gp)+')';
 }
-async function actualizarSaldo(){
-  const v=parseFloat(document.getElementById('nuevo-saldo').value);if(isNaN(v))return alert('Monto inválido');
-  saldo=v;movs.unshift({fecha:getVEDate(),desc:'Saldo actualizado',tipo:'ajuste',monto:0,sd:saldo,tasa});
-  await saveSaldo_db();renderSaldoResumen();renderMovs();document.getElementById('nuevo-saldo').value='';
+async function actualizarSaldo(banco='bancaribe'){
+  if(banco==='bancaribe'){
+    const v=parseFloat(document.getElementById('nuevo-saldo').value);if(isNaN(v))return alert('Monto inválido');
+    saldo=v;movs.unshift({fecha:getVEDate(),desc:'Saldo Bancaribe actualizado',tipo:'ajuste',monto:0,sd:saldo,tasa});
+    await saveSaldo_db();document.getElementById('nuevo-saldo').value='';
+  } else {
+    const v=parseFloat(document.getElementById('nuevo-saldo-provincial').value);if(isNaN(v))return alert('Monto inválido');
+    saldoProvincial=v;localStorage.setItem('lf_saldo_provincial',saldoProvincial);
+    movs.unshift({fecha:getVEDate(),desc:'Saldo Provincial actualizado',tipo:'ajuste',monto:0,sd:saldo,tasa});
+    await saveSaldo_db();document.getElementById('nuevo-saldo-provincial').value='';
+  }
+  renderSaldoResumen();renderMovs();
 }
 async function registrarGasto(){
   const desc=document.getElementById('gasto-desc').value.trim(),monto=parseFloat(document.getElementById('gasto-monto').value),tipo=document.getElementById('gasto-tipo').value,fecha=document.getElementById('gasto-fecha').value;
@@ -1262,10 +1311,12 @@ async function registrarTransferencia(){
 }
 function renderMovs(){
   const tb=document.getElementById('tabla-movs');if(!tb)return;
-  if(!movs.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--texto-dim)">Sin movimientos</td></tr>';return;}
-  const tipos={compra:'Compra',inversion:'Inversión',otro:'Otro',ajuste:'Ajuste',transferencia:'Transferir'};
-  const cls={compra:'bi',inversion:'bp',otro:'bi',ajuste:'bm',transferencia:'bm'};
-  tb.innerHTML=movs.map((m,i)=>{const t=m.tasa||tasa||0;const mBs=t>0&&m.monto>0?'Bs.'+Math.round(m.monto*t).toLocaleString('es-VE'):'—';
+  // Only show confirmed movs — exclude pending venta rows (they shouldn't be here but just in case)
+  const filteredMovs=movs.filter(m=>m.tipo!=='venta_pendiente');
+  if(!filteredMovs.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--texto-dim)">Sin movimientos</td></tr>';return;}
+  const tipos={compra:'Compra',inversion:'Inversión',otro:'Otro',ajuste:'Ajuste',transferencia:'Transferir',venta:'Venta cobrada'};
+  const cls={compra:'bi',inversion:'bp',otro:'bi',ajuste:'bm',transferencia:'bm',venta:'bm'};
+  tb.innerHTML=filteredMovs.map((m,i)=>{const t=m.tasa||tasa||0;const mBs=t>0&&m.monto>0?'Bs.'+Math.round(m.monto*t).toLocaleString('es-VE'):'—';
     return`<tr><td>${m.fecha}</td><td>${m.desc}</td><td><span class="badge ${cls[m.tipo]||'bi'}">${tipos[m.tipo]||m.tipo}</span></td><td class="${m.tipo==='transferencia'||m.esIngreso?'green':m.monto>0?'red':''}">${m.esIngreso?'+':m.monto>0?(m.tipo==='transferencia'?'→ -':'-'):''}}$${m.monto.toFixed(2)}</td><td style="color:var(--texto-dim)">${mBs}</td><td>$${m.sd.toFixed(2)}</td><td><button class="db" onclick="delMov(${i})">✕</button></td></tr>`;
   }).join('');
 }
@@ -1382,13 +1433,22 @@ async function guardarUmbrales(){if(!modalProd)return;const am=document.getEleme
 
 // ─── VIDRIERA ────────────────────────────────────────────────
 function calcVpg(){const p=parseFloat(document.getElementById('v-precio').value),c=parseFloat(document.getElementById('v-cont').value);document.getElementById('v-pg').value=(!isNaN(p)&&!isNaN(c)&&c>0)?'$'+(p/c).toFixed(4):'—';}
+function getSelVal(id){
+  // Works for both normal selects and searchable selects
+  const el=document.getElementById(id);
+  return el?el.value:'';
+}
 async function addVidriera(){
-  const prod=document.getElementById('v-prod').value,marca=document.getElementById('v-marca').value.trim(),unidad=document.getElementById('v-unidad').value,cont=parseFloat(document.getElementById('v-cont').value),precio=parseFloat(document.getElementById('v-precio').value),tienda=document.getElementById('v-tienda').value.trim(),fecha=document.getElementById('v-fecha').value;
+  const prod=getSelVal('v-prod'),marca=document.getElementById('v-marca').value.trim(),unidad=document.getElementById('v-unidad').value,cont=parseFloat(document.getElementById('v-cont').value),precio=parseFloat(document.getElementById('v-precio').value),tienda=document.getElementById('v-tienda').value.trim(),fecha=document.getElementById('v-fecha').value;
   if(!prod||isNaN(precio)||!tienda||!fecha)return alert('Completa: producto, precio, tienda y fecha');
   const pg=(!isNaN(cont)&&cont>0)?precio/cont:null;
   vidriera.unshift({fecha,prod,marca,unidad,cont,precio,pg,tienda});
   await saveInv_db();renderVidriera();
-  ['v-marca','v-precio','v-cont','v-tienda'].forEach(id=>document.getElementById(id).value='');document.getElementById('v-pg').value='';
+  // Reset searchable select label
+  const lbl=document.getElementById('v-prod_lbl');if(lbl)lbl.textContent='Seleccionar...';
+  document.getElementById('v-prod').value='';
+  ['v-marca','v-precio','v-cont','v-tienda'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('v-pg').value='';
 }
 function renderVidriera(){
   const fp=document.getElementById('fv-p')?.value||'',sv=document.getElementById('sv')?.value||'fecha-desc';
@@ -1607,6 +1667,24 @@ function setDelivery(){
   renderCart();
 }
 function limpiarCarrito(){carrito=[];deliveryMonto=0;descuentoPct=0;const row=document.getElementById('cart-delivery-row');if(row)row.style.display='none';const drow=document.getElementById('cart-descuento-row');if(drow)drow.style.display='none';const inp=document.getElementById('delivery-monto');if(inp)inp.value='';const dinp=document.getElementById('descuento-pct');if(dinp)dinp.value='';renderCart();}
+
+// ─── BANCO SELECTOR ──────────────────────────────────────────
+let bancoActual = 'bancaribe'; // default
+let saldoProvincial = parseFloat(localStorage.getItem('lf_saldo_provincial')||'0');
+
+function setBanco(banco){
+  bancoActual = banco;
+  const bc = document.getElementById('banco-bancaribe-btn');
+  const bp = document.getElementById('banco-provincial-btn');
+  if(banco==='bancaribe'){
+    if(bc){bc.style.borderColor='var(--naranja)';bc.style.background='rgba(232,98,26,.15)';bc.style.color='var(--naranja)';}
+    if(bp){bp.style.borderColor='var(--gris-light)';bp.style.background='var(--gris-dark)';bp.style.color='var(--texto-dim)';}
+  } else {
+    if(bc){bc.style.borderColor='var(--gris-light)';bc.style.background='var(--gris-dark)';bc.style.color='var(--texto-dim)';}
+    if(bp){bp.style.borderColor='#2196F3';bp.style.background='rgba(33,150,243,.15)';bp.style.color='#60a0d0';}
+  }
+}
+
 async function confirmarVenta(estado='cobrado'){
   if(!carrito.length)return alert('Carrito vacío');
   const cliente=document.getElementById('pos-cliente').value.trim()||'Sin nombre',fecha=document.getElementById('pos-fecha').value;
@@ -1624,8 +1702,17 @@ async function confirmarVenta(estado='cobrado'){
   ventas.unshift(venta);
   await addVenta_db(venta);
   if(estado==='cobrado'){
-    saldo+=totalFinal;
-    movs.unshift({fecha:fechaVenta,desc:'Venta cobrada — '+cliente,tipo:'venta',monto:totalFinal,sd:saldo,tasa,esIngreso:true});
+    const gan=totalFinal-costo;
+    if(bancoActual==='bancaribe'){
+      // Bancaribe: full amount goes to insumos account
+      saldo+=totalFinal;
+      movs.unshift({fecha:fechaVenta,desc:'Venta — '+cliente,tipo:'venta',monto:totalFinal,sd:saldo,tasa,esIngreso:true,banco:'bancaribe',ganancia:gan});
+    } else {
+      // Provincial: full amount to personal account, need to transfer costo to bancaribe
+      saldoProvincial+=totalFinal;
+      localStorage.setItem('lf_saldo_provincial', saldoProvincial);
+      movs.unshift({fecha:fechaVenta,desc:'Venta — '+cliente+' (Provincial)',tipo:'venta',monto:totalFinal,sd:saldo,tasa,esIngreso:true,banco:'provincial',ganancia:gan,costoATransferir:costo});
+    }
     await saveSaldo_db();
   }
   // Auto-crear envío si hay delivery
