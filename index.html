@@ -398,7 +398,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           </div>
           <p class="nota">* Estimado: compras + stock inicial − consumo por ventas. Verifica físicamente.</p>
           <div class="tw" style="margin-top:.6rem"><table>
-            <thead><tr><th>Estado</th><th>Producto</th><th>Stock est.</th><th>Unidad</th><th>🟡</th><th>🔴</th><th></th></tr></thead>
+            <thead><tr><th>Estado</th><th>Producto</th><th>Stock est.</th><th>Unidad</th><th>$/unidad</th><th>🟡</th><th>🔴</th><th></th></tr></thead>
             <tbody id="tabla-inv"></tbody>
           </table></div>
         </div>
@@ -719,7 +719,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div class="modal-title" id="modal-nom">Editar producto</div>
     <div style="background:var(--gris-mid);border-radius:6px;padding:.6rem .8rem;margin-bottom:.8rem">
       <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Ajuste manual de stock</div>
-      <div class="fgrid" style="margin-bottom:0">
+      <div class="fgrid" style="margin-bottom:.5rem">
         <div class="fg"><label>Stock actual (ajuste manual)</label><input type="number" id="modal-stock" placeholder="dejar vacío = sin cambio"/></div>
         <div class="fg"><label>Unidad</label>
           <select id="modal-unit">
@@ -730,7 +730,21 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           </select>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--texto-dim);margin-top:4px">⚠ Esto sobreescribe el stock calculado. Úsalo para correcciones manuales.</div>
+      <div style="font-size:11px;color:var(--texto-dim);margin-bottom:4px">⚠ Esto sobreescribe el stock calculado. Úsalo para correcciones manuales.</div>
+    </div>
+    <div style="background:var(--gris-mid);border-radius:6px;padding:.6rem .8rem;margin-bottom:.8rem">
+      <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Costo por unidad</div>
+      <div class="fgrid" style="margin-bottom:0">
+        <div class="fg">
+          <label>Precio/unidad actual</label>
+          <input type="text" id="modal-pg-actual" readonly style="background:var(--gris-light);color:var(--texto-dim);font-size:12px"/>
+        </div>
+        <div class="fg">
+          <label>Nuevo precio/unidad ($)</label>
+          <input type="number" id="modal-pg-nuevo" placeholder="dejar vacío = sin cambio" step="0.0001"/>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--texto-dim);margin-top:4px">Afecta el costo de preparados y menú que usen este ingrediente.</div>
     </div>
     <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Alertas del semáforo</div>
     <div class="fgrid">
@@ -1698,6 +1712,12 @@ function abrirModal(prod){
   document.getElementById('modal-stock').placeholder='actual: '+(stock[prod]!=null?(stock[prod]%1===0?stock[prod]:stock[prod].toFixed(1)):'—');
   const unitSel=document.getElementById('modal-unit');
   if(unitSel) unitSel.value=unidades[prod]||u.unit||'g';
+  // Show current price/unit
+  const pgActual=getPG(prod);
+  const pgEl=document.getElementById('modal-pg-actual');
+  if(pgEl) pgEl.value=pgActual?'$'+pgActual.toFixed(6)+' / '+(unidades[prod]||'g'):'Sin precio registrado';
+  const pgNuevo=document.getElementById('modal-pg-nuevo');
+  if(pgNuevo) pgNuevo.value='';
   document.getElementById('modal-umbral').style.display='flex';
 }
 function cerrarModal(e){if(e.target.id==='modal-umbral')document.getElementById('modal-umbral').style.display='none';}
@@ -1747,6 +1767,30 @@ async function guardarUmbrales(){
     await saveInv_db();
   }
 
+  // Save new price/unit if provided — inject as a fake compra with new pg
+  const pgNuevoVal=document.getElementById('modal-pg-nuevo').value;
+  if(pgNuevoVal!==''){
+    const pgNuevo=parseFloat(pgNuevoVal);
+    if(!isNaN(pgNuevo)&&pgNuevo>0){
+      // Add a correction entry at the top of compras so getPG picks it up (most recent first)
+      const corrEntry={
+        fecha:getVEDate(),
+        prod:modalProd,
+        marca:'Corrección manual',
+        stockunit:unit,
+        cont:1,
+        precio:pgNuevo,
+        pg:pgNuevo,
+        tienda:'Ajuste manual',
+        esCorreccion:true
+      };
+      // Remove previous correction entries for this product
+      compras=compras.filter(co=>!(co.prod===modalProd&&co.esCorreccion));
+      // Add new one at beginning so it's picked up as most recent
+      compras.unshift(corrEntry);
+      await addCompra_db(corrEntry);
+    }
+  }
   await saveUmbrales_db();
   renderInventario();renderSI();
   document.getElementById('modal-umbral').style.display='none';
