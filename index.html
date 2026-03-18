@@ -284,6 +284,22 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         </div>
         <button class="btn" onclick="addPVP()">Agregar producto</button>
       </div>
+      <div class="card">
+        <div class="card-title">💡 Gastos operativos mensuales</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.7rem">Gas, internet, empaques extras, etc. Se muestran en Estadísticas como referencia para tu punto de equilibrio.</div>
+        <div id="gastos-op-lista"></div>
+        <div class="fgrid" style="margin-top:.5rem">
+          <div class="fg"><label>Descripción</label><input type="text" id="gop-desc" placeholder="ej: Bombona de gas"/></div>
+          <div class="fg"><label>Monto mensual estimado ($)</label><input type="number" id="gop-monto" placeholder="ej: 3.50"/></div>
+          <div class="fg"><label>¿Incluir en costo burger?</label>
+            <select id="gop-incluir">
+              <option value="no">No (solo referencia)</option>
+              <option value="si">Sí (dividir entre burgers del mes)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" onclick="addGastoOp()">Agregar gasto</button>
+      </div>
     </div>
 
     <!-- SALDO -->
@@ -606,7 +622,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
         <select class="inline" id="stats-mes" onchange="renderStats()"><option value="">Todos los meses</option></select>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
         <div class="card">
           <div class="card-title">🏆 Productos vendidos</div>
           <div id="stats-productos"></div>
@@ -615,6 +631,10 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <div class="card-title">⭐ Clientes frecuentes</div>
           <div id="stats-clientes"></div>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-title">💡 Punto de equilibrio</div>
+        <div id="stats-equilibrio"></div>
       </div>
     </div>
     <!-- ENVÍOS -->
@@ -955,6 +975,86 @@ function renderStats(){
   }
 }
 
+
+// ─── GASTOS OPERATIVOS ────────────────────────────────────────
+let gastosOp = JSON.parse(localStorage.getItem('lf_gastos_op')||'[]');
+
+function saveGastosOp(){ localStorage.setItem('lf_gastos_op', JSON.stringify(gastosOp)); }
+
+function addGastoOp(){
+  const desc = document.getElementById('gop-desc').value.trim();
+  const monto = parseFloat(document.getElementById('gop-monto').value);
+  const incluir = document.getElementById('gop-incluir').value;
+  if(!desc||isNaN(monto)||monto<=0) return alert('Completa descripción y monto');
+  gastosOp.push({desc, monto, incluir});
+  saveGastosOp();
+  renderGastosOp();
+  document.getElementById('gop-desc').value='';
+  document.getElementById('gop-monto').value='';
+}
+
+function renderGastosOp(){
+  const el = document.getElementById('gastos-op-lista');
+  if(!el) return;
+  if(!gastosOp.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin gastos operativos registrados.</div>';
+    return;
+  }
+  const total = gastosOp.reduce((a,g)=>a+g.monto,0);
+  el.innerHTML = gastosOp.map((g,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px">
+      <span style="flex:1">${g.desc}</span>
+      <span class="hl">$${g.monto.toFixed(2)}/mes</span>
+      <span class="badge ${g.incluir==='si'?'bm':'bi'}">${g.incluir==='si'?'en costo':'referencia'}</span>
+      <button class="db" onclick="delGastoOp(${i})">✕</button>
+    </div>`).join('')
+    +`<div style="font-size:12px;border-top:1px solid var(--gris-mid);padding-top:5px;margin-top:5px;display:flex;justify-content:space-between">
+      <span style="color:var(--texto-dim)">Total gastos operativos/mes</span>
+      <strong class="hl">$${total.toFixed(2)}</strong>
+    </div>`;
+}
+
+function delGastoOp(i){
+  if(!confirm('Eliminar?'))return;
+  gastosOp.splice(i,1);
+  saveGastosOp();
+  renderGastosOp();
+}
+
+function getTotalGastosOp(){ return gastosOp.reduce((a,g)=>a+g.monto,0);   // Punto de equilibrio
+  const eqEl = document.getElementById('stats-equilibrio');
+  if(eqEl){
+    const totalGastosOp = getTotalGastosOp();
+    const ventasMes = data.reduce((a,v)=>a+v.total,0);
+    const ganMes = data.reduce((a,v)=>a+(v.gan||0),0);
+    const label = mes ? mes : 'período seleccionado';
+    if(!totalGastosOp){
+      eqEl.innerHTML=`<div style="font-size:12px;color:var(--texto-dim)">Agrega gastos operativos en ⚙ Config para ver tu punto de equilibrio.</div>`;
+    } else {
+      const cubierto = ganMes >= totalGastosOp;
+      const pct = totalGastosOp > 0 ? Math.min(100, (ganMes/totalGastosOp)*100) : 0;
+      const color = cubierto ? 'var(--verde)' : ganMes > totalGastosOp*0.7 ? 'var(--amarillo)' : 'var(--rojo)';
+      eqEl.innerHTML=`
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1rem">
+          <div class="metric"><div class="ml">Gastos op./mes</div><div class="mv hl">$${totalGastosOp.toFixed(2)}</div></div>
+          <div class="metric"><div class="ml">Ganancia ${label}</div><div class="mv" style="color:${color}">$${ganMes.toFixed(2)}</div></div>
+          <div class="metric"><div class="ml">Ventas ${label}</div><div class="mv">$${ventasMes.toFixed(2)}</div></div>
+          <div class="metric ${cubierto?'green-m':'accent'}"><div class="ml">Estado</div><div class="mv" style="font-size:14px;color:${color}">${cubierto?'✓ Cubierto':'⚠ Faltan $'+(totalGastosOp-ganMes).toFixed(2)}</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:4px">Gastos cubiertos por ganancia</div>
+        <div style="height:8px;background:var(--gris-mid);border-radius:4px;overflow:hidden;margin-bottom:8px">
+          <div style="height:100%;width:${pct.toFixed(0)}%;background:${color};border-radius:4px;transition:width .4s"></div>
+        </div>
+        <div style="font-size:12px;color:var(--texto-dim)">
+          ${cubierto 
+            ? `Tu ganancia cubre todos los gastos operativos. Sobrante: <strong style="color:var(--verde)">$${(ganMes-totalGastosOp).toFixed(2)}</strong>`
+            : `Necesitas <strong style="color:var(--rojo)">$${(totalGastosOp-ganMes).toFixed(2)}</strong> más de ganancia para cubrir todos los gastos operativos.`
+          }
+        </div>`;
+    }
+  }
+}
+
 // ─── SUPABASE ───────────────────────────────────────────────
 const SUPA_URL = 'https://ljgjpmlvjnqfpstltjmy.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqZ2pwbWx2am5xZnBzdGx0am15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTM5NDYsImV4cCI6MjA4OTA2OTk0Nn0.rGaBuq2DxLi_uhYh8ynpItGxO249Ng7PyK9S_XQ07Oc';
@@ -1029,7 +1129,39 @@ async function syncOfflineQueue(){
 window.addEventListener('online', () => { syncOfflineQueue(); });
 window.addEventListener('offline', () => { setSyncStatus('error'); document.getElementById('bcv-dot').style.background='var(--rojo)'; });
 
-function isOnline(){ return navigator.onLine; }
+function isOnline(){ return navigator.onLine;   // Punto de equilibrio
+  const eqEl = document.getElementById('stats-equilibrio');
+  if(eqEl){
+    const totalGastosOp = getTotalGastosOp();
+    const ventasMes = data.reduce((a,v)=>a+v.total,0);
+    const ganMes = data.reduce((a,v)=>a+(v.gan||0),0);
+    const label = mes ? mes : 'período seleccionado';
+    if(!totalGastosOp){
+      eqEl.innerHTML=`<div style="font-size:12px;color:var(--texto-dim)">Agrega gastos operativos en ⚙ Config para ver tu punto de equilibrio.</div>`;
+    } else {
+      const cubierto = ganMes >= totalGastosOp;
+      const pct = totalGastosOp > 0 ? Math.min(100, (ganMes/totalGastosOp)*100) : 0;
+      const color = cubierto ? 'var(--verde)' : ganMes > totalGastosOp*0.7 ? 'var(--amarillo)' : 'var(--rojo)';
+      eqEl.innerHTML=`
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1rem">
+          <div class="metric"><div class="ml">Gastos op./mes</div><div class="mv hl">$${totalGastosOp.toFixed(2)}</div></div>
+          <div class="metric"><div class="ml">Ganancia ${label}</div><div class="mv" style="color:${color}">$${ganMes.toFixed(2)}</div></div>
+          <div class="metric"><div class="ml">Ventas ${label}</div><div class="mv">$${ventasMes.toFixed(2)}</div></div>
+          <div class="metric ${cubierto?'green-m':'accent'}"><div class="ml">Estado</div><div class="mv" style="font-size:14px;color:${color}">${cubierto?'✓ Cubierto':'⚠ Faltan $'+(totalGastosOp-ganMes).toFixed(2)}</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:4px">Gastos cubiertos por ganancia</div>
+        <div style="height:8px;background:var(--gris-mid);border-radius:4px;overflow:hidden;margin-bottom:8px">
+          <div style="height:100%;width:${pct.toFixed(0)}%;background:${color};border-radius:4px;transition:width .4s"></div>
+        </div>
+        <div style="font-size:12px;color:var(--texto-dim)">
+          ${cubierto 
+            ? `Tu ganancia cubre todos los gastos operativos. Sobrante: <strong style="color:var(--verde)">$${(ganMes-totalGastosOp).toFixed(2)}</strong>`
+            : `Necesitas <strong style="color:var(--rojo)">$${(totalGastosOp-ganMes).toFixed(2)}</strong> más de ganancia para cubrir todos los gastos operativos.`
+          }
+        </div>`;
+    }
+  }
+}
 
 // ─── SUPABASE LOAD ──────────────────────────────────────────
 async function loadAll(){
@@ -1207,7 +1339,7 @@ function showTab(n,el){
   el.classList.add('active');
   if(n==='preparados')renderPreps();
   if(n==='menu')renderMenuItems();
-  if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();}
+  if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();}
   if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();renderPendientes();}
   if(n==='envios')renderEnvios();
   if(n==='stats')renderStats();
@@ -1719,7 +1851,7 @@ function renderMenuItems(){
   cont.innerHTML=menuItems.map((item,mi)=>{
     const pv=item.pv||0;const cB=calcCM(item),cP=getCPapas(cfg.gp),cE=getCE(),cT=cB+cP+cE;const ganPct=pv>0?((pv-cT)/pv*100):0;const ganColor=ganPct>=40?"var(--verde)":ganPct>=25?"var(--amarillo)":"var(--rojo)";
     const rows=item.comps.map((c,ci)=>{let pg=0,sub=0;if(c.tipo==='ing'){pg=c.pg||getPG(c.nom)||0;sub=c.cant*pg;}else{const p=preps.find(x=>x.nom===c.nom);if(p){pg=getCPGP(p);sub=c.cant*pg;}}return`<div style="display:grid;grid-template-columns:2fr 90px 1fr 1fr 22px;gap:5px;align-items:center;margin-bottom:5px;font-size:12px"><span><span class="tag ${c.tipo==='prep'?'tp':'ti'}">${c.tipo}</span>${c.nom}</span><div style="display:flex;align-items:center;gap:3px"><input type="number" value="${c.cant}" min="1" style="width:58px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 5px;font-size:12px;text-align:right" onchange="editCompGramos(${mi},${ci},this.value)" onclick="event.stopPropagation()"/>g</div><span style="color:var(--texto-dim)">$${pg.toFixed(4)}/g</span><span class="hl">$${sub.toFixed(4)}</span><button class="db" onclick="event.stopPropagation();delComp(${mi},${ci})">✕</button></div>`;}).join('');
-    return`<div class="xcard"><div class="xhead" onclick="tog('mb${item.id}')"><span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${item.nom}</span><div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center"><span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span><span style="color:${ganColor};font-weight:600">Ganancia: ${ganPct.toFixed(1)}%</span><span>Venta: <strong class="green">$${pv.toFixed(2)}</strong></span><button class="db" onclick="event.stopPropagation();delMenu(${mi})">✕</button></div></div>
+    return`<div class="xcard"><div class="xhead" onclick="tog('mb${item.id}')"><span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${item.nom}</span><div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center"><span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span><span style="color:${ganColor};font-weight:600">Ganancia: ${ganPct.toFixed(1)}% <span style="opacity:.8">($${(pv-cT).toFixed(2)})</span></span><span>Venta: <strong class="green">$${pv.toFixed(2)}</strong></span><button class="db" onclick="event.stopPropagation();delMenu(${mi})">✕</button></div></div>
     <div class="xbody" id="mb${item.id}">${rows||'<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin componentes.</div>'}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:5px;background:var(--gris-mid);border-radius:6px;padding:.55rem .75rem;margin:.4rem 0;font-size:12px">
         <div style="display:flex;justify-content:space-between"><span style="color:var(--texto-dim)">Burger</span><span class="hl">$${cB.toFixed(4)}</span></div>
@@ -1729,7 +1861,7 @@ function renderMenuItems(){
       </div>
       <div style="font-size:12px;padding-top:.4rem;border-top:1px solid var(--gris-mid)">
         <div style="display:flex;justify-content:space-between;font-weight:600"><span>Costo total</span><span class="hl">$${cT.toFixed(4)}</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:600">Precio de venta</span><div style="display:flex;gap:6px;align-items:center"><input type="number" value="${pv.toFixed(2)}" onchange="actualizarPV(${mi},this.value)" style="width:80px;background:var(--gris-mid);border:1px solid var(--naranja);color:var(--texto);border-radius:4px;padding:4px 7px;font-size:12px;text-align:right" /><span style="font-size:11px;color:${ganColor};font-weight:600">${ganPct.toFixed(1)}% ganancia</span></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:600">Precio de venta</span><div style="display:flex;gap:6px;align-items:center"><input type="number" value="${pv.toFixed(2)}" onchange="actualizarPV(${mi},this.value)" style="width:80px;background:var(--gris-mid);border:1px solid var(--naranja);color:var(--texto);border-radius:4px;padding:4px 7px;font-size:12px;text-align:right" /><span style="font-size:11px;color:${ganColor};font-weight:600">${ganPct.toFixed(1)}% = $${(pv-cT).toFixed(2)}</span></div></div>
 
       </div>
       <div style="border-top:1px solid var(--gris-mid);margin:.5rem 0;padding-top:.5rem">
@@ -2033,6 +2165,7 @@ async function init(){
   renderEmp();
   renderPVPLista();
   renderProdsExtra();
+  renderGastosOp();
   renderPendientes();
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
