@@ -488,11 +488,19 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div id="tab-preparados" class="section">
       <div class="card">
         <div class="card-title">Crear preparado</div>
-        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-          <div class="fg"><label>Nombre</label><input type="text" id="prep-nom" style="width:185px"/></div>
-          <div class="fg"><label>Gramos obtenidos (tras merma)</label><input type="number" id="prep-g" style="width:145px"/></div>
-          <button class="btn" onclick="crearPrep()">Crear</button>
+        <div class="fgrid">
+          <div class="fg"><label>Nombre</label><input type="text" id="prep-nom"/></div>
+          <div class="fg"><label>Gramos obtenidos (tras merma)</label><input type="number" id="prep-g" placeholder="ej: 630"/></div>
+          <div class="fg">
+            <label>Factor absorción aceite (opcional)</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="number" id="prep-aceite" placeholder="ej: 0.15" step="0.01" min="0" max="1" style="flex:1"/>
+              <span style="font-size:11px;color:var(--texto-dim);white-space:nowrap">× gr × $/g</span>
+            </div>
+            <div style="font-size:10px;color:var(--texto-dim);margin-top:2px">Papas: usa 0.10–0.15 (10–15%)</div>
+          </div>
         </div>
+        <button class="btn" onclick="crearPrep()">Crear</button>
       </div>
       <div id="lista-preps"></div>
     </div>
@@ -688,7 +696,23 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
 </div>
 <div id="modal-umbral" style="display:none" class="modal-bg" onclick="cerrarModal(event)">
   <div class="modal">
-    <div class="modal-title" id="modal-nom">Editar umbrales</div>
+    <div class="modal-title" id="modal-nom">Editar producto</div>
+    <div style="background:var(--gris-mid);border-radius:6px;padding:.6rem .8rem;margin-bottom:.8rem">
+      <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Ajuste manual de stock</div>
+      <div class="fgrid" style="margin-bottom:0">
+        <div class="fg"><label>Stock actual (ajuste manual)</label><input type="number" id="modal-stock" placeholder="dejar vacío = sin cambio"/></div>
+        <div class="fg"><label>Unidad</label>
+          <select id="modal-unit">
+            <option value="g">Gramos (g)</option>
+            <option value="ud">Unidades (ud)</option>
+            <option value="kg">Kilogramos (kg)</option>
+            <option value="ml">Mililitros (ml)</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--texto-dim);margin-top:4px">⚠ Esto sobreescribe el stock calculado. Úsalo para correcciones manuales.</div>
+    </div>
+    <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Alertas del semáforo</div>
     <div class="fgrid">
       <div class="fg"><label>🟡 Alerta amarilla</label><input type="number" id="modal-am"/></div>
       <div class="fg"><label>🔴 Alerta roja</label><input type="number" id="modal-ro"/></div>
@@ -1157,7 +1181,16 @@ function fUSD(u){return'$'+u.toFixed(2);}
 
 // ─── HELPERS ─────────────────────────────────────────────────
 function getPG(p){const m=compras.filter(c=>c.prod===p&&c.pg);return m.length?m[0].pg:null;}
-function getCPGP(prep){const c=prep.ings.reduce((a,i)=>a+(i.cant*(i.pg||getPG(i.prod)||0)),0);return prep.g>0?c/prep.g:0;}
+function getCPGP(prep){
+  const costoIngs=prep.ings.reduce((a,i)=>a+(i.cant*(i.pg||getPG(i.prod)||0)),0);
+  // Add oil absorption cost if factor defined
+  let costoAceite=0;
+  if(prep.factorAceite&&prep.factorAceite>0){
+    const pgAceite=getPG('Aceite')||0;
+    costoAceite=prep.g*prep.factorAceite*pgAceite;
+  }
+  return prep.g>0?(costoIngs+costoAceite)/prep.g:0;
+}
 function getCE(){return empaque.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)),0);}
 function getCPapas(g){if(!cfg.papas)return 0;const p=preps.find(x=>x.nom===cfg.papas);return p?g*getCPGP(p):0;}
 
@@ -1462,9 +1495,51 @@ function renderInvHist(){
 async function delSIprod(prod){if(!confirm('Eliminar stock inicial de '+prod+'?'))return;const i=stockInicial.findIndex(s=>s.prod===prod);if(i>=0){stockInicial.splice(i,1);await saveInv_db();renderSI();renderInventario();renderInvHist();}}
 
 let modalProd=null;
-function abrirModal(prod){modalProd=prod;const u=umbrales[prod]||{};document.getElementById('modal-nom').textContent=prod;document.getElementById('modal-am').value=u.amarillo!=null?u.amarillo:'';document.getElementById('modal-ro').value=u.rojo!=null?u.rojo:'';document.getElementById('modal-umbral').style.display='flex';}
+function abrirModal(prod){
+  modalProd=prod;
+  const u=umbrales[prod]||{};
+  const {stock,unidades}=calcStock();
+  document.getElementById('modal-nom').textContent=prod;
+  document.getElementById('modal-am').value=u.amarillo!=null?u.amarillo:'';
+  document.getElementById('modal-ro').value=u.rojo!=null?u.rojo:'';
+  document.getElementById('modal-stock').value='';
+  document.getElementById('modal-stock').placeholder='actual: '+(stock[prod]!=null?(stock[prod]%1===0?stock[prod]:stock[prod].toFixed(1)):'—');
+  const unitSel=document.getElementById('modal-unit');
+  if(unitSel) unitSel.value=unidades[prod]||u.unit||'g';
+  document.getElementById('modal-umbral').style.display='flex';
+}
 function cerrarModal(e){if(e.target.id==='modal-umbral')document.getElementById('modal-umbral').style.display='none';}
-async function guardarUmbrales(){if(!modalProd)return;const am=document.getElementById('modal-am').value,ro=document.getElementById('modal-ro').value;umbrales[modalProd]={amarillo:am!==''?parseFloat(am):null,rojo:ro!==''?parseFloat(ro):null,unit:umbrales[modalProd]?.unit||'g'};await saveUmbrales_db();renderInventario();document.getElementById('modal-umbral').style.display='none';}
+async function guardarUmbrales(){
+  if(!modalProd)return;
+  const am=document.getElementById('modal-am').value;
+  const ro=document.getElementById('modal-ro').value;
+  const stockVal=document.getElementById('modal-stock').value;
+  const unit=document.getElementById('modal-unit').value;
+  umbrales[modalProd]={
+    amarillo:am!==''?parseFloat(am):null,
+    rojo:ro!==''?parseFloat(ro):null,
+    unit
+  };
+  // If manual stock adjustment provided — add a stock_inicial override entry
+  if(stockVal!==''){
+    const nuevoStock=parseFloat(stockVal);
+    if(!isNaN(nuevoStock)&&nuevoStock>=0){
+      // Calculate current calculated stock to find the difference
+      const {stock}=calcStock();
+      const stockActual=stock[modalProd]||0;
+      const diff=nuevoStock-stockActual;
+      // Store as a manual adjustment in stockInicial
+      const existeIdx=stockInicial.findIndex(s=>s.prod===modalProd&&s.esAjuste);
+      const ajuste={prod:modalProd,unit,cant:diff,precio:0,fecha:getVEDate(),esAjuste:true,nota:'Ajuste manual'};
+      if(existeIdx>=0) stockInicial[existeIdx]=ajuste;
+      else stockInicial.push(ajuste);
+      await saveInv_db();
+    }
+  }
+  await saveUmbrales_db();
+  renderInventario();
+  document.getElementById('modal-umbral').style.display='none';
+}
 
 // ─── VIDRIERA ────────────────────────────────────────────────
 function calcVpg(){const p=parseFloat(document.getElementById('v-precio').value),c=parseFloat(document.getElementById('v-cont').value);document.getElementById('v-pg').value=(!isNaN(p)&&!isNaN(c)&&c>0)?'$'+(p/c).toFixed(4):'—';}
@@ -1505,18 +1580,25 @@ async function delV(i){if(!confirm('Eliminar?'))return;vidriera.splice(i,1);awai
 // ─── PREPARADOS ──────────────────────────────────────────────
 async function crearPrep(){
   const nom=document.getElementById('prep-nom').value.trim(),g=parseFloat(document.getElementById('prep-g').value);
+  const aceiteInput=document.getElementById('prep-aceite').value;
+  const factorAceite=aceiteInput?parseFloat(aceiteInput):null;
   if(!nom||isNaN(g)||g<=0)return alert('Completa nombre y gramos');
-  preps.push({id:Date.now(),nom,g,ings:[]});await saveInv_db();renderPreps();refreshPapasSelect();
-  document.getElementById('prep-nom').value='';document.getElementById('prep-g').value='';
+  preps.push({id:Date.now(),nom,g,ings:[],factorAceite});
+  await saveInv_db();renderPreps();refreshPapasSelect();
+  document.getElementById('prep-nom').value='';document.getElementById('prep-g').value='';document.getElementById('prep-aceite').value='';
 }
 function renderPreps(){
   const cont=document.getElementById('lista-preps');if(!cont)return;
   if(!preps.length){cont.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--texto-dim);font-size:12px">Sin preparados.</div>';return;}
   cont.innerHTML=preps.map((p,pi)=>{
-    const costo=p.ings.reduce((a,i)=>a+(i.cant*(i.pg||getPG(i.prod)||0)),0),cpg=p.g>0?costo/p.g:0;
+    const costoIngs=p.ings.reduce((a,i)=>a+(i.cant*(i.pg||getPG(i.prod)||0)),0);
+    const costoAceite=(p.factorAceite&&p.factorAceite>0)?(p.g*p.factorAceite*(getPG('Aceite')||0)):0;
+    const costo=costoIngs+costoAceite;
+    const cpg=p.g>0?costo/p.g:0;
     const rows=p.ings.map((ing,ii)=>{const pg=ing.pg||getPG(ing.prod)||0;return`<div class="irow"><span>${ing.prod}</span><span>${ing.cant}g</span><span>$${pg.toFixed(4)}/g</span><span class="hl">$${(ing.cant*pg).toFixed(4)}</span><button class="db" onclick="delIngP(${pi},${ii})">✕</button></div>`;}).join('');
+    const aceiteRow=p.factorAceite&&p.factorAceite>0?`<div class="irow" style="opacity:.7"><span>🫙 Aceite (absorción ${(p.factorAceite*100).toFixed(0)}%)</span><span>${(p.g*p.factorAceite).toFixed(1)}g</span><span>$${(getPG('Aceite')||0).toFixed(4)}/g</span><span class="hl">$${costoAceite.toFixed(4)}</span><span></span></div>`:'';
     return`<div class="xcard"><div class="xhead" onclick="tog('pb${p.id}')"><span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${p.nom}</span><div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center"><span>Costo: <strong class="hl">$${costo.toFixed(4)}</strong></span><span>${p.g}g</span><span>$/g: <strong class="hl">$${cpg.toFixed(4)}</strong></span><button class="db" onclick="event.stopPropagation();delPrep(${pi})">✕</button></div></div>
-    <div class="xbody" id="pb${p.id}">${rows||'<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin ingredientes.</div>'}
+    <div class="xbody" id="pb${p.id}">${rows}${aceiteRow}${!rows&&!aceiteRow?'<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin ingredientes.</div>':''}
       <div style="border-top:1px solid var(--gris-mid);margin:.6rem 0;padding-top:.6rem"><div style="font-size:12px;font-weight:600;margin-bottom:.4rem;color:var(--naranja)">Agregar ingrediente</div>
         <div class="fgrid" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
           <div class="fg"><label>Producto</label><select id="pi-p-${pi}" onchange="autoPGP(${pi})"><option value="">...</option>${PRODS.map(x=>`<option value="${x}">${x}</option>`).join('')}</select></div>
@@ -1536,6 +1618,12 @@ async function addIngP(pi){
   await saveInv_db();renderPreps();setTimeout(()=>{const el=document.getElementById(`pb${preps[pi].id}`);if(el)el.classList.add('open');},50);
 }
 async function delIngP(pi,ii){if(!confirm('Eliminar?'))return;preps[pi].ings.splice(ii,1);await saveInv_db();renderPreps();}
+async function editFactorAceite(pi,val){
+  const f=parseFloat(val);
+  preps[pi].factorAceite=isNaN(f)?null:f;
+  await saveInv_db();renderPreps();
+  setTimeout(()=>{const el=document.getElementById('pb'+preps[pi].id);if(el)el.classList.add('open');},50);
+}
 async function delPrep(pi){if(!confirm('Eliminar preparado?'))return;preps.splice(pi,1);await saveInv_db();renderPreps();refreshPapasSelect();}
 
 // ─── MENÚ ────────────────────────────────────────────────────
