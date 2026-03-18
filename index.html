@@ -1812,7 +1812,56 @@ function calcStock(){
 
 function getSem(prod,cant){const u=umbrales[prod]||{};if(u.rojo!=null&&cant<=u.rojo)return'rojo';if(u.amarillo!=null&&cant<=u.amarillo)return'amarillo';return'verde';}
 
+
+// ─── SECCIONES DE INVENTARIO ─────────────────────────────────
+function renderSeccionesUI(){
+  const sel = document.getElementById('filtro-seccion');
+  if(sel){
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todas las secciones</option>' +
+      seccionesInv.map(s=>`<option ${s===cur?'selected':''} value="${s}">${s}</option>`).join('');
+  }
+  const chips = document.getElementById('secciones-chips');
+  if(chips){
+    chips.innerHTML = seccionesInv.map((s,i)=>
+      `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gris-mid);border:1px solid var(--gris-light);border-radius:99px;padding:2px 8px;font-size:11px">
+        <span>${s}</span>
+        <button onclick="eliminarSeccion(${i})" style="background:none;border:none;color:var(--texto-dim);cursor:pointer;font-size:11px;padding:0;line-height:1">✕</button>
+      </span>`
+    ).join('');
+  }
+}
+
+function agregarSeccion(){
+  const inp = document.getElementById('nueva-seccion-inp');
+  const nom = inp?.value.trim();
+  if(!nom) return alert('Escribe el nombre de la sección');
+  if(seccionesInv.includes(nom)) return alert('Esa sección ya existe');
+  seccionesInv.push(nom);
+  saveSecciones();
+  renderSeccionesUI();
+  renderInventario();
+  if(inp) inp.value = '';
+}
+
+function eliminarSeccion(i){
+  const nom = seccionesInv[i];
+  if(!confirm('Eliminar sección "'+nom+'"? Los productos asignados quedarán sin sección.')) return;
+  seccionesInv.splice(i, 1);
+  Object.keys(prodSecciones).forEach(p=>{ if(prodSecciones[p]===nom) delete prodSecciones[p]; });
+  saveSecciones();
+  renderSeccionesUI();
+  renderInventario();
+}
+
+function setProdSeccion(prod, seccion){
+  if(seccion) prodSecciones[prod] = seccion;
+  else delete prodSecciones[prod];
+  saveSecciones();
+}
+
 function renderInventario(){
+  renderSeccionesUI();
   const{stock,unidades,origenes}=calcStock();
   const filtro=document.getElementById('filtro-inv')?.value||'';
   let prods=Object.keys(stock).map(prod=>({prod,cant:stock[prod],unit:unidades[prod]||'g',sem:getSem(prod,stock[prod]),origen:origenes[prod]||'compra'}));
