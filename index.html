@@ -1515,30 +1515,50 @@ async function guardarUmbrales(){
   const ro=document.getElementById('modal-ro').value;
   const stockVal=document.getElementById('modal-stock').value;
   const unit=document.getElementById('modal-unit').value;
+
+  // Save umbrales
   umbrales[modalProd]={
     amarillo:am!==''?parseFloat(am):null,
     rojo:ro!==''?parseFloat(ro):null,
     unit
   };
-  // If manual stock adjustment provided — add a stock_inicial override entry
+
+  // Manual stock override — strategy: wipe all previous entries for this prod
+  // and replace with a single "ajuste manual" that represents the desired absolute value
   if(stockVal!==''){
     const nuevoStock=parseFloat(stockVal);
     if(!isNaN(nuevoStock)&&nuevoStock>=0){
-      // Calculate current calculated stock to find the difference
-      const {stock}=calcStock();
-      const stockActual=stock[modalProd]||0;
-      const diff=nuevoStock-stockActual;
-      // Store as a manual adjustment in stockInicial
-      const existeIdx=stockInicial.findIndex(s=>s.prod===modalProd&&s.esAjuste);
-      const ajuste={prod:modalProd,unit,cant:diff,precio:0,fecha:getVEDate(),esAjuste:true,nota:'Ajuste manual'};
-      if(existeIdx>=0) stockInicial[existeIdx]=ajuste;
-      else stockInicial.push(ajuste);
+      // Remove all existing stock entries for this product (inicial + ajustes)
+      // Then add a single entry with the exact value desired
+      stockInicial=stockInicial.filter(s=>s.prod!==modalProd);
+      // Also calculate how much came from compras to get the net correction
+      const stockDeCompras=compras.filter(co=>co.prod===modalProd).reduce((a,co)=>a+parseFloat(co.cont||0),0);
+      const consumo=calcConsumo();
+      const consumido=consumo[modalProd]||0;
+      const stockNetCompras=Math.max(0,stockDeCompras-consumido);
+      // We need stockInicial entry so that total = stockNetCompras + stockInicial = nuevoStock
+      const cantInicial=nuevoStock-stockNetCompras;
+      stockInicial.push({
+        prod:modalProd,
+        unit,
+        cant:cantInicial,
+        precio:0,
+        fecha:getVEDate(),
+        esAjuste:true,
+        nota:'Ajuste manual → '+nuevoStock+unit
+      });
       await saveInv_db();
     }
+  } else if(unit!==umbrales[modalProd]?.unit){
+    // Unit changed — update unit in existing stockInicial entries
+    stockInicial.forEach(s=>{if(s.prod===modalProd)s.unit=unit;});
+    await saveInv_db();
   }
+
   await saveUmbrales_db();
-  renderInventario();
+  renderInventario();renderSI();
   document.getElementById('modal-umbral').style.display='none';
+  modalProd=null;
 }
 
 // ─── VIDRIERA ────────────────────────────────────────────────
