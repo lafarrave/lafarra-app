@@ -1453,10 +1453,70 @@ function calcConsumo(){
 
 function calcStock(){
   const stock={},unidades={},origenes={};
-  stockInicial.forEach(s=>{stock[s.prod]=(stock[s.prod]||0)+s.cant;unidades[s.prod]=s.unit;origenes[s.prod]='inicial';});
-  compras.forEach(c=>{const p=c.prod;if(!p)return;stock[p]=(stock[p]||0)+parseFloat(c.cont||0);unidades[p]=c.stockunit||'g';origenes[p]=origenes[p]==='inicial'?'ambos':'compra';});
+  // For each product, check if there's a manual adjustment (esAjuste)
+  // If yes: use that as the absolute baseline and only count purchases/sales AFTER that date
+  // If no: use normal inicial + compras - consumo
+  const ajustes={};
+  stockInicial.forEach(s=>{
+    if(s.esAjuste){
+      // Keep only the most recent ajuste per product
+      if(!ajustes[s.prod]||s.fecha>ajustes[s.prod].fecha) ajustes[s.prod]=s;
+    }
+  });
+
+  // Products WITH manual adjustment
+  Object.keys(ajustes).forEach(prod=>{
+    const aj=ajustes[prod];
+    stock[prod]=aj.cant;
+    unidades[prod]=aj.unit||'g';
+    origenes[prod]='ajuste';
+    // Add purchases made AFTER the adjustment date
+    compras.forEach(c=>{
+      if(c.prod===prod&&c.fecha>=aj.fecha){
+        stock[prod]+=parseFloat(c.cont||0);
+        origenes[prod]='mixto';
+      }
+    });
+    // Subtract consumption from sales AFTER the adjustment date
+    ventas.forEach(v=>{
+      if(v.fecha<aj.fecha)return;
+      v.items.forEach(item=>{
+        const qty=item.qty||1;
+        const mi=menuItems.find(m=>m.nom===item.nom);
+        if(mi){mi.comps.forEach(co=>{
+          if(co.tipo==='ing'&&co.nom===prod) stock[prod]=Math.max(0,stock[prod]-co.cant*qty);
+          else if(co.tipo==='prep'){
+            const prep=preps.find(p=>p.nom===co.nom);
+            if(prep)prep.ings.forEach(ing=>{
+              if(ing.prod===prod){const r=co.cant/(prep.g||1);stock[prod]=Math.max(0,stock[prod]-ing.cant*r*qty);}
+            });
+          }
+        });}
+      });
+    });
+  });
+
+  // Products WITHOUT manual adjustment — normal calculation
+  stockInicial.forEach(s=>{
+    if(s.esAjuste)return; // already handled
+    if(ajustes[s.prod])return; // has an ajuste, skip
+    stock[s.prod]=(stock[s.prod]||0)+s.cant;
+    unidades[s.prod]=s.unit;
+    origenes[s.prod]='inicial';
+  });
+  compras.forEach(c=>{
+    const p=c.prod;if(!p)return;
+    if(ajustes[p])return; // already handled above
+    stock[p]=(stock[p]||0)+parseFloat(c.cont||0);
+    unidades[p]=c.stockunit||'g';
+    origenes[p]=origenes[p]==='inicial'?'ambos':'compra';
+  });
   const consumo=calcConsumo();
-  Object.keys(consumo).forEach(p=>{if(stock[p]!==undefined)stock[p]=Math.max(0,stock[p]-consumo[p]);});
+  Object.keys(consumo).forEach(p=>{
+    if(ajustes[p])return; // already handled
+    if(stock[p]!==undefined)stock[p]=Math.max(0,stock[p]-consumo[p]);
+  });
+
   return{stock,unidades,origenes};
 }
 
