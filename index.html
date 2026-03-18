@@ -1593,7 +1593,40 @@ async function registrarCompra(){
 
 function calcConsumo(){
   const consumo={};
-  ventas.forEach(v=>{v.items.forEach(item=>{const qty=item.qty||1;const mi=menuItems.find(m=>m.nom===item.nom);if(mi){mi.comps.forEach(c=>{if(c.tipo==='ing')consumo[c.nom]=(consumo[c.nom]||0)+c.cant*qty;else if(c.tipo==='prep'){const prep=preps.find(p=>p.nom===c.nom);if(prep)prep.ings.forEach(ing=>{const r=c.cant/(prep.g||1);consumo[ing.prod]=(consumo[ing.prod]||0)+ing.cant*r*qty;});}});}});});
+  ventas.forEach(v=>{
+    v.items.forEach(item=>{
+      const qty=item.qty||1;
+      const mi=menuItems.find(m=>m.nom===item.nom);
+      if(mi){
+        // Descontar ingredientes del menú
+        mi.comps.forEach(c=>{
+          if(c.tipo==='ing') consumo[c.nom]=(consumo[c.nom]||0)+c.cant*qty;
+          else if(c.tipo==='prep'){
+            const prep=preps.find(p=>p.nom===c.nom);
+            if(prep) prep.ings.forEach(ing=>{
+              const r=c.cant/(prep.g||1);
+              consumo[ing.prod]=(consumo[ing.prod]||0)+ing.cant*r*qty;
+            });
+          }
+        });
+        // Descontar empaque fijo por cada burger vendida
+        empaque.forEach(e=>{
+          consumo[e.prod]=(consumo[e.prod]||0)+e.cant*qty;
+        });
+        // Descontar papas incluidas si configuradas
+        if(cfg.papas){
+          const prep=preps.find(p=>p.nom===cfg.papas);
+          if(prep){
+            const grPapas=cfg.gp||150;
+            prep.ings.forEach(ing=>{
+              const r=grPapas/(prep.g||1);
+              consumo[ing.prod]=(consumo[ing.prod]||0)+ing.cant*r*qty;
+            });
+          }
+        }
+      }
+    });
+  });
   return consumo;
 }
 
@@ -1740,29 +1773,21 @@ async function guardarUmbrales(){
   if(stockVal!==''){
     const nuevoStock=parseFloat(stockVal);
     if(!isNaN(nuevoStock)&&nuevoStock>=0){
-      // Remove all existing stock entries for this product (inicial + ajustes)
-      // Then add a single entry with the exact value desired
+      // Remove ALL previous entries for this product (inicial + ajustes)
       stockInicial=stockInicial.filter(s=>s.prod!==modalProd);
-      // Also calculate how much came from compras to get the net correction
-      const stockDeCompras=compras.filter(co=>co.prod===modalProd).reduce((a,co)=>a+parseFloat(co.cont||0),0);
-      const consumo=calcConsumo();
-      const consumido=consumo[modalProd]||0;
-      const stockNetCompras=Math.max(0,stockDeCompras-consumido);
-      // We need stockInicial entry so that total = stockNetCompras + stockInicial = nuevoStock
-      const cantInicial=nuevoStock-stockNetCompras;
+      // Store the EXACT value as absolute — calcStock will handle the rest
       stockInicial.push({
         prod:modalProd,
         unit,
-        cant:cantInicial,
+        cant:nuevoStock,
         precio:0,
         fecha:getVEDate(),
         esAjuste:true,
-        nota:'Ajuste manual → '+nuevoStock+unit
+        nota:'Ajuste manual → '+nuevoStock+' '+unit
       });
       await saveInv_db();
     }
   } else if(unit!==umbrales[modalProd]?.unit){
-    // Unit changed — update unit in existing stockInicial entries
     stockInicial.forEach(s=>{if(s.prod===modalProd)s.unit=unit;});
     await saveInv_db();
   }
