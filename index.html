@@ -246,15 +246,39 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <button class="btn" onclick="saveConfig()">Guardar config</button>
       </div>
       <div class="card">
-        <div class="card-title">Empaque fijo por burger</div>
+        <div class="card-title">🍔 Empaque fijo por burger</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Bolsa kraft, papel envoltura, servilletas, stickers, botes de salsa, etc.</div>
         <div id="emp-lista"></div>
         <div class="fgrid" style="margin-top:.5rem">
           <div class="fg"><label>Producto</label><select id="emp-prod"><option value="">Seleccionar...</option></select></div>
           <div class="fg"><label>Cantidad (g/ud)</label><input type="number" id="emp-cant" placeholder="1"/></div>
           <div class="fg"><label>Precio/ud (auto)</label><input type="number" id="emp-pg" placeholder="auto"/></div>
         </div>
-        <button class="btn" onclick="addEmp()">Agregar ítem</button>
+        <button class="btn" onclick="addEmp('burger')">Agregar ítem</button>
         <div id="emp-total" style="font-size:12px;color:var(--texto-dim);margin-top:.5rem"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🍟 Empaque fijo por papas</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Cono, bandeja, servilletas, etc. Se aplica a ítems de categoría "Papas" en el POS.</div>
+        <div id="emp-papas-lista"></div>
+        <div class="fgrid" style="margin-top:.5rem">
+          <div class="fg"><label>Producto</label><select id="emp-papas-prod"><option value="">Seleccionar...</option></select></div>
+          <div class="fg"><label>Cantidad (g/ud)</label><input type="number" id="emp-papas-cant" placeholder="1"/></div>
+          <div class="fg"><label>Precio/ud (auto)</label><input type="number" id="emp-papas-pg" placeholder="auto"/></div>
+        </div>
+        <button class="btn" onclick="addEmp('papas')">Agregar ítem</button>
+        <div id="emp-papas-total" style="font-size:12px;color:var(--texto-dim);margin-top:.5rem"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚖️ Calculadora de porciones (referencia)</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Define el gramaje de cada porción. El sistema calculará cuántas tienes disponibles según el stock. Solo es referencia — no afecta el sistema de ventas.</div>
+        <div id="porciones-lista"></div>
+        <div class="fgrid" style="margin-top:.5rem">
+          <div class="fg"><label>Nombre de la porción</label><input type="text" id="porc-nom" placeholder="ej: Medallón Smash"/></div>
+          <div class="fg"><label>Ingrediente base</label><select id="porc-prod"><option value="">Seleccionar...</option></select></div>
+          <div class="fg"><label>Gramos por porción</label><input type="number" id="porc-gr" placeholder="ej: 80"/></div>
+        </div>
+        <button class="btn" onclick="addPorcion()">Agregar porción</button>
       </div>
       <div class="card">
         <div class="card-title">Lista de productos (ingredientes)</div>
@@ -832,6 +856,8 @@ function initSearchableSelects(){
   makeSearchable('c-prod', prods, 'Seleccionar...');
   makeSearchable('si-prod', prods, 'Seleccionar...');
   makeSearchable('emp-prod', prods, 'Seleccionar...');
+  makeSearchable('emp-papas-prod', prods, 'Seleccionar...');
+  makeSearchable('porc-prod', prods, 'Seleccionar...');
 }
 
 function refreshSearchable(id){
@@ -1069,6 +1095,45 @@ function getTotalGastosOp(){ return gastosOp.reduce((a,g)=>a+g.monto,0);   // Pu
   }
 }
 
+
+// ─── CALCULADORA DE PORCIONES ────────────────────────────────
+function addPorcion(){
+  const nom=document.getElementById('porc-nom').value.trim();
+  const prod=getSelVal('porc-prod');
+  const gr=parseFloat(document.getElementById('porc-gr').value);
+  if(!nom||!prod||isNaN(gr)||gr<=0)return alert('Completa todos los campos');
+  porciones.push({nom,prod,gr});
+  saveConfig_db();renderPorciones();
+  document.getElementById('porc-nom').value='';
+  document.getElementById('porc-gr').value='';
+  document.getElementById('porc-prod').value='';
+  const lbl=document.getElementById('porc-prod_lbl');if(lbl)lbl.textContent='Seleccionar...';
+}
+
+function renderPorciones(){
+  const el=document.getElementById('porciones-lista');if(!el)return;
+  if(!porciones.length){el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin porciones configuradas.</div>';return;}
+  const {stock}=calcStock();
+  el.innerHTML=porciones.map((p,i)=>{
+    const stockDisp=stock[p.prod]||0;
+    const cant=p.gr>0?Math.floor(stockDisp/p.gr):0;
+    const color=cant<=2?'var(--rojo)':cant<=5?'var(--amarillo)':'var(--verde)';
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;background:var(--gris-mid);border-radius:6px;padding:6px 10px;font-size:12px">
+      <div style="flex:1">
+        <span style="font-weight:500">${p.nom}</span>
+        <span style="color:var(--texto-dim);margin-left:6px">${p.prod} · ${p.gr}g c/u</span>
+      </div>
+      <div style="text-align:right">
+        <span style="font-size:16px;font-weight:700;color:${color}">${cant}</span>
+        <span style="font-size:11px;color:var(--texto-dim);margin-left:3px">disponibles</span>
+      </div>
+      <button class="db" onclick="delPorcion(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function delPorcion(i){if(!confirm('Eliminar?'))return;porciones.splice(i,1);await saveConfig_db();renderPorciones();}
+
 // ─── SUPABASE ───────────────────────────────────────────────
 const SUPA_URL = 'https://ljgjpmlvjnqfpstltjmy.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqZ2pwbWx2am5xZnBzdGx0am15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTM5NDYsImV4cCI6MjA4OTA2OTk0Nn0.rGaBuq2DxLi_uhYh8ynpItGxO249Ng7PyK9S_XQ07Oc';
@@ -1082,7 +1147,7 @@ let PRODS=getProds();
 const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'},{key:'bebida',label:'🥤 Bebidas'},{key:'extra',label:'➕ Extras'},{key:'otro',label:'📦 Otros'}];
 
 let cfg={gan:50,papas:'',gp:150,gp2:250};
-let empaque=[], pvProds=[];
+let empaque=[], empaquePapas=[], pvProds=[], porciones=[];
 let saldo=0, movs=[], ganT=0;
 let vidriera=[], compras=[], stockInicial=[], umbrales={};
 let preps=[], menuItems=[], ventas=[], envios=[];
@@ -1186,6 +1251,8 @@ async function loadAll(){
       cfgData.forEach(row=>{
         if(row.id==='cfg') cfg=row.data;
         if(row.id==='empaque') empaque=row.data;
+        if(row.id==='empaque_papas') empaquePapas=row.data||[];
+        if(row.id==='porciones') porciones=row.data||[];
         if(row.id==='pvprods') pvProds=row.data;
         if(row.id==='saldo'){ saldo=row.data.saldo; movs=row.data.movs||[]; ganT=row.data.ganT||0; }
         if(row.id==='umbrales') umbrales=row.data;
@@ -1219,7 +1286,7 @@ async function loadAll(){
 }
 
 async function saveConfig_db(){
-  const payload=[{id:'cfg',data:cfg,updated_at:new Date()},{id:'empaque',data:empaque,updated_at:new Date()},{id:'pvprods',data:pvProds,updated_at:new Date()}];
+  const payload=[{id:'cfg',data:cfg,updated_at:new Date()},{id:'empaque',data:empaque,updated_at:new Date()},{id:'empaque_papas',data:empaquePapas,updated_at:new Date()},{id:'pvprods',data:pvProds,updated_at:new Date()},{id:'porciones',data:porciones,updated_at:new Date()}];
   if(!isOnline()){ addToOfflineQueue('config', payload); return; }
   setSyncStatus('syncing');
   try{
@@ -1338,11 +1405,20 @@ function getCPGP(prep){
   return prep.g>0?(costoIngs+costoAceite)/prep.g:0;
 }
 function getCE(){return empaque.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)),0);}
+function getCEPapas(){return empaquePapas.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)),0);}
+function isItemPapas(nom){
+  const pvp=pvProds.find(p=>p.nom===nom);
+  return pvp&&pvp.cat==='papas';
+}
 function getCPapas(g){if(!cfg.papas)return 0;const p=preps.find(x=>x.nom===cfg.papas);return p?g*getCPGP(p):0;}
 
 function calcCM(item){return item.comps.reduce((a,c)=>{if(c.tipo==='ing')return a+c.cant*(c.pg||getPG(c.nom)||0);const p=preps.find(x=>x.nom===c.nom);return p?a+c.cant*getCPGP(p):a;},0);}
 function getPVM(item){return item.pv||0;}
-function getCMTotal(item){return calcCM(item)+getCPapas(cfg.gp)+getCE();}
+function getCMTotal(item){
+  // Check if this item is a papas item in POS
+  if(isItemPapas(item.nom)) return calcCM(item)+getCEPapas();
+  return calcCM(item)+getCPapas(cfg.gp)+getCE();
+}
 function getGanPend(){return Math.max(0,ventas.reduce((a,v)=>a+(v.gan||0),0)-ganT);}
 function tog(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
 
@@ -1434,21 +1510,30 @@ async function saveConfig(){
   alert('✓ Configuración guardada');
 }
 
-function addEmp(){
-  const prod=getSelVal('emp-prod'),cant=parseFloat(document.getElementById('emp-cant').value),pgI=document.getElementById('emp-pg').value;
+function addEmp(tipo='burger'){
+  const prefix=tipo==='papas'?'emp-papas-':'emp-';
+  const prod=getSelVal(prefix+'prod'),cant=parseFloat(document.getElementById(prefix+'cant').value),pgI=document.getElementById(prefix+'pg').value;
   if(!prod||isNaN(cant)||cant<=0)return alert('Completa producto y cantidad');
-  empaque.push({prod,cant,pg:pgI?parseFloat(pgI):null});
+  if(tipo==='papas') empaquePapas.push({prod,cant,pg:pgI?parseFloat(pgI):null});
+  else empaque.push({prod,cant,pg:pgI?parseFloat(pgI):null});
   saveConfig_db();renderEmp();
-  document.getElementById('emp-cant').value='';document.getElementById('emp-pg').value='';
-  document.getElementById('emp-prod').value='';const el2=document.getElementById('emp-prod_lbl');if(el2)el2.textContent='Seleccionar...';
+  document.getElementById(prefix+'cant').value='';document.getElementById(prefix+'pg').value='';
+  document.getElementById(prefix+'prod').value='';
+  const lbl=document.getElementById(prefix+'prod_lbl');if(lbl)lbl.textContent='Seleccionar...';
+}
+function renderEmpLista(lista, elId, totId, getCostFn, delFn){
+  const el=document.getElementById(elId),tot=document.getElementById(totId);if(!el)return;
+  if(!lista.length){el.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin ítems.</div>';if(tot)tot.textContent='';return;}
+  el.innerHTML=lista.map((e,i)=>{const pg=e.pg||getPG(e.prod)||0;return`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 18px;gap:5px;align-items:center;margin-bottom:4px;font-size:12px"><span>${e.prod}</span><span>${e.cant}ud</span><span class="hl">$${pg.toFixed(4)}</span><span>$${(e.cant*pg).toFixed(4)}</span><button class="db" onclick="${delFn}(${i})">✕</button></div>`;}).join('');
+  if(tot)tot.innerHTML=`Total: <strong class="hl">$${getCostFn().toFixed(4)}</strong>`;
 }
 function renderEmp(){
-  const el=document.getElementById('emp-lista'),tot=document.getElementById('emp-total');if(!el)return;
-  if(!empaque.length){el.innerHTML='';if(tot)tot.textContent='Sin ítems.';return;}
-  el.innerHTML=empaque.map((e,i)=>{const pg=e.pg||getPG(e.prod)||0;return`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 18px;gap:5px;align-items:center;margin-bottom:4px;font-size:12px"><span>${e.prod}</span><span>${e.cant}ud</span><span class="hl">$${pg.toFixed(4)}</span><span>$${(e.cant*pg).toFixed(4)}</span><button class="db" onclick="delEmp(${i})">✕</button></div>`;}).join('');
-  if(tot)tot.innerHTML=`Total empaque/burger: <strong class="hl">$${getCE().toFixed(4)}</strong>`;
+  renderEmpLista(empaque,'emp-lista','emp-total',getCE,'delEmp');
+  renderEmpLista(empaquePapas,'emp-papas-lista','emp-papas-total',getCEPapas,'delEmpPapas');
+  renderPorciones();
 }
 async function delEmp(i){if(!confirm('Eliminar?'))return;empaque.splice(i,1);await saveConfig_db();renderEmp();}
+async function delEmpPapas(i){if(!confirm('Eliminar?'))return;empaquePapas.splice(i,1);await saveConfig_db();renderEmp();}
 
 function addPVP(){
   const nom=document.getElementById('pvp-nom').value.trim(),precio=parseFloat(document.getElementById('pvp-precio').value),costo=parseFloat(document.getElementById('pvp-costo').value)||0,cat=document.getElementById('pvp-cat').value;
@@ -1609,10 +1694,14 @@ function calcConsumo(){
             });
           }
         });
-        // Descontar empaque fijo por cada burger vendida
-        empaque.forEach(e=>{
-          consumo[e.prod]=(consumo[e.prod]||0)+e.cant*qty;
-        });
+        // Descontar empaque según tipo de ítem
+        if(isItemPapas(item.nom)){
+          // Es un ítem de papas — usar empaque de papas
+          empaquePapas.forEach(e=>{ consumo[e.prod]=(consumo[e.prod]||0)+e.cant*qty; });
+        } else {
+          // Es una burger — usar empaque de burger
+          empaque.forEach(e=>{ consumo[e.prod]=(consumo[e.prod]||0)+e.cant*qty; });
+        }
         // Descontar papas incluidas si configuradas
         if(cfg.papas){
           const prep=preps.find(p=>p.nom===cfg.papas);
