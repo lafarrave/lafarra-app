@@ -431,7 +431,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           </div>
           <p class="nota">* Estimado: compras + stock inicial − consumo por ventas. Verifica físicamente.</p>
           <div class="tw" style="margin-top:.6rem"><table>
-            <thead><tr><th>Estado</th><th>Producto</th><th>Sección</th><th>Stock est.</th><th>Unidad</th><th>$/unidad</th><th>🟡</th><th>🔴</th><th></th></tr></thead>
+            <thead><tr><th>Estado</th><th>Producto</th><th>Stock est.</th><th>Unidad</th><th>$/unidad</th><th>🟡</th><th>🔴</th><th></th></tr></thead>
             <tbody id="tabla-inv"></tbody>
           </table></div>
         </div>
@@ -785,6 +785,15 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         </div>
       </div>
       <div style="font-size:11px;color:var(--texto-dim);margin-top:4px">Afecta el costo de preparados y menú que usen este ingrediente.</div>
+    </div>
+    <div style="background:var(--gris-mid);border-radius:6px;padding:.6rem .8rem;margin-bottom:.8rem">
+      <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Sección del inventario</div>
+      <div class="fg">
+        <label>Asignar a sección</label>
+        <select id="modal-seccion" style="width:100%">
+          <option value="">— Sin sección —</option>
+        </select>
+      </div>
     </div>
     <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Alertas del semáforo</div>
     <div class="fgrid">
@@ -1911,6 +1920,13 @@ function abrirModal(prod){
   if(pgEl) pgEl.value=pgActual?'$'+pgActual.toFixed(6)+' / '+(unidades[prod]||'g'):'Sin precio registrado';
   const pgNuevo=document.getElementById('modal-pg-nuevo');
   if(pgNuevo) pgNuevo.value='';
+  // Populate section selector
+  const secSel=document.getElementById('modal-seccion');
+  if(secSel){
+    const curSec=getSeccion(prod);
+    secSel.innerHTML='<option value="">— Sin sección —</option>'+
+      seccionesInv.map(s=>`<option ${s===curSec?'selected':''} value="${s}">${s}</option>`).join('');
+  }
   document.getElementById('modal-umbral').style.display='flex';
 }
 function cerrarModal(e){if(e.target.id==='modal-umbral')document.getElementById('modal-umbral').style.display='none';}
@@ -1920,6 +1936,9 @@ async function guardarUmbrales(){
   const ro=document.getElementById('modal-ro').value;
   const stockVal=document.getElementById('modal-stock').value;
   const unit=document.getElementById('modal-unit').value;
+  // Save section
+  const seccion=document.getElementById('modal-seccion')?.value||'';
+  setProdSeccion(modalProd,seccion);
 
   // Save umbrales
   umbrales[modalProd]={
