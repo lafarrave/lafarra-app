@@ -551,7 +551,14 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <div class="card-title">Crear ítem de menú</div>
         <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
           <div class="fg"><label>Nombre</label><input type="text" id="mn-nom" style="width:185px"/></div>
-          <div class="fg"><label>Precio de venta ($)</label><input type="number" id="mn-pv" placeholder="ej: 7.00" style="width:145px"/></div>
+          <div class="fg"><label>Precio de venta ($)</label><input type="number" id="mn-pv" placeholder="ej: 7.00" style="width:130px"/></div>
+          <div class="fg"><label>Categoría POS</label>
+            <select id="mn-cat" style="width:130px">
+              <option value="burger">🍔 Burger</option>
+              <option value="papas">🍟 Papas</option>
+              <option value="otro">📦 Otro</option>
+            </select>
+          </div>
           <button class="btn" onclick="crearMenu()">Crear</button>
         </div>
       </div>
@@ -1408,7 +1415,9 @@ function getCE(){return empaque.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)
 function getCEPapas(){return empaquePapas.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)),0);}
 function isItemPapas(nom){
   const pvp=pvProds.find(p=>p.nom===nom);
-  return pvp&&pvp.cat==='papas';
+  if(pvp) return pvp.cat==='papas';
+  const mi=menuItems.find(m=>m.nom===nom);
+  return mi&&mi.cat==='papas';
 }
 function getCPapas(g){if(!cfg.papas)return 0;const p=preps.find(x=>x.nom===cfg.papas);return p?g*getCPGP(p):0;}
 
@@ -2009,7 +2018,7 @@ function renderMenuItems(){
   cont.innerHTML=menuItems.map((item,mi)=>{
     const pv=item.pv||0;const cB=calcCM(item),cP=getCPapas(cfg.gp),cE=getCE(),cT=cB+cP+cE;const ganPct=pv>0?((pv-cT)/pv*100):0;const ganColor=ganPct>=40?"var(--verde)":ganPct>=25?"var(--amarillo)":"var(--rojo)";
     const rows=item.comps.map((c,ci)=>{let pg=0,sub=0;if(c.tipo==='ing'){pg=c.pg||getPG(c.nom)||0;sub=c.cant*pg;}else{const p=preps.find(x=>x.nom===c.nom);if(p){pg=getCPGP(p);sub=c.cant*pg;}}return`<div style="display:grid;grid-template-columns:2fr 90px 1fr 1fr 22px;gap:5px;align-items:center;margin-bottom:5px;font-size:12px"><span><span class="tag ${c.tipo==='prep'?'tp':'ti'}">${c.tipo}</span>${c.nom}</span><div style="display:flex;align-items:center;gap:3px"><input type="number" value="${c.cant}" min="1" style="width:58px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 5px;font-size:12px;text-align:right" onchange="editCompGramos(${mi},${ci},this.value)" onclick="event.stopPropagation()"/>g</div><span style="color:var(--texto-dim)">$${pg.toFixed(4)}/g</span><span class="hl">$${sub.toFixed(4)}</span><button class="db" onclick="event.stopPropagation();delComp(${mi},${ci})">✕</button></div>`;}).join('');
-    return`<div class="xcard"><div class="xhead" onclick="tog('mb${item.id}')"><span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${item.nom}</span><div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center"><span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span><span style="color:${ganColor};font-weight:600">Ganancia: ${ganPct.toFixed(1)}% <span style="opacity:.8">($${(pv-cT).toFixed(2)})</span></span><span>Venta: <strong class="green">$${pv.toFixed(2)}</strong></span><button class="db" onclick="event.stopPropagation();delMenu(${mi})">✕</button></div></div>
+    return`<div class="xcard"><div class="xhead" onclick="tog('mb${item.id}')"><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${item.nom}</span><span class="badge ${item.cat==='papas'?'bp':'bi'}" style="font-size:10px">${item.cat==='papas'?'🍟 papas':'🍔 burger'}</span></div><div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center"><span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span><span style="color:${ganColor};font-weight:600">Ganancia: ${ganPct.toFixed(1)}% <span style="opacity:.8">($${(pv-cT).toFixed(2)})</span></span><span>Venta: <strong class="green">$${pv.toFixed(2)}</strong></span><select onchange="cambiarCatMenu(${mi},this.value)" onclick="event.stopPropagation()" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:2px 5px;font-size:10px"><option value="burger" ${item.cat!=='papas'?'selected':''}>🍔 burger</option><option value="papas" ${item.cat==='papas'?'selected':''}>🍟 papas</option><option value="otro" ${item.cat==='otro'?'selected':''}>📦 otro</option></select><button class="db" onclick="event.stopPropagation();delMenu(${mi})">✕</button></div></div>
     <div class="xbody" id="mb${item.id}">${rows||'<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin componentes.</div>'}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:5px;background:var(--gris-mid);border-radius:6px;padding:.55rem .75rem;margin:.4rem 0;font-size:12px">
         <div style="display:flex;justify-content:space-between"><span style="color:var(--texto-dim)">Burger</span><span class="hl">$${cB.toFixed(4)}</span></div>
@@ -2038,6 +2047,7 @@ function updMC(mi){const tipo=document.getElementById(`mc-t-${mi}`).value,sel=do
 async function addComp(mi){const tipo=document.getElementById(`mc-t-${mi}`).value,nom=document.getElementById(`mc-n-${mi}`).value,cant=parseFloat(document.getElementById(`mc-c-${mi}`).value);if(!nom||isNaN(cant)||cant<=0)return alert('Completa nombre y cantidad');menuItems[mi].comps.push({tipo,nom,cant,pg:null});await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById(`mb${menuItems[mi].id}`);if(el)el.classList.add('open');},50);}
 async function actualizarPV(mi,val){const pv=parseFloat(val);if(isNaN(pv)||pv<=0)return;menuItems[mi].pv=pv;await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById("mb"+menuItems[mi].id);if(el)el.classList.add("open");},50);}
 async function delMenu(mi){if(!confirm('Eliminar ítem?'))return;menuItems.splice(mi,1);await saveInv_db();renderMenuItems();}
+async function cambiarCatMenu(mi,cat){menuItems[mi].cat=cat;await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById('mb'+menuItems[mi].id);if(el)el.classList.add('open');},50);}
 async function delComp(mi,ci){if(!confirm('Eliminar este componente?'))return;menuItems[mi].comps.splice(ci,1);await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById('mb'+menuItems[mi].id);if(el)el.classList.add('open');},50);}
 async function editCompGramos(mi,ci,val){const g=parseFloat(val);if(isNaN(g)||g<=0)return;menuItems[mi].comps[ci].cant=g;await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById('mb'+menuItems[mi].id);if(el)el.classList.add('open');},50);}
 
@@ -2088,7 +2098,7 @@ async function marcarCobrado(vid){
 // ─── POS ─────────────────────────────────────────────────────
 function getAllPOSProds(){
   const all=[];
-  menuItems.forEach(item=>{const pv=parseFloat(getPVM(item).toFixed(2));all.push({nom:item.nom,precio:pv,costo:getCMTotal(item),cat:'burger'});});
+  menuItems.forEach(item=>{const pv=parseFloat(getPVM(item).toFixed(2));all.push({nom:item.nom,precio:pv,costo:getCMTotal(item),cat:item.cat||'burger'});});
   pvProds.forEach(p=>all.push({nom:p.nom,precio:p.precio,costo:p.costo,cat:p.cat||'extra'}));
   return all;
 }
