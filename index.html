@@ -411,18 +411,27 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
 
       <div id="panel-inv-tabla" class="panel visible">
         <div class="card">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:.7rem">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:.5rem">
             <span class="card-title" style="margin:0;flex:1">Estado del inventario</span>
+            <select class="inline" id="filtro-seccion" onchange="renderInventario()">
+              <option value="">Todas las secciones</option>
+            </select>
             <select class="inline" id="filtro-inv" onchange="renderInventario()">
               <option value="">Todos</option>
-              <option value="rojo">Solo críticos 🔴</option>
-              <option value="amarillo">Solo alertas 🟡</option>
-              <option value="verde">Solo OK 🟢</option>
+              <option value="rojo">🔴 Críticos</option>
+              <option value="amarillo">🟡 Alertas</option>
+              <option value="verde">🟢 OK</option>
             </select>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:.5rem;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--texto-dim)">Gestionar secciones:</span>
+            <input type="text" id="nueva-seccion-inp" placeholder="Nueva sección..." style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 8px;font-size:11px;width:150px"/>
+            <button class="btn" style="padding:3px 10px;font-size:11px" onclick="agregarSeccion()">+ Añadir</button>
+            <div id="secciones-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
           </div>
           <p class="nota">* Estimado: compras + stock inicial − consumo por ventas. Verifica físicamente.</p>
           <div class="tw" style="margin-top:.6rem"><table>
-            <thead><tr><th>Estado</th><th>Producto</th><th>Stock est.</th><th>Unidad</th><th>$/unidad</th><th>🟡</th><th>🔴</th><th></th></tr></thead>
+            <thead><tr><th>Estado</th><th>Producto</th><th>Sección</th><th>Stock est.</th><th>Unidad</th><th>$/unidad</th><th>🟡</th><th>🔴</th><th></th></tr></thead>
             <tbody id="tabla-inv"></tbody>
           </table></div>
         </div>
@@ -1155,6 +1164,10 @@ const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'}
 
 let cfg={gan:50,papas:'',gp:150,gp2:250};
 let empaque=[], empaquePapas=[], pvProds=[], porciones=[];
+let seccionesInv=JSON.parse(localStorage.getItem('lf_secciones')||'["Proteínas","Salsas","Vegetales","Descartables","Otros"]');
+let prodSecciones=JSON.parse(localStorage.getItem('lf_prod_secciones')||'{}');
+function saveSecciones(){localStorage.setItem('lf_secciones',JSON.stringify(seccionesInv));localStorage.setItem('lf_prod_secciones',JSON.stringify(prodSecciones));}
+function getSeccion(prod){return prodSecciones[prod]||'';}
 let saldo=0, movs=[], ganT=0;
 let vidriera=[], compras=[], stockInicial=[], umbrales={};
 let preps=[], menuItems=[], ventas=[], envios=[];
