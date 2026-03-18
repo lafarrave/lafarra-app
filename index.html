@@ -1873,18 +1873,47 @@ function renderInventario(){
   renderSeccionesUI();
   const{stock,unidades,origenes}=calcStock();
   const filtro=document.getElementById('filtro-inv')?.value||'';
-  let prods=Object.keys(stock).map(prod=>({prod,cant:stock[prod],unit:unidades[prod]||'g',sem:getSem(prod,stock[prod]),origen:origenes[prod]||'compra'}));
-  if(filtro)prods=prods.filter(p=>p.sem===filtro);
-  prods.sort((a,b)=>({'rojo':0,'amarillo':1,'verde':2}[a.sem]-{'rojo':0,'amarillo':1,'verde':2}[b.sem]));
+  const filtroSec=document.getElementById('filtro-seccion')?.value||'';
+  let prods=Object.keys(stock).map(prod=>({
+    prod,cant:stock[prod],unit:unidades[prod]||'g',
+    sem:getSem(prod,stock[prod]),origen:origenes[prod]||'compra',
+    sec:getSeccion(prod)
+  }));
+  if(filtro) prods=prods.filter(p=>p.sem===filtro);
+  if(filtroSec) prods=prods.filter(p=>p.sec===filtroSec);
   const tb=document.getElementById('tabla-inv');if(!tb)return;
-  if(!prods.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--texto-dim)">Sin datos. Carga stock inicial o registra compras.</td></tr>';return;}
-  tb.innerHTML=prods.map(p=>{
-    const u=umbrales[p.prod]||{};const maxV=(u.amarillo?u.amarillo*3:null)||(p.cant>0?p.cant*1.5:1);const pct=Math.min(100,maxV>0?(p.cant/maxV)*100:100);
-    const bc=p.sem==='rojo'?'var(--rojo)':p.sem==='amarillo'?'var(--amarillo)':'var(--verde)';
-    const semHTML=p.sem==='rojo'?`<span class="semaforo sem-rojo"><div class="dot dot-rojo"></div>Crítico</span>`:p.sem==='amarillo'?`<span class="semaforo sem-amarillo"><div class="dot dot-amarillo"></div>Alerta</span>`:`<span class="semaforo sem-verde"><div class="dot dot-verde"></div>OK</span>`;
-    const ob=p.origen==='inicial'?`<span class="badge-inicial">inicial</span>`:p.origen==='ambos'?`<span class="badge-inicial">mixto</span>`:'';
-    return`<tr><td>${semHTML}</td><td style="font-weight:500">${p.prod}${ob}</td><td><span style="font-weight:600;color:${bc}">${p.cant%1===0?p.cant:p.cant.toFixed(1)}</span><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${bc}"></div></div></td><td style="color:var(--texto-dim)">${p.unit}</td><td style="color:var(--amarillo)">${u.amarillo!=null?u.amarillo:'—'}</td><td style="color:var(--rojo)">${u.rojo!=null?u.rojo:'—'}</td><td><button class="edit-btn" onclick="abrirModal('${p.prod.replace(/'/g,"\\'")}')">editar</button></td></tr>`;
-  }).join('');
+  if(!prods.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--texto-dim)">Sin datos o sin resultados.</td></tr>';return;}
+  const semOrd={'rojo':0,'amarillo':1,'verde':2};
+  const grupos={};
+  prods.forEach(p=>{const k=p.sec||'__sin';if(!grupos[k])grupos[k]=[];grupos[k].push(p);});
+  const orden=[...seccionesInv,'__sin'];
+  const rows=[];
+  orden.forEach(secKey=>{
+    const items=grupos[secKey];if(!items||!items.length)return;
+    items.sort((a,b)=>semOrd[a.sem]-semOrd[b.sem]||a.prod.localeCompare(b.prod,'es'));
+    const titulo=secKey==='__sin'?'Sin sección':secKey;
+    rows.push(`<tr><td colspan="8" style="padding:10px 9px 4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--naranja);border-top:1px solid var(--gris-mid)">${titulo}</td></tr>`);
+    items.forEach(p=>{
+      const u=umbrales[p.prod]||{};
+      const maxV=(u.amarillo?u.amarillo*3:null)||(p.cant>0?p.cant*1.5:1);
+      const pct=Math.min(100,maxV>0?(p.cant/maxV)*100:100);
+      const bc=p.sem==='rojo'?'var(--rojo)':p.sem==='amarillo'?'var(--amarillo)':'var(--verde)';
+      const semHTML=p.sem==='rojo'?`<span class="semaforo sem-rojo"><div class="dot dot-rojo"></div>Crítico</span>`:p.sem==='amarillo'?`<span class="semaforo sem-amarillo"><div class="dot dot-amarillo"></div>Alerta</span>`:`<span class="semaforo sem-verde"><div class="dot dot-verde"></div>OK</span>`;
+      const ob=p.origen==='inicial'?`<span class="badge-inicial">inicial</span>`:p.origen==='ambos'?`<span class="badge-inicial">mixto</span>`:'';
+      const pgProd=getPG(p.prod);
+      rows.push(`<tr>
+        <td>${semHTML}</td>
+        <td style="font-weight:500">${p.prod}${ob}</td>
+        <td><span style="font-weight:600;color:${bc}">${p.cant%1===0?p.cant:p.cant.toFixed(1)}</span><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${bc}"></div></div></td>
+        <td style="color:var(--texto-dim)">${p.unit}</td>
+        <td style="color:var(--texto-dim);font-size:11px">${pgProd?'$'+pgProd.toFixed(4):'—'}</td>
+        <td style="color:var(--amarillo)">${u.amarillo!=null?u.amarillo:'—'}</td>
+        <td style="color:var(--rojo)">${u.rojo!=null?u.rojo:'—'}</td>
+        <td><button class="edit-btn" onclick="abrirModal('${p.prod.replace(/'/g,"\\'")}')">editar</button></td>
+      </tr>`);
+    });
+  });
+  tb.innerHTML=rows.join('');
 }
 
 function renderSI(){
