@@ -4,8 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="theme-color" content="#111111"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<title>La Farra — Gestión v1.8</title>
+<title>La Farra — Gestión v2.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -45,7 +44,6 @@ html,body{height:100%;background:var(--negro);font-family:'Barlow',sans-serif;co
 .btns:hover{border-color:var(--naranja)}
 .card{background:var(--gris-dark);border:1px solid var(--gris-mid);border-radius:10px;padding:1rem;margin-bottom:1rem}
 .card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;color:var(--naranja);margin-bottom:.8rem}
-.card-title.azul{color:var(--azul)}
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:left;padding:6px 9px;color:var(--texto-dim);font-weight:600;border-bottom:1px solid var(--gris-mid)}
@@ -72,7 +70,6 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
 .tag{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;margin-right:2px}
 .ti{background:#1a2a3a;color:#60a0d0}.tp{background:#2a2010;color:#c0a040}
 .nota{font-size:11px;color:var(--texto-dim);font-style:italic}
-.info-box{background:#0d1f2d;border:1px solid #1a3a5a;border-radius:8px;padding:.7rem;margin-bottom:.8rem;font-size:12px;display:flex;gap:8px}
 .sbox{border-radius:10px;padding:1rem;border:1px solid var(--gris-mid);background:var(--gris-dark)}
 .sbox.green-box{border-color:var(--verde);background:#0d1f0d}
 .slbl{font-size:10px;text-transform:uppercase;color:var(--texto-dim);margin-bottom:4px}
@@ -106,10 +103,14 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
 .tl.active{background:var(--naranja);color:#fff}
 .panel{display:none}.panel.visible{display:block}
 .semaforo{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:2px 8px;border-radius:99px}
-.sem-verde{background:#0d2b0d;color:#4CAF50}.sem-amarillo{background:#2b2200;color:#FFC107}.sem-rojo{background:#2b0d0d;color:#e53935}
+.sem-verde{background:#0d2b0d;color:#4CAF50;border:1px solid #2a5a2a}
+.sem-amarillo{background:#2b2200;color:#FFC107;border:1px solid #5a4800}
+.sem-rojo{background:#2b0d0d;color:#e53935;border:1px solid #5a2020}
 .dot{width:7px;height:7px;border-radius:50%}
-.progress-bar{height:3px;background:var(--gris-mid);border-radius:2px;margin-top:3px}
+.dot-verde{background:#4CAF50}.dot-amarillo{background:#FFC107}.dot-rojo{background:#e53935}
+.progress-bar{height:3px;background:var(--gris-mid);border-radius:2px;margin-top:3px;overflow:hidden}
 .progress-fill{height:100%;border-radius:2px}
+.badge-inicial{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;background:#1a3a5a;color:#60a0d0;margin-left:3px}
 .modal-bg{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:1000}
 .modal{background:var(--gris-dark);border:1px solid var(--naranja);border-radius:10px;padding:1.2rem;width:320px}
 .modal-title{font-weight:700;font-size:15px;color:var(--naranja);margin-bottom:.9rem}
@@ -165,9 +166,8 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
 
     <!-- CONFIG -->
     <div id="tab-config" class="section visible">
-      <!-- PAPAS POR DEFECTO -->
       <div class="card">
-        <div class="card-title">🍟 Papas por defecto</div>
+        <div class="card-title">🍟 Papas por defecto (150g)</div>
         <div class="fgrid">
           <div class="fg"><label>Preparado de papas</label><select id="cfg-papas-prep"><option value="">Seleccionar...</option></select></div>
           <div class="fg"><label>Gramos por porción</label><input type="number" id="cfg-papas-gr" value="150" step="10"/></div>
@@ -178,13 +178,12 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
         <button class="btn" style="margin-top:8px" onclick="savePapasDefecto()">Guardar papas</button>
       </div>
 
-      <!-- BOTES DE SALSA POR DEFECTO -->
       <div class="card">
         <div class="card-title">🥫 Botes de salsa por defecto</div>
         <div class="fgrid">
           <div class="fg"><label>Producto (envase)</label><select id="cfg-salsa-envase"><option value="">Seleccionar...</option></select></div>
           <div class="fg"><label>Preparado (salsa)</label><select id="cfg-salsa-prep"><option value="">Seleccionar...</option></select></div>
-          <div class="fg"><label>Gramos de salsa por bote</label><input type="number" id="cfg-salsa-gr" value="30" step="5"/></div>
+          <div class="fg"><label>Gramos por bote</label><input type="number" id="cfg-salsa-gr" value="30" step="5"/></div>
           <div class="fg"><label>Cantidad de botes</label><input type="number" id="cfg-salsa-cant" value="1" step="1" min="1"/></div>
         </div>
         <div class="nota" style="margin-top:8px;background:var(--gris-mid);padding:8px;border-radius:6px">
@@ -194,7 +193,6 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
         <button class="btn" style="margin-top:8px" onclick="saveSalsaDefecto()">Guardar salsa</button>
       </div>
 
-      <!-- EMPAQUE FIJO POR BURGER -->
       <div class="card">
         <div class="card-title">🍔 Empaque fijo por burger</div>
         <div id="emp-lista"></div>
@@ -206,7 +204,6 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
         <div class="nota" style="margin-top:8px">Total empaque burger: <strong class="hl" id="emp-total">$0.00</strong></div>
       </div>
 
-      <!-- EMPAQUE FIJO POR PAPAS -->
       <div class="card">
         <div class="card-title">🍟 Empaque fijo por papas</div>
         <div id="emp-papas-lista"></div>
@@ -218,7 +215,6 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
         <div class="nota" style="margin-top:8px">Total empaque papas: <strong class="hl" id="emp-papas-total">$0.00</strong></div>
       </div>
 
-      <!-- RESTO CONFIG -->
       <div class="card"><div class="card-title">⚖️ Porciones</div><div id="porciones-lista"></div><div class="fgrid"><div class="fg"><label>Nombre</label><input type="text" id="porc-nom"/></div><div class="fg"><label>Ingrediente</label><select id="porc-prod"></select></div><div class="fg"><label>Gramos</label><input type="number" id="porc-gr"/></div></div><button class="btn" onclick="addPorcion()">Agregar</button></div>
       <div class="card"><div class="card-title">📦 Productos extra POS</div><div id="pvp-lista"></div><div class="fgrid"><div class="fg"><label>Nombre</label><input type="text" id="pvp-nom"/></div><div class="fg"><label>Precio $</label><input type="number" id="pvp-precio"/></div><div class="fg"><label>Costo $</label><input type="number" id="pvp-costo"/></div><div class="fg"><label>Categoría</label><select id="pvp-cat"><option value="papas">Papas</option><option value="extra">Extras</option><option value="bebida">Bebidas</option></select></div></div><button class="btn" onclick="addPVP()">Agregar</button></div>
       <div class="card"><div class="card-title">➕ Ingredientes personalizados</div><div id="prods-extra-lista"></div><div style="display:flex;gap:8px;margin-top:.5rem"><input type="text" id="nuevo-prod-nom" placeholder="Nuevo ingrediente" style="flex:1;background:var(--gris-mid);border:1px solid var(--gris-light);border-radius:6px;padding:7px"/><button class="btn" onclick="agregarProducto()">+</button></div></div>
@@ -235,15 +231,15 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
       <div class="card"><div class="card-title">Actualizar saldos</div><div class="fgrid"><div class="fg"><label>Bancaribe $</label><input type="number" id="nuevo-saldo"/><button class="btn" style="margin-top:5px" onclick="actualizarSaldo('bancaribe')">Actualizar</button></div><div class="fg"><label>Provincial $</label><input type="number" id="nuevo-saldo-provincial"/><button class="btn" style="margin-top:5px" onclick="actualizarSaldo('provincial')">Actualizar</button></div></div></div>
       <div class="card"><div class="card-title">Registrar gasto</div><div class="fgrid"><div class="fg"><label>Descripción</label><input type="text" id="gasto-desc"/></div><div class="fg"><label>Monto $</label><input type="number" id="gasto-monto"/></div><div class="fg"><label>Fecha</label><input type="date" id="gasto-fecha"/></div></div><button class="btn" onclick="registrarGasto()">Registrar</button></div>
       <div class="card"><div class="card-title">Transferir ganancia</div><p class="nota">Acumulado: <strong id="gan-inline" class="green">$0.00</strong></p><div class="fgrid"><div class="fg"><label>Monto $</label><input type="number" id="transfer-monto"/></div><div class="fg"><label>Fecha</label><input type="date" id="transfer-fecha"/></div></div><button class="btn-green" onclick="registrarTransferencia()">Transferir</button></div>
-      <div class="card"><div class="card-title">Historial</div><div class="tw"> <thead> <th>Fecha</th><th>Descripción</th><th>Monto</th><th>Saldo</th><th></th> </thead> <tbody id="tabla-movs"></tbody> </div></div>
+      <div class="card"><div class="card-title">Historial</div><div class="tw"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Saldo</th><th></th></tr></thead><tbody id="tabla-movs"></tbody></table></div></div>
     </div>
 
-    <!-- INVENTARIO -->
+    <!-- INVENTARIO CON SEMÁFOROS -->
     <div id="tab-inventario" class="section">
       <div class="tabs-local"><div class="tl active" onclick="showPanel('inv-tabla',this)">📦 Stock</div><div class="tl" onclick="showPanel('inv-inicial',this)">🔵 Stock inicial</div><div class="tl" onclick="showPanel('inv-compra',this)">🛒 Compra</div><div class="tl" onclick="showPanel('inv-historial',this)">📋 Historial</div></div>
       <div id="panel-inv-tabla" class="panel visible"><div class="card"><div id="tabla-inv"></div></div></div>
-      <div id="panel-inv-inicial" class="panel"><div class="card"><div class="card-title">Cargar stock inicial</div><div class="fgrid"><div class="fg"><label>Producto</label><select id="si-prod"></select></div><div class="fg"><label>Cantidad</label><input type="number" id="si-cant"/></div><div class="fg"><label>Unidad</label><select id="si-unit"><option value="g">g</option><option value="ud">ud</option></select></div><div class="fg"><label>Precio ref $</label><input type="number" id="si-precio"/></div></div><button class="btn-azul" onclick="cargarStockInicial()">Cargar</button><div id="tabla-si" style="margin-top:1rem"></div></div></div>
-      <div id="panel-inv-compra" class="panel"><div class="card"><div class="card-title">Registrar compra</div><div class="fgrid"><div class="fg"><label>Producto</label><select id="c-prod"></select></div><div class="fg"><label>Cantidad</label><input type="number" id="c-cant"/></div><div class="fg"><label>Precio total $</label><input type="number" id="c-precio"/></div><div class="fg"><label>Tienda</label><input type="text" id="c-tienda"/></div><div class="fg"><label>Fecha</label><input type="date" id="c-fecha"/></div></div><button class="btn" onclick="registrarCompra()">Registrar</button></div></div>
+      <div id="panel-inv-inicial" class="panel"><div class="card"><div class="card-title">Cargar stock inicial</div><div class="fgrid"><div class="fg"><label>Producto</label><select id="si-prod"></select></div><div class="fg"><label>Cantidad</label><input type="number" id="si-cant"/></div><div class="fg"><label>Unidad</label><select id="si-unit"><option value="g">g</option><option value="ud">ud</option></select></div><div class="fg"><label>Precio ref $</label><input type="number" id="si-precio"/></div><div class="fg"><label>🟡 Alerta amarilla</label><input type="number" id="si-am"/></div><div class="fg"><label>🔴 Alerta roja</label><input type="number" id="si-ro"/></div></div><button class="btn-azul" onclick="cargarStockInicial()">Cargar</button><div id="tabla-si" style="margin-top:1rem"></div></div></div>
+      <div id="panel-inv-compra" class="panel"><div class="card"><div class="card-title">Registrar compra</div><div class="fgrid"><div class="fg"><label>Producto</label><select id="c-prod"></select></div><div class="fg"><label>Cantidad</label><input type="number" id="c-cant"/></div><div class="fg"><label>Precio total $</label><input type="number" id="c-precio"/></div><div class="fg"><label>Tienda</label><input type="text" id="c-tienda"/></div><div class="fg"><label>Fecha</label><input type="date" id="c-fecha"/></div><div class="fg"><label>🟡 Alerta amarilla</label><input type="number" id="c-am"/></div><div class="fg"><label>🔴 Alerta roja</label><input type="number" id="c-ro"/></div></div><button class="btn" onclick="registrarCompra()">Registrar</button></div></div>
       <div id="panel-inv-historial" class="panel"><div class="card"><div class="card-title">Historial</div><div id="tabla-inv-hist"></div></div></div>
     </div>
 
@@ -307,7 +303,7 @@ td{padding:7px 9px;border-bottom:1px solid var(--gris-mid)}
 </div>
 
 <!-- MODALES -->
-<div id="modal-umbral" style="display:none" class="modal-bg"><div class="modal"><div class="modal-title">Editar producto</div><div class="fg"><label>Stock manual</label><input type="number" id="modal-stock"/></div><div class="fg"><label>Precio/unidad</label><input type="number" id="modal-pg-nuevo" step="0.0001"/></div><div class="fgrid"><div class="fg"><label>Alerta amarilla</label><input type="number" id="modal-am"/></div><div class="fg"><label>Alerta roja</label><input type="number" id="modal-ro"/></div></div><button class="btn" onclick="guardarUmbrales()">Guardar</button><button class="btns" onclick="document.getElementById('modal-umbral').style.display='none'">Cancelar</button></div></div>
+<div id="modal-umbral" style="display:none" class="modal-bg"><div class="modal"><div class="modal-title">Editar producto</div><div class="fg"><label>Stock manual</label><input type="number" id="modal-stock"/></div><div class="fg"><label>Precio/unidad</label><input type="number" id="modal-pg-nuevo" step="0.0001"/></div><div class="fgrid"><div class="fg"><label>🟡 Alerta amarilla</label><input type="number" id="modal-am"/></div><div class="fg"><label>🔴 Alerta roja</label><input type="number" id="modal-ro"/></div></div><button class="btn" onclick="guardarUmbrales()">Guardar</button><button class="btns" onclick="document.getElementById('modal-umbral').style.display='none'">Cancelar</button></div></div>
 <div id="modal-cliente" style="display:none" class="modal-bg"><div class="modal"><div class="modal-title">Editar cliente</div><input type="text" id="modal-cliente-nuevo" style="width:100%;background:var(--gris-mid);border:1px solid var(--gris-light);border-radius:6px;padding:7px;margin-bottom:10px"/><button class="btn" onclick="guardarNombreVenta()">Guardar</button></div></div>
 
 <script>
@@ -364,127 +360,370 @@ function saveSalsaDefecto(){salsaDefecto.envase=document.getElementById('cfg-sal
 function refreshConfigSelects(){const ps=document.getElementById('cfg-papas-prep');if(ps){ps.innerHTML='<option value="">Seleccionar...</option>'+preps.map(p=>`<option value="${p.nom}" ${papasDefecto.prep===p.nom?'selected':''}>${p.nom}</option>`).join('');}document.getElementById('cfg-papas-gr').value=papasDefecto.gr;const es=document.getElementById('cfg-salsa-envase');if(es){es.innerHTML='<option value="">Seleccionar...</option>'+PRODS.map(p=>`<option value="${p}" ${salsaDefecto.envase===p?'selected':''}>${p}</option>`).join('');}const ss=document.getElementById('cfg-salsa-prep');if(ss){ss.innerHTML='<option value="">Seleccionar...</option>'+preps.map(p=>`<option value="${p.nom}" ${salsaDefecto.prep===p.nom?'selected':''}>${p.nom}</option>`).join('');}document.getElementById('cfg-salsa-gr').value=salsaDefecto.gr;document.getElementById('cfg-salsa-cant').value=salsaDefecto.cant||1;updateCostosPreview();}
 
 // ============================================================
-// MENÚ
+// INVENTARIO CON SEMÁFOROS
 // ============================================================
-function renderMenuItems(){const cont=document.getElementById('lista-menu');if(!cont)return;if(!menuItems.length){cont.innerHTML='<div class="nota" style="text-align:center;padding:1rem">Sin ítems</div>';return;}cont.innerHTML=menuItems.map((item,mi)=>{const incluyePapas=item.incluyePapas!==false;const incluyeSalsa=item.incluyeSalsa!==false;const pv=item.pv||0;const cB=item.comps.reduce((a,c)=>{if(c.tipo==='ing')return a+c.cant*(c.pg||getPG(c.nom)||0);const p=preps.find(x=>x.nom===c.nom);return a+(p?c.cant*getCPGP(p):0);},0);const cPapas=incluyePapas && item.cat!=='papas'?getCostoPapas()+getCEPapas():0;const cSalsa=incluyeSalsa && item.cat!=='papas'?getCostoSalsaTotal():0;const cE=item.cat==='papas'?getCEPapas():getCE();const cT=cB+cPapas+cSalsa+cE;const ganPct=pv>0?((pv-cT)/pv*100):0;const ganColor=ganPct>=40?'var(--verde)':ganPct>=25?'var(--amarillo)':'var(--rojo)';const rows=item.comps.map((c,ci)=>{let pg=0;if(c.tipo==='ing')pg=c.pg||getPG(c.nom)||0;else{const p=preps.find(x=>x.nom===c.nom);if(p)pg=getCPGP(p);}return`<div class="irow"><span><span class="tag ${c.tipo==='prep'?'tp':'ti'}">${c.tipo}</span>${c.nom}</span><span>${c.cant}g</span><span>$${pg.toFixed(4)}</span><button class="db" onclick="delComp(${mi},${ci})">✕</button></div>`;}).join('');return`<div class="xcard"><div class="xhead" onclick="tog('mb${item.id}')"><span style="font-weight:700">${item.nom}</span><div style="display:flex;gap:8px;font-size:11px"><span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span><span style="color:${ganColor}">${ganPct.toFixed(0)}%</span><span>Venta: <strong>$${pv.toFixed(2)}</strong></span><button class="db" onclick="event.stopPropagation();delMenu(${mi})">✕</button></div></div><div class="xbody" id="mb${item.id}"><div class="switch"><input type="checkbox" id="toggle-papas-${mi}" ${incluyePapas?'checked':''} onchange="toggleIncluyePapas(${mi},this.checked)"/><label>🍟 Incluir papas (${papasDefecto.gr}g)</label></div><div class="switch"><input type="checkbox" id="toggle-salsa-${mi}" ${incluyeSalsa?'checked':''} onchange="toggleIncluyeSalsa(${mi},this.checked)"/><label>🥫 Incluir ${salsaDefecto.cant||1} bote(s) de salsa</label></div>${rows||'<div class="nota" style="margin:.5rem 0">Sin componentes</div>'}<div style="border-top:1px solid var(--gris-mid);margin:.5rem 0;padding-top:.5rem"><div style="font-size:12px;margin-bottom:.4rem">➕ Agregar componente</div><div style="display:flex;gap:5px;flex-wrap:wrap"><select id="mc-t-${mi}" onchange="updMC(${mi})" style="width:80px"><option value="ing">Ingrediente</option><option value="prep">Preparado</option></select><select id="mc-n-${mi}" style="width:140px"><option value="">...</option></select><input type="number" id="mc-c-${mi}" placeholder="g" style="width:70px"/><button class="btn" style="padding:3px 8px" onclick="addComp(${mi})">+</button></div></div><div style="font-size:11px;border-top:1px solid var(--gris-mid);padding-top:.5rem;margin-top:.5rem"><div>Burger: $${cB.toFixed(4)}</div><div>Papas: $${cPapas.toFixed(4)}</div><div>Salsa (${salsaDefecto.cant||1}x): $${cSalsa.toFixed(4)}</div><div>Empaque: $${cE.toFixed(4)}</div><div style="margin-top:6px"><input type="number" value="${pv.toFixed(2)}" onchange="actualizarPV(${mi},this.value)" style="width:80px;background:var(--gris-mid);border:1px solid var(--naranja);border-radius:4px;padding:4px"/><span style="margin-left:8px;color:${ganColor}">Ganancia: $${(pv-cT).toFixed(2)} (${ganPct.toFixed(0)}%)</span></div></div></div></div>`;}).join('');}
-async function toggleIncluyePapas(mi,val){menuItems[mi].incluyePapas=val;await saveInv_db();renderMenuItems();}
-async function toggleIncluyeSalsa(mi,val){menuItems[mi].incluyeSalsa=val;await saveInv_db();renderMenuItems();}
-async function crearMenu(){const nom=document.getElementById('mn-nom').value.trim(),pv=parseFloat(document.getElementById('mn-pv').value);if(!nom||isNaN(pv))return showToast('Completa campos','warning');menuItems.push({id:Date.now(),nom,pv,comps:[],incluyePapas:true,incluyeSalsa:true,cat:document.getElementById('mn-cat').value});await saveInv_db();renderMenuItems();document.getElementById('mn-nom').value='';document.getElementById('mn-pv').value='';showToast('Ítem creado','success');}
-async function actualizarPV(mi,val){menuItems[mi].pv=parseFloat(val);await saveInv_db();renderMenuItems();}
-async function delMenu(mi){if(!confirm('Eliminar?'))return;menuItems.splice(mi,1);await saveInv_db();renderMenuItems();}
-async function addComp(mi){const tipo=document.getElementById(`mc-t-${mi}`).value,nom=document.getElementById(`mc-n-${mi}`).value,cant=parseFloat(document.getElementById(`mc-c-${mi}`).value);if(!nom||isNaN(cant))return;menuItems[mi].comps.push({tipo,nom,cant});await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById(`mb${menuItems[mi].id}`);if(el)el.classList.add('open');},50);}
-async function delComp(mi,ci){if(!confirm('Eliminar?'))return;menuItems[mi].comps.splice(ci,1);await saveInv_db();renderMenuItems();}
-function updMC(mi){const tipo=document.getElementById(`mc-t-${mi}`).value,sel=document.getElementById(`mc-n-${mi}`);sel.innerHTML='<option value="">...</option>';if(tipo==='ing')PRODS.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);});else preps.forEach(p=>{const o=document.createElement('option');o.value=p.nom;o.textContent=p.nom;sel.appendChild(o);});}
+function calcStock(){
+    const stock = {};
+    stockInicial.forEach(s => { stock[s.prod] = (stock[s.prod] || 0) + s.cant; });
+    compras.forEach(c => { stock[c.prod] = (stock[c.prod] || 0) + (c.cont || 0); });
+    const consumo = {};
+    ventas.forEach(v => {
+        v.items.forEach(item => {
+            const mi = menuItems.find(m => m.nom === item.nom);
+            if(mi){
+                mi.comps.forEach(c => {
+                    if(c.tipo === 'ing') consumo[c.nom] = (consumo[c.nom] || 0) + (c.cant * (item.qty || 1));
+                    else if(c.tipo === 'prep'){
+                        const prep = preps.find(p => p.nom === c.nom);
+                        if(prep) prep.ings.forEach(ing => {
+                            const r = c.cant / (prep.g || 1);
+                            consumo[ing.prod] = (consumo[ing.prod] || 0) + (ing.cant * r * (item.qty || 1));
+                        });
+                    }
+                });
+                if(mi.cat !== 'papas'){
+                    empaque.forEach(e => { consumo[e.prod] = (consumo[e.prod] || 0) + (e.cant * (item.qty || 1)); });
+                    if(papasDefecto.prep){
+                        const prepPapas = preps.find(p => p.nom === papasDefecto.prep);
+                        if(prepPapas){
+                            const r = papasDefecto.gr / (prepPapas.g || 1);
+                            prepPapas.ings.forEach(ing => {
+                                consumo[ing.prod] = (consumo[ing.prod] || 0) + (ing.cant * r * (item.qty || 1));
+                            });
+                        }
+                    }
+                    if(salsaDefecto.envase && salsaDefecto.prep){
+                        consumo[salsaDefecto.envase] = (consumo[salsaDefecto.envase] || 0) + ((salsaDefecto.cant||1) * (item.qty || 1));
+                        const prepSalsa = preps.find(p => p.nom === salsaDefecto.prep);
+                        if(prepSalsa){
+                            const r = salsaDefecto.gr / (prepSalsa.g || 1);
+                            prepSalsa.ings.forEach(ing => {
+                                consumo[ing.prod] = (consumo[ing.prod] || 0) + (ing.cant * r * (salsaDefecto.cant||1) * (item.qty || 1));
+                            });
+                        }
+                    }
+                } else {
+                    empaquePapas.forEach(e => { consumo[e.prod] = (consumo[e.prod] || 0) + (e.cant * (item.qty || 1)); });
+                }
+            } else {
+                const pvp = pvProds.find(p => p.nom === item.nom);
+                if(pvp && pvp.costo && pvp.costo > 0){
+                    consumo[item.nom] = (consumo[item.nom] || 0) + (item.qty || 1);
+                }
+            }
+        });
+    });
+    Object.keys(consumo).forEach(p => { if(stock[p]) stock[p] = Math.max(0, stock[p] - consumo[p]); });
+    return { stock, unidades: {} };
+}
+function getSem(prod, cant){
+    const u = umbrales[prod] || {};
+    if(u.rojo != null && cant <= u.rojo) return 'rojo';
+    if(u.amarillo != null && cant <= u.amarillo) return 'amarillo';
+    return 'verde';
+}
+function renderInventario(){
+    const tb = document.getElementById('tabla-inv');
+    if(!tb) return;
+    const { stock } = calcStock();
+    const prods = Object.keys(stock).map(p => ({ prod: p, cant: stock[p], sem: getSem(p, stock[p]) }));
+    if(!prods.length){ tb.innerHTML = '<div class="nota">Sin datos de inventario</div>'; return; }
+    tb.innerHTML = `<table><thead><tr><th>Estado</th><th>Producto</th><th>Stock</th><th>Unidad</th><th>🟡</th><th>🔴</th><th></th></tr></thead><tbody>${prods.map(p => {
+        const u = umbrales[p.prod] || {};
+        const semHTML = p.sem === 'rojo' ? '<span class="semaforo sem-rojo"><div class="dot dot-rojo"></div>Crítico</span>' : p.sem === 'amarillo' ? '<span class="semaforo sem-amarillo"><div class="dot dot-amarillo"></div>Alerta</span>' : '<span class="semaforo sem-verde"><div class="dot dot-verde"></div>OK</span>';
+        return `<tr><td>${semHTML}</td><td>${p.prod}</td><td>${p.cant.toFixed(1)}</td><td>g</td><td>${u.amarillo != null ? u.amarillo : '—'}</td><td>${u.rojo != null ? u.rojo : '—'}</td><td><button class="edit-btn" onclick="abrirModal('${p.prod.replace(/'/g,"\\'")}')">editar</button></td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+function renderSI(){
+    const tb = document.getElementById('tabla-si');
+    if(tb) tb.innerHTML = stockInicial.map((s,i) => `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>${s.prod}: ${s.cant} ${s.unit||'g'} ($${s.precio?.toFixed(2)||0})</span><button class="db" onclick="delSI(${i})">✕</button></div>`).join('');
+}
+function renderInvHist(){
+    const tb = document.getElementById('tabla-inv-hist');
+    if(!tb) return;
+    const todos = [...stockInicial.map(s=>({...s,tipo:'Stock inicial'})), ...compras.map(c=>({...c,tipo:'Compra',cant:c.cont}))].sort((a,b)=>b.fecha?.localeCompare(a.fecha||''));
+    if(!todos.length){ tb.innerHTML = '<div class="nota">Sin movimientos</div>'; return; }
+    tb.innerHTML = `<table><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Precio</th></tr></thead><tbody>${todos.map(m => `<tr><td>${m.fecha||'-'}</td><td>${m.prod}</td><td>${m.tipo}</td><td>${m.cant}</td><td>$${(m.precio||0).toFixed(2)}</td></tr>`).join('')}</tbody></table>`;
+}
+async function cargarStockInicial(){
+    const prod = getSelVal('si-prod'), cant = parseFloat(document.getElementById('si-cant').value), unit = document.getElementById('si-unit').value, precio = parseFloat(document.getElementById('si-precio').value)||0, am = document.getElementById('si-am').value, ro = document.getElementById('si-ro').value;
+    if(!prod || isNaN(cant)) return showToast('Completa producto y cantidad','warning');
+    stockInicial.push({prod,cant,unit,precio,fecha:getVEDate()});
+    if(am || ro) umbrales[prod] = { amarillo: am ? parseFloat(am) : (umbrales[prod]?.amarillo), rojo: ro ? parseFloat(ro) : (umbrales[prod]?.rojo), unit };
+    await saveInv_db();
+    await saveUmbrales_db();
+    renderSI(); renderInventario();
+    showToast('Stock cargado','success');
+}
+async function registrarCompra(){
+    const prod = getSelVal('c-prod'), cant = parseFloat(document.getElementById('c-cant').value), precio = parseFloat(document.getElementById('c-precio').value), tienda = document.getElementById('c-tienda').value, fecha = document.getElementById('c-fecha').value||getVEDate(), am = document.getElementById('c-am').value, ro = document.getElementById('c-ro').value;
+    if(!prod || isNaN(cant) || isNaN(precio)) return showToast('Completa todos los campos','warning');
+    const compra = {fecha,prod,cont:cant,precio,pg:precio/cant,tienda};
+    compras.unshift(compra);
+    if(am || ro) umbrales[prod] = { amarillo: am ? parseFloat(am) : (umbrales[prod]?.amarillo), rojo: ro ? parseFloat(ro) : (umbrales[prod]?.rojo), unit: 'g' };
+    saldo -= precio;
+    movs.unshift({fecha,desc:prod+' - '+tienda,tipo:'compra',monto:precio,sd:saldo,tasa});
+    await addCompra_db(compra);
+    await saveSaldo_db();
+    await saveUmbrales_db();
+    renderInventario(); renderInvHist(); renderSaldoResumen();
+    showToast('Compra registrada','success');
+}
+async function delSI(i){ if(!confirm('Eliminar?')) return; stockInicial.splice(i,1); await saveInv_db(); renderSI(); renderInventario(); }
+let modalProd = null;
+function abrirModal(prod){
+    modalProd = prod;
+    const u = umbrales[prod] || {};
+    document.getElementById('modal-am').value = u.amarillo != null ? u.amarillo : '';
+    document.getElementById('modal-ro').value = u.rojo != null ? u.rojo : '';
+    document.getElementById('modal-stock').value = '';
+    document.getElementById('modal-pg-nuevo').value = '';
+    document.getElementById('modal-umbral').style.display = 'flex';
+}
+async function guardarUmbrales(){
+    if(!modalProd) return;
+    const am = document.getElementById('modal-am').value, ro = document.getElementById('modal-ro').value, stockVal = document.getElementById('modal-stock').value, pgNuevo = document.getElementById('modal-pg-nuevo').value;
+    umbrales[modalProd] = { amarillo: am !== '' ? parseFloat(am) : null, rojo: ro !== '' ? parseFloat(ro) : null };
+    if(stockVal !== ''){
+        const nuevoStock = parseFloat(stockVal);
+        if(!isNaN(nuevoStock) && nuevoStock >= 0){
+            stockInicial = stockInicial.filter(s => s.prod !== modalProd);
+            stockInicial.push({ prod: modalProd, unit: 'g', cant: nuevoStock, precio: 0, fecha: getVEDate(), esAjuste: true });
+            await saveInv_db();
+        }
+    }
+    if(pgNuevo !== ''){
+        const pg = parseFloat(pgNuevo);
+        if(!isNaN(pg) && pg > 0){
+            compras = compras.filter(co => !(co.prod === modalProd && co.esCorreccion));
+            compras.unshift({ fecha: getVEDate(), prod: modalProd, cont: 1, precio: pg, pg: pg, tienda: 'Ajuste manual', esCorreccion: true });
+            await addCompra_db(compras[0]);
+        }
+    }
+    await saveUmbrales_db();
+    renderInventario();
+    document.getElementById('modal-umbral').style.display = 'none';
+    modalProd = null;
+    showToast('Cambios guardados','success');
+}
+
+// ============================================================
+// MENÚ (USANDO papasDefecto.gr CORRECTAMENTE)
+// ============================================================
+function renderMenuItems(){
+    const cont = document.getElementById('lista-menu');
+    if(!cont) return;
+    if(!menuItems.length){ cont.innerHTML = '<div class="nota" style="text-align:center;padding:1rem">Sin ítems</div>'; return; }
+    cont.innerHTML = menuItems.map((item,mi) => {
+        const incluyePapas = item.incluyePapas !== false;
+        const incluyeSalsa = item.incluyeSalsa !== false;
+        const pv = item.pv || 0;
+        const cB = item.comps.reduce((a,c) => {
+            if(c.tipo === 'ing') return a + c.cant * (c.pg || getPG(c.nom) || 0);
+            const p = preps.find(x => x.nom === c.nom);
+            return a + (p ? c.cant * getCPGP(p) : 0);
+        }, 0);
+        const cPapas = (incluyePapas && item.cat !== 'papas') ? getCostoPapas() + getCEPapas() : 0;
+        const cSalsa = (incluyeSalsa && item.cat !== 'papas') ? getCostoSalsaTotal() : 0;
+        const cE = item.cat === 'papas' ? getCEPapas() : getCE();
+        const cT = cB + cPapas + cSalsa + cE;
+        const ganPct = pv > 0 ? ((pv - cT) / pv * 100) : 0;
+        const ganColor = ganPct >= 40 ? 'var(--verde)' : ganPct >= 25 ? 'var(--amarillo)' : 'var(--rojo)';
+        const rows = item.comps.map((c,ci) => {
+            let pg = 0;
+            if(c.tipo === 'ing') pg = c.pg || getPG(c.nom) || 0;
+            else { const p = preps.find(x => x.nom === c.nom); if(p) pg = getCPGP(p); }
+            return `<div class="irow"><span><span class="tag ${c.tipo==='prep'?'tp':'ti'}">${c.tipo}</span>${c.nom}</span><span>${c.cant}g</span><span>$${pg.toFixed(4)}</span><button class="db" onclick="delComp(${mi},${ci})">✕</button></div>`;
+        }).join('');
+        return `<div class="xcard"><div class="xhead" onclick="tog('mb${item.id}')"><span style="font-weight:700">${item.nom}</span><div style="display:flex;gap:8px;font-size:11px"><span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span><span style="color:${ganColor}">${ganPct.toFixed(0)}%</span><span>Venta: <strong>$${pv.toFixed(2)}</strong></span><button class="db" onclick="event.stopPropagation();delMenu(${mi})">✕</button></div></div>
+        <div class="xbody" id="mb${item.id}">
+            <div class="switch"><input type="checkbox" id="toggle-papas-${mi}" ${incluyePapas?'checked':''} onchange="toggleIncluyePapas(${mi},this.checked)"/><label>🍟 Incluir papas (${papasDefecto.gr}g - $${getCostoPapas().toFixed(4)})</label></div>
+            <div class="switch"><input type="checkbox" id="toggle-salsa-${mi}" ${incluyeSalsa?'checked':''} onchange="toggleIncluyeSalsa(${mi},this.checked)"/><label>🥫 Incluir ${salsaDefecto.cant||1} bote(s) de salsa ($${getCostoSalsaTotal().toFixed(4)})</label></div>
+            ${rows || '<div class="nota" style="margin:.5rem 0">Sin componentes</div>'}
+            <div style="border-top:1px solid var(--gris-mid);margin:.5rem 0;padding-top:.5rem"><div style="font-size:12px;margin-bottom:.4rem">➕ Agregar componente</div><div style="display:flex;gap:5px;flex-wrap:wrap"><select id="mc-t-${mi}" onchange="updMC(${mi})" style="width:80px"><option value="ing">Ingrediente</option><option value="prep">Preparado</option></select><select id="mc-n-${mi}" style="width:140px"><option value="">...</option></select><input type="number" id="mc-c-${mi}" placeholder="g" style="width:70px"/><button class="btn" style="padding:3px 8px" onclick="addComp(${mi})">+</button></div></div>
+            <div style="font-size:11px;border-top:1px solid var(--gris-mid);padding-top:.5rem;margin-top:.5rem"><div>Burger: $${cB.toFixed(4)}</div><div>Papas (${papasDefecto.gr}g): $${getCostoPapas().toFixed(4)}</div><div>Empaque papas: $${getCEPapas().toFixed(4)}</div><div>Salsa (${salsaDefecto.cant||1}x): $${getCostoSalsaTotal().toFixed(4)}</div><div>Empaque burger: $${getCE().toFixed(4)}</div><div style="margin-top:6px"><input type="number" value="${pv.toFixed(2)}" onchange="actualizarPV(${mi},this.value)" style="width:80px;background:var(--gris-mid);border:1px solid var(--naranja);border-radius:4px;padding:4px"/><span style="margin-left:8px;color:${ganColor}">Ganancia: $${(pv-cT).toFixed(2)} (${ganPct.toFixed(0)}%)</span></div></div>
+        </div></div>`;
+    }).join('');
+}
+async function toggleIncluyePapas(mi,val){ menuItems[mi].incluyePapas = val; await saveInv_db(); renderMenuItems(); }
+async function toggleIncluyeSalsa(mi,val){ menuItems[mi].incluyeSalsa = val; await saveInv_db(); renderMenuItems(); }
+async function crearMenu(){ const nom = document.getElementById('mn-nom').value.trim(), pv = parseFloat(document.getElementById('mn-pv').value); if(!nom || isNaN(pv)) return showToast('Completa campos','warning'); menuItems.push({ id: Date.now(), nom, pv, comps: [], incluyePapas: true, incluyeSalsa: true, cat: document.getElementById('mn-cat').value }); await saveInv_db(); renderMenuItems(); document.getElementById('mn-nom').value = ''; document.getElementById('mn-pv').value = ''; showToast('Ítem creado','success'); }
+async function actualizarPV(mi,val){ menuItems[mi].pv = parseFloat(val); await saveInv_db(); renderMenuItems(); }
+async function delMenu(mi){ if(!confirm('Eliminar?')) return; menuItems.splice(mi,1); await saveInv_db(); renderMenuItems(); }
+async function addComp(mi){ const tipo = document.getElementById(`mc-t-${mi}`).value, nom = document.getElementById(`mc-n-${mi}`).value, cant = parseFloat(document.getElementById(`mc-c-${mi}`).value); if(!nom || isNaN(cant)) return; menuItems[mi].comps.push({ tipo, nom, cant }); await saveInv_db(); renderMenuItems(); setTimeout(()=>{ const el = document.getElementById(`mb${menuItems[mi].id}`); if(el) el.classList.add('open'); },50); }
+async function delComp(mi,ci){ if(!confirm('Eliminar?')) return; menuItems[mi].comps.splice(ci,1); await saveInv_db(); renderMenuItems(); }
+function updMC(mi){ const tipo = document.getElementById(`mc-t-${mi}`).value, sel = document.getElementById(`mc-n-${mi}`); sel.innerHTML = '<option value="">...</option>'; if(tipo === 'ing') PRODS.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); }); else preps.forEach(p=>{ const o=document.createElement('option'); o.value=p.nom; o.textContent=p.nom; sel.appendChild(o); }); }
 
 // ============================================================
 // PREPARADOS
 // ============================================================
-async function crearPrep(){const nom=document.getElementById('prep-nom').value.trim(),g=parseFloat(document.getElementById('prep-g').value),aceite=parseFloat(document.getElementById('prep-aceite').value)||null;if(!nom||isNaN(g))return showToast('Completa campos','warning');preps.push({id:Date.now(),nom,g,ings:[],factorAceite:aceite});await saveInv_db();renderPreps();refreshConfigSelects();document.getElementById('prep-nom').value='';document.getElementById('prep-g').value='';document.getElementById('prep-aceite').value='';showToast('Preparado creado','success');}
-function renderPreps(){const cont=document.getElementById('lista-preps');if(!cont)return;if(!preps.length){cont.innerHTML='<div class="nota" style="text-align:center;padding:1rem">Sin preparados</div>';return;}cont.innerHTML=preps.map((p,pi)=>{const costo=p.ings.reduce((a,i)=>a+i.cant*(i.pg||getPG(i.prod)||0),0)+(p.factorAceite?p.g*p.factorAceite*(getPG('Aceite')||0):0);const cpg=p.g>0?costo/p.g:0;return`<div class="xcard"><div class="xhead" onclick="tog('pp${p.id}')"><span>${p.nom}</span><span>${p.g}g - $${cpg.toFixed(4)}/g</span><button class="db" onclick="event.stopPropagation();delPrep(${pi})">✕</button></div><div class="xbody" id="pp${p.id}"><div id="prep-ings-${pi}"></div><div class="fgrid"><div class="fg"><label>Producto</label><select id="pi-p-${pi}"><option value="">...</option>${PRODS.map(x=>`<option value="${x}">${x}</option>`).join('')}</select></div><div class="fg"><label>Cantidad(g)</label><input type="number" id="pi-c-${pi}"/></div></div><button class="btn" onclick="addIngP(${pi})">Agregar</button></div></div>`;}).join('');preps.forEach((p,pi)=>{const ingsDiv=document.getElementById(`prep-ings-${pi}`);if(ingsDiv)ingsDiv.innerHTML=p.ings.map((ing,ii)=>`<div class="irow"><span>${ing.prod}</span><span>${ing.cant}g</span><span>$${(ing.pg||getPG(ing.prod)||0).toFixed(4)}</span><button class="db" onclick="delIngP(${pi},${ii})">✕</button></div>`).join('');});}
-async function addIngP(pi){const prod=document.getElementById(`pi-p-${pi}`).value,cant=parseFloat(document.getElementById(`pi-c-${pi}`).value);if(!prod||isNaN(cant))return;preps[pi].ings.push({prod,cant,pg:getPG(prod)||null});await saveInv_db();renderPreps();}
-async function delIngP(pi,ii){preps[pi].ings.splice(ii,1);await saveInv_db();renderPreps();}
-async function delPrep(pi){preps.splice(pi,1);await saveInv_db();renderPreps();refreshConfigSelects();}
+async function crearPrep(){ const nom = document.getElementById('prep-nom').value.trim(), g = parseFloat(document.getElementById('prep-g').value), aceite = parseFloat(document.getElementById('prep-aceite').value)||null; if(!nom || isNaN(g)) return showToast('Completa campos','warning'); preps.push({ id: Date.now(), nom, g, ings: [], factorAceite: aceite }); await saveInv_db(); renderPreps(); refreshConfigSelects(); document.getElementById('prep-nom').value = ''; document.getElementById('prep-g').value = ''; document.getElementById('prep-aceite').value = ''; showToast('Preparado creado','success'); }
+function renderPreps(){ const cont = document.getElementById('lista-preps'); if(!cont) return; if(!preps.length){ cont.innerHTML = '<div class="nota" style="text-align:center;padding:1rem">Sin preparados</div>'; return; } cont.innerHTML = preps.map((p,pi) => { const costo = p.ings.reduce((a,i)=>a+i.cant*(i.pg||getPG(i.prod)||0),0) + (p.factorAceite ? p.g*p.factorAceite*(getPG('Aceite')||0) : 0); const cpg = p.g>0 ? costo/p.g : 0; return `<div class="xcard"><div class="xhead" onclick="tog('pp${p.id}')"><span>${p.nom}</span><span>${p.g}g - $${cpg.toFixed(4)}/g</span><button class="db" onclick="event.stopPropagation();delPrep(${pi})">✕</button></div><div class="xbody" id="pp${p.id}"><div id="prep-ings-${pi}"></div><div class="fgrid"><div class="fg"><label>Producto</label><select id="pi-p-${pi}"><option value="">...</option>${PRODS.map(x=>`<option value="${x}">${x}</option>`).join('')}</select></div><div class="fg"><label>Cantidad(g)</label><input type="number" id="pi-c-${pi}"/></div></div><button class="btn" onclick="addIngP(${pi})">Agregar</button></div></div>`; }).join(''); preps.forEach((p,pi)=>{ const ingsDiv = document.getElementById(`prep-ings-${pi}`); if(ingsDiv) ingsDiv.innerHTML = p.ings.map((ing,ii)=>`<div class="irow"><span>${ing.prod}</span><span>${ing.cant}g</span><span>$${(ing.pg||getPG(ing.prod)||0).toFixed(4)}</span><button class="db" onclick="delIngP(${pi},${ii})">✕</button></div>`).join(''); }); }
+async function addIngP(pi){ const prod = document.getElementById(`pi-p-${pi}`).value, cant = parseFloat(document.getElementById(`pi-c-${pi}`).value); if(!prod || isNaN(cant)) return; preps[pi].ings.push({ prod, cant, pg: getPG(prod) || null }); await saveInv_db(); renderPreps(); }
+async function delIngP(pi,ii){ preps[pi].ings.splice(ii,1); await saveInv_db(); renderPreps(); }
+async function delPrep(pi){ preps.splice(pi,1); await saveInv_db(); renderPreps(); refreshConfigSelects(); }
 
 // ============================================================
 // POS
 // ============================================================
-function renderPOSCats(){const cont=document.getElementById('pos-cats');if(!cont)return;const burgers=menuItems.filter(m=>m.cat==='burger').map(m=>({nom:m.nom,precio:m.pv}));const papas=menuItems.filter(m=>m.cat==='papas').map(m=>({nom:m.nom,precio:m.pv}));const extras=pvProds.filter(p=>p.cat!=='papas').map(p=>({nom:p.nom,precio:p.precio}));let html='';if(burgers.length){html+=`<div class="cat-section"><div class="cat-header">🍔 HAMBURGUESAS</div><div class="prod-grid">`;burgers.forEach(p=>{html+=`<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio})"><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`;});html+=`</div></div>`;}if(papas.length){html+=`<div class="cat-section"><div class="cat-header">🍟 PAPAS FRITAS</div><div class="prod-grid">`;papas.forEach(p=>{html+=`<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio})"><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`;});html+=`</div></div>`;}if(extras.length){html+=`<div class="cat-section"><div class="cat-header">➕ EXTRAS / BEBIDAS</div><div class="prod-grid">`;extras.forEach(p=>{html+=`<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio})"><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`;});html+=`</div></div>`;}cont.innerHTML=html;}
-function getCostoItem(item){const mi=menuItems.find(m=>m.nom===item.nom);if(!mi)return pvProds.find(p=>p.nom===item.nom)?.costo||0;const incluyePapas=mi.incluyePapas!==false;const incluyeSalsa=mi.incluyeSalsa!==false;let total=mi.comps.reduce((a,c)=>{if(c.tipo==='ing')return a+c.cant*(c.pg||getPG(c.nom)||0);const p=preps.find(x=>x.nom===c.nom);return a+(p?c.cant*getCPGP(p):0);},0);if(incluyePapas && mi.cat!=='papas')total+=getCostoPapas()+getCEPapas();if(incluyeSalsa && mi.cat!=='papas')total+=getCostoSalsaTotal();if(mi.cat==='papas')total+=getCEPapas();else total+=getCE();return total;}
-function addToCart(nom,precio){const ex=carrito.find(c=>c.nom===nom);if(ex)ex.qty++;else carrito.push({nom,precio,qty:1});renderCart();}
-function changeQty(i,d){carrito[i].qty+=d;if(carrito[i].qty<=0)carrito.splice(i,1);renderCart();}
-function renderCart(){const el=document.getElementById('cart-items');if(!el)return;if(!carrito.length){el.innerHTML='<div class="nota" style="text-align:center;padding:.5rem">Carrito vacío</div>';document.getElementById('cart-total').textContent='$0.00';document.getElementById('cart-bs').textContent='—';return;}el.innerHTML=carrito.map((c,i)=>`<div class="citem"><span style="flex:1">${c.nom}</span><div class="qty-ctrl"><button class="qbtn" onclick="changeQty(${i},-1)">−</button><span style="min-width:20px;text-align:center">${c.qty}</span><button class="qbtn" onclick="changeQty(${i},1)">+</button></div><span class="hl">$${(c.precio*c.qty).toFixed(2)}</span></div>`).join('');const total=carrito.reduce((a,c)=>a+c.precio*c.qty,0)+(deliveryMonto||0);const desc=descuentoPct>0?total*descuentoPct/100:0;const totalFinal=total-desc;document.getElementById('cart-total').textContent='$'+totalFinal.toFixed(2);document.getElementById('cart-bs').textContent=tasa>0?fBs(totalFinal):'—';}
-function limpiarCarrito(){carrito=[];deliveryMonto=0;descuentoPct=0;renderCart();}
-function toggleDelivery(){const wrap=document.getElementById('delivery-input-wrap');if(wrap)wrap.style.display=wrap.style.display==='none'?'block':'none';}
-function setDelivery(){const v=parseFloat(document.getElementById('delivery-monto').value);if(v>0){deliveryMonto=v;document.getElementById('delivery-input-wrap').style.display='none';document.getElementById('cart-delivery-row').style.display='block';document.getElementById('cart-delivery-display').textContent='$'+v.toFixed(2);renderCart();}}
-function toggleDescuento(){const wrap=document.getElementById('descuento-input-wrap');if(wrap)wrap.style.display=wrap.style.display==='none'?'block':'none';}
-function setDescuento(){const pct=parseFloat(document.getElementById('descuento-pct').value);if(pct>0&&pct<=100){descuentoPct=pct;document.getElementById('descuento-input-wrap').style.display='none';renderCart();}}
-function setBanco(b){bancoActual=b;const bc=document.getElementById('banco-bancaribe-btn'),bp=document.getElementById('banco-provincial-btn');if(b==='bancaribe'){bc.style.borderColor='var(--naranja)';bc.style.background='rgba(232,98,26,.15)';bc.style.color='var(--naranja)';bp.style.borderColor='var(--gris-light)';bp.style.background='var(--gris-dark)';bp.style.color='var(--texto-dim)';}else{bc.style.borderColor='var(--gris-light)';bc.style.background='var(--gris-dark)';bc.style.color='var(--texto-dim)';bp.style.borderColor='#2196F3';bp.style.background='rgba(33,150,243,.15)';bp.style.color='#60a0d0';}}
-async function confirmarVenta(estado){if(!carrito.length)return showToast('Carrito vacío','warning');const cliente=document.getElementById('pos-cliente').value.trim()||'Sin nombre',fecha=document.getElementById('pos-fecha').value||getVEDate();const items=carrito.map(c=>({nom:c.nom,precio:c.precio,costo:getCostoItem(c),qty:c.qty}));const totalItems=items.reduce((a,c)=>a+c.precio*c.qty,0);const costoTotal=items.reduce((a,c)=>a+c.costo*c.qty,0);const totalConDelivery=totalItems+(deliveryMonto||0);const descMonto=descuentoPct>0?totalConDelivery*descuentoPct/100:0;const totalFinal=totalConDelivery-descMonto;const gan=totalFinal-costoTotal;const vid='v'+Date.now();const venta={fecha,cliente,items,total:totalFinal,costo:costoTotal,gan,estado,vid,tasa};ventas.unshift(venta);await addVenta_db(venta);if(estado==='cobrado'){if(bancoActual==='bancaribe'){saldo+=totalFinal;movs.unshift({fecha,desc:'Venta — '+cliente,tipo:'venta',monto:totalFinal,sd:saldo,tasa,esIngreso:true,ganancia:gan});}else{saldoProvincial+=totalFinal;localStorage.setItem('lf_saldo_provincial',saldoProvincial);movs.unshift({fecha,desc:'Venta — '+cliente+' (Provincial)',tipo:'venta',monto:totalFinal,sd:saldo,tasa,esIngreso:true,ganancia:gan,costoATransferir:costoTotal});}await saveSaldo_db();}guardarCliente(cliente);deliveryMonto=0;descuentoPct=0;carrito=[];renderCart();renderVentas();renderMetricsPOS();renderSaldoResumen();renderPendientes();document.getElementById('pos-cliente').value='';showToast(estado==='cobrado'?'Venta registrada':'Guardada pendiente','success');}
-function renderVentas(){const lista=document.getElementById('ventas-lista');if(!lista)return;lista.innerHTML=ventas.slice(0,30).map((v,i)=>`<div class="vcard"><div><strong>${v.cliente}</strong> ${v.fecha} <span class="hl">$${v.total.toFixed(2)}</span> <button class="edit-btn" onclick="editarNombreVenta(${i})">✏</button> <button class="db" onclick="delVenta(${i})">✕</button></div><div class="nota">${v.items.map(it=>`${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ')}</div></div>`).join('');}
-function renderPendientes(){const pends=ventas.filter(v=>v.estado==='pendiente');const el=document.getElementById('lista-pendientes');if(!el)return;if(!pends.length){el.innerHTML='<div class="nota">Sin pendientes</div>';return;}el.innerHTML=pends.map(v=>`<div style="border:1px solid var(--amarillo);border-radius:8px;padding:.5rem;margin-bottom:.5rem"><div><strong>${v.cliente}</strong> ${v.fecha} <span class="hl">$${v.total.toFixed(2)}</span><button class="btn" style="margin-left:8px;padding:2px 8px" onclick="marcarCobrado('${v.vid}')">Cobrar</button><button class="db" onclick="delVentaById('${v.vid}')">✕</button></div><div class="nota">${v.items.map(it=>`${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ')}</div></div>`).join('');}
-async function marcarCobrado(vid){const idx=ventas.findIndex(v=>v.vid===vid);if(idx<0)return;const v=ventas[idx];v.estado='cobrado';if(bancoActual==='bancaribe'){saldo+=v.total;movs.unshift({fecha:getVEDate(),desc:'Cobro — '+v.cliente,tipo:'venta',monto:v.total,sd:saldo,tasa,esIngreso:true});}else{saldoProvincial+=v.total;localStorage.setItem('lf_saldo_provincial',saldoProvincial);movs.unshift({fecha:getVEDate(),desc:'Cobro — '+v.cliente,tipo:'venta',monto:v.total,sd:saldo,tasa,esIngreso:true});}await saveSaldo_db();renderVentas();renderPendientes();renderMetricsPOS();renderSaldoResumen();showToast('Cobrado','success');}
-
-// ============================================================
-// INVENTARIO
-// ============================================================
-function renderInventario(){const tb=document.getElementById('tabla-inv');if(!tb)return;const stock={};compras.forEach(c=>{stock[c.prod]=(stock[c.prod]||0)+c.cont;});stockInicial.forEach(s=>{stock[s.prod]=(stock[s.prod]||0)+s.cant;});const consumo={};ventas.forEach(v=>{v.items.forEach(item=>{const mi=menuItems.find(m=>m.nom===item.nom);if(mi){mi.comps.forEach(c=>{if(c.tipo==='ing')consumo[c.nom]=(consumo[c.nom]||0)+c.cant*(item.qty||1);});}});});Object.keys(consumo).forEach(p=>{if(stock[p])stock[p]=Math.max(0,stock[p]-consumo[p]);});const prods=Object.keys(stock).map(p=>({prod:p,cant:stock[p]}));if(!prods.length){tb.innerHTML='<div class="nota">Sin datos de inventario</div>';return;}tb.innerHTML=`<table><thead><tr><th>Producto</th><th>Stock estimado</th><th>Unidad</th></tr></thead><tbody>${prods.map(p=>`<tr><td>${p.prod}</td><td>${p.cant.toFixed(1)}</td><td>g</td></tr>`).join('')}</tbody></table>`;}
-function renderSI(){const tb=document.getElementById('tabla-si');if(tb)tb.innerHTML=stockInicial.map((s,i)=>`<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>${s.prod}: ${s.cant} ${s.unit||'g'}</span><button class="db" onclick="delSI(${i})">✕</button></div>`).join('');}
-function renderInvHist(){const tb=document.getElementById('tabla-inv-hist');if(!tb)return;const todos=[...stockInicial.map(s=>({...s,tipo:'Stock inicial'})),...compras.map(c=>({...c,tipo:'Compra',cant:c.cont}))].sort((a,b)=>b.fecha?.localeCompare(a.fecha||''));if(!todos.length){tb.innerHTML='<div class="nota">Sin movimientos</div>';return;}tb.innerHTML=`<table><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th></tr></thead><tbody>${todos.map(m=>`<tr><td>${m.fecha||'-'}</td><td>${m.prod}</td><td>${m.tipo}</td><td>${m.cant}</td></tr>`).join('')}</tbody></table>`;}
-async function cargarStockInicial(){const prod=getSelVal('si-prod'),cant=parseFloat(document.getElementById('si-cant').value),unit=document.getElementById('si-unit').value,precio=parseFloat(document.getElementById('si-precio').value)||0;if(!prod||isNaN(cant))return showToast('Completa producto y cantidad','warning');stockInicial.push({prod,cant,unit,precio,fecha:getVEDate()});await saveInv_db();renderSI();renderInventario();showToast('Stock cargado','success');}
-async function registrarCompra(){const prod=getSelVal('c-prod'),cant=parseFloat(document.getElementById('c-cant').value),precio=parseFloat(document.getElementById('c-precio').value),tienda=document.getElementById('c-tienda').value,fecha=document.getElementById('c-fecha').value||getVEDate();if(!prod||isNaN(cant)||isNaN(precio))return showToast('Completa todos los campos','warning');const compra={fecha,prod,cont:cant,precio,pg:precio/cant,tienda};compras.unshift(compra);saldo-=precio;movs.unshift({fecha,desc:prod+' - '+tienda,tipo:'compra',monto:precio,sd:saldo,tasa});await addCompra_db(compra);await saveSaldo_db();renderInventario();renderInvHist();showToast('Compra registrada','success');}
-async function delSI(i){if(!confirm('Eliminar?'))return;stockInicial.splice(i,1);await saveInv_db();renderSI();renderInventario();}
-
-// ============================================================
-// VIDRIERA
-// ============================================================
-async function addVidriera(){const prod=getSelVal('v-prod'),marca=document.getElementById('v-marca').value,cont=parseFloat(document.getElementById('v-cont').value),precio=parseFloat(document.getElementById('v-precio').value),tienda=document.getElementById('v-tienda').value,fecha=document.getElementById('v-fecha').value||getVEDate();if(!prod||isNaN(precio))return showToast('Completa producto y precio','warning');vidriera.unshift({fecha,prod,marca,cont,precio,pg:cont>0?precio/cont:null,tienda});await saveInv_db();renderVidriera();showToast('Precio agregado','success');}
-function renderVidriera(){const tb=document.getElementById('tabla-vidriera');if(!tb)return;if(!vidriera.length){tb.innerHTML='<div class="nota">Sin precios registrados</div>';return;}tb.innerHTML=`<table><thead><tr><th>Fecha</th><th>Producto</th><th>Marca</th><th>Contenido</th><th>Precio</th><th>$/g</th><th>Tienda</th></tr></thead><tbody>${vidriera.slice(0,30).map(v=>`<tr><td>${v.fecha}</td><td>${v.prod}</td><td>${v.marca||'-'}</td><td>${v.cont||'-'}g</td><td>$${v.precio.toFixed(2)}</td><td>${v.pg?'$'+v.pg.toFixed(4):'-'}</td><td>${v.tienda}</td></tr>`).join('')}</tbody></table>`;}
+function renderPOSCats(){
+    const cont = document.getElementById('pos-cats');
+    if(!cont) return;
+    const burgers = menuItems.filter(m => m.cat === 'burger').map(m => ({ nom: m.nom, precio: m.pv }));
+    const papas = menuItems.filter(m => m.cat === 'papas').map(m => ({ nom: m.nom, precio: m.pv }));
+    const extras = pvProds.filter(p => p.cat !== 'papas').map(p => ({ nom: p.nom, precio: p.precio }));
+    let html = '';
+    if(burgers.length){
+        html += `<div class="cat-section"><div class="cat-header">🍔 HAMBURGUESAS</div><div class="prod-grid">`;
+        burgers.forEach(p => { html += `<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio})"><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`; });
+        html += `</div></div>`;
+    }
+    if(papas.length){
+        html += `<div class="cat-section"><div class="cat-header">🍟 PAPAS FRITAS</div><div class="prod-grid">`;
+        papas.forEach(p => { html += `<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio})"><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`; });
+        html += `</div></div>`;
+    }
+    if(extras.length){
+        html += `<div class="cat-section"><div class="cat-header">➕ EXTRAS / BEBIDAS</div><div class="prod-grid">`;
+        extras.forEach(p => { html += `<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio})"><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`; });
+        html += `</div></div>`;
+    }
+    cont.innerHTML = html;
+}
+function getCostoItem(item){
+    const mi = menuItems.find(m => m.nom === item.nom);
+    if(!mi) return pvProds.find(p => p.nom === item.nom)?.costo || 0;
+    const incluyePapas = mi.incluyePapas !== false;
+    const incluyeSalsa = mi.incluyeSalsa !== false;
+    let total = mi.comps.reduce((a,c) => {
+        if(c.tipo === 'ing') return a + c.cant * (c.pg || getPG(c.nom) || 0);
+        const p = preps.find(x => x.nom === c.nom);
+        return a + (p ? c.cant * getCPGP(p) : 0);
+    }, 0);
+    if(incluyePapas && mi.cat !== 'papas') total += getCostoPapas() + getCEPapas();
+    if(incluyeSalsa && mi.cat !== 'papas') total += getCostoSalsaTotal();
+    if(mi.cat === 'papas') total += getCEPapas();
+    else total += getCE();
+    return total;
+}
+function addToCart(nom, precio){ const ex = carrito.find(c => c.nom === nom); if(ex) ex.qty++; else carrito.push({ nom, precio, qty: 1 }); renderCart(); }
+function changeQty(i,d){ carrito[i].qty += d; if(carrito[i].qty <= 0) carrito.splice(i,1); renderCart(); }
+function renderCart(){
+    const el = document.getElementById('cart-items');
+    if(!el) return;
+    if(!carrito.length){ el.innerHTML = '<div class="nota" style="text-align:center;padding:.5rem">Carrito vacío</div>'; document.getElementById('cart-total').textContent = '$0.00'; document.getElementById('cart-bs').textContent = '—'; return; }
+    el.innerHTML = carrito.map((c,i) => `<div class="citem"><span style="flex:1">${c.nom}</span><div class="qty-ctrl"><button class="qbtn" onclick="changeQty(${i},-1)">−</button><span style="min-width:20px;text-align:center">${c.qty}</span><button class="qbtn" onclick="changeQty(${i},1)">+</button></div><span class="hl">$${(c.precio * c.qty).toFixed(2)}</span></div>`).join('');
+    const total = carrito.reduce((a,c) => a + c.precio * c.qty, 0) + (deliveryMonto || 0);
+    const desc = descuentoPct > 0 ? total * descuentoPct / 100 : 0;
+    const totalFinal = total - desc;
+    document.getElementById('cart-total').textContent = '$' + totalFinal.toFixed(2);
+    document.getElementById('cart-bs').textContent = tasa > 0 ? fBs(totalFinal) : '—';
+}
+function limpiarCarrito(){ carrito = []; deliveryMonto = 0; descuentoPct = 0; renderCart(); }
+function toggleDelivery(){ const wrap = document.getElementById('delivery-input-wrap'); if(wrap) wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none'; }
+function setDelivery(){ const v = parseFloat(document.getElementById('delivery-monto').value); if(v > 0){ deliveryMonto = v; document.getElementById('delivery-input-wrap').style.display = 'none'; document.getElementById('cart-delivery-row').style.display = 'block'; document.getElementById('cart-delivery-display').textContent = '$' + v.toFixed(2); renderCart(); } }
+function toggleDescuento(){ const wrap = document.getElementById('descuento-input-wrap'); if(wrap) wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none'; }
+function setDescuento(){ const pct = parseFloat(document.getElementById('descuento-pct').value); if(pct > 0 && pct <= 100){ descuentoPct = pct; document.getElementById('descuento-input-wrap').style.display = 'none'; renderCart(); } }
+function setBanco(b){ bancoActual = b; const bc = document.getElementById('banco-bancaribe-btn'), bp = document.getElementById('banco-provincial-btn'); if(b === 'bancaribe'){ bc.style.borderColor = 'var(--naranja)'; bc.style.background = 'rgba(232,98,26,.15)'; bc.style.color = 'var(--naranja)'; bp.style.borderColor = 'var(--gris-light)'; bp.style.background = 'var(--gris-dark)'; bp.style.color = 'var(--texto-dim)'; } else { bc.style.borderColor = 'var(--gris-light)'; bc.style.background = 'var(--gris-dark)'; bc.style.color = 'var(--texto-dim)'; bp.style.borderColor = '#2196F3'; bp.style.background = 'rgba(33,150,243,.15)'; bp.style.color = '#60a0d0'; } }
+async function confirmarVenta(estado){
+    if(!carrito.length) return showToast('Carrito vacío','warning');
+    const cliente = document.getElementById('pos-cliente').value.trim() || 'Sin nombre', fecha = document.getElementById('pos-fecha').value || getVEDate();
+    const items = carrito.map(c => ({ nom: c.nom, precio: c.precio, costo: getCostoItem(c), qty: c.qty }));
+    const totalItems = items.reduce((a,c) => a + c.precio * c.qty, 0);
+    const costoTotal = items.reduce((a,c) => a + c.costo * c.qty, 0);
+    const totalConDelivery = totalItems + (deliveryMonto || 0);
+    const descMonto = descuentoPct > 0 ? totalConDelivery * descuentoPct / 100 : 0;
+    const totalFinal = totalConDelivery - descMonto;
+    const gan = totalFinal - costoTotal;
+    const vid = 'v' + Date.now();
+    const venta = { fecha, cliente, items, total: totalFinal, costo: costoTotal, gan, estado, vid, tasa };
+    ventas.unshift(venta);
+    await addVenta_db(venta);
+    if(estado === 'cobrado'){
+        if(bancoActual === 'bancaribe'){ saldo += totalFinal; movs.unshift({ fecha, desc: 'Venta — ' + cliente, tipo: 'venta', monto: totalFinal, sd: saldo, tasa, esIngreso: true, ganancia: gan }); }
+        else { saldoProvincial += totalFinal; localStorage.setItem('lf_saldo_provincial', saldoProvincial); movs.unshift({ fecha, desc: 'Venta — ' + cliente + ' (Provincial)', tipo: 'venta', monto: totalFinal, sd: saldo, tasa, esIngreso: true, ganancia: gan, costoATransferir: costoTotal }); }
+        await saveSaldo_db();
+    }
+    guardarCliente(cliente);
+    deliveryMonto = 0; descuentoPct = 0; carrito = [];
+    renderCart(); renderVentas(); renderMetricsPOS(); renderSaldoResumen(); renderPendientes();
+    document.getElementById('pos-cliente').value = '';
+    showToast(estado === 'cobrado' ? 'Venta registrada' : 'Guardada pendiente', 'success');
+}
+function renderVentas(){ const lista = document.getElementById('ventas-lista'); if(!lista) return; lista.innerHTML = ventas.slice(0,30).map((v,i) => `<div class="vcard"><div><strong>${v.cliente}</strong> ${v.fecha} <span class="hl">$${v.total.toFixed(2)}</span> <button class="edit-btn" onclick="editarNombreVenta(${i})">✏</button> <button class="db" onclick="delVenta(${i})">✕</button></div><div class="nota">${v.items.map(it => `${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ')}</div></div>`).join(''); }
+function renderPendientes(){ const pends = ventas.filter(v => v.estado === 'pendiente'); const el = document.getElementById('lista-pendientes'); if(!el) return; if(!pends.length){ el.innerHTML = '<div class="nota">Sin pendientes</div>'; return; } el.innerHTML = pends.map(v => `<div style="border:1px solid var(--amarillo);border-radius:8px;padding:.5rem;margin-bottom:.5rem"><div><strong>${v.cliente}</strong> ${v.fecha} <span class="hl">$${v.total.toFixed(2)}</span><button class="btn" style="margin-left:8px;padding:2px 8px" onclick="marcarCobrado('${v.vid}')">Cobrar</button><button class="db" onclick="delVentaById('${v.vid}')">✕</button></div><div class="nota">${v.items.map(it => `${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ')}</div></div>`).join(''); }
+async function marcarCobrado(vid){ const idx = ventas.findIndex(v => v.vid === vid); if(idx < 0) return; const v = ventas[idx]; v.estado = 'cobrado'; if(bancoActual === 'bancaribe'){ saldo += v.total; movs.unshift({ fecha: getVEDate(), desc: 'Cobro — ' + v.cliente, tipo: 'venta', monto: v.total, sd: saldo, tasa, esIngreso: true }); } else { saldoProvincial += v.total; localStorage.setItem('lf_saldo_provincial', saldoProvincial); movs.unshift({ fecha: getVEDate(), desc: 'Cobro — ' + v.cliente, tipo: 'venta', monto: v.total, sd: saldo, tasa, esIngreso: true }); } await saveSaldo_db(); renderVentas(); renderPendientes(); renderMetricsPOS(); renderSaldoResumen(); showToast('Cobrado','success'); }
 
 // ============================================================
 // SALDO
 // ============================================================
-function renderSaldoResumen(){document.getElementById('s-bs').textContent=fBs(saldo);document.getElementById('s-usd').textContent=fUSD(saldo);document.getElementById('p-bs').textContent=fBs(saldoProvincial);document.getElementById('p-usd').textContent=fUSD(saldoProvincial);const gp=getGanPend();document.getElementById('g-bs').textContent=fBs(gp);document.getElementById('g-usd').textContent=fUSD(gp);document.getElementById('gan-inline').textContent=fUSD(gp);}
-async function actualizarSaldo(banco){if(banco==='bancaribe'){const v=parseFloat(document.getElementById('nuevo-saldo').value);if(isNaN(v))return;saldo=v;movs.unshift({fecha:getVEDate(),desc:'Ajuste Bancaribe',tipo:'ajuste',monto:0,sd:saldo,tasa});await saveSaldo_db();}else{const v=parseFloat(document.getElementById('nuevo-saldo-provincial').value);if(isNaN(v))return;saldoProvincial=v;localStorage.setItem('lf_saldo_provincial',saldoProvincial);movs.unshift({fecha:getVEDate(),desc:'Ajuste Provincial',tipo:'ajuste',monto:0,sd:saldo,tasa});await saveSaldo_db();}renderSaldoResumen();renderMovs();showToast('Saldo actualizado','success');}
-function renderMovs(){const tb=document.getElementById('tabla-movs');if(!tb)return;tb.innerHTML=movs.slice(0,30).map((m,i)=>`<tr><td>${m.fecha}</td><td>${m.desc}</td><td class="${m.esIngreso?'green':m.monto>0?'red':''}">${m.esIngreso?'+':'-'}$${Math.abs(m.monto).toFixed(2)}</td><td>$${m.sd.toFixed(2)}</td><td><button class="db" onclick="delMov(${i})">✕</button></td></tr>`).join('');}
-async function registrarTransferencia(){const monto=parseFloat(document.getElementById('transfer-monto').value),fecha=document.getElementById('transfer-fecha').value;if(isNaN(monto))return;const gp=getGanPend();if(monto>gp)return showToast('Saldo insuficiente','warning');ganT+=monto;saldo-=monto;movs.unshift({fecha,desc:'Transferencia a personal',tipo:'transferencia',monto,sd:saldo,tasa});await saveSaldo_db();renderSaldoResumen();renderMovs();showToast('Transferencia registrada','success');}
-async function registrarGasto(){const desc=document.getElementById('gasto-desc').value,monto=parseFloat(document.getElementById('gasto-monto').value),fecha=document.getElementById('gasto-fecha').value||getVEDate();if(!desc||isNaN(monto))return;saldo-=monto;movs.unshift({fecha,desc,tipo:'gasto',monto,sd:saldo,tasa});await saveSaldo_db();renderSaldoResumen();renderMovs();showToast('Gasto registrado','success');}
-async function delMov(i){movs.splice(i,1);await saveSaldo_db();renderMovs();renderSaldoResumen();}
+function renderSaldoResumen(){ document.getElementById('s-bs').textContent = fBs(saldo); document.getElementById('s-usd').textContent = fUSD(saldo); document.getElementById('p-bs').textContent = fBs(saldoProvincial); document.getElementById('p-usd').textContent = fUSD(saldoProvincial); const gp = getGanPend(); document.getElementById('g-bs').textContent = fBs(gp); document.getElementById('g-usd').textContent = fUSD(gp); document.getElementById('gan-inline').textContent = fUSD(gp); }
+async function actualizarSaldo(banco){ if(banco === 'bancaribe'){ const v = parseFloat(document.getElementById('nuevo-saldo').value); if(isNaN(v)) return; saldo = v; movs.unshift({ fecha: getVEDate(), desc: 'Ajuste Bancaribe', tipo: 'ajuste', monto: 0, sd: saldo, tasa }); await saveSaldo_db(); } else { const v = parseFloat(document.getElementById('nuevo-saldo-provincial').value); if(isNaN(v)) return; saldoProvincial = v; localStorage.setItem('lf_saldo_provincial', saldoProvincial); movs.unshift({ fecha: getVEDate(), desc: 'Ajuste Provincial', tipo: 'ajuste', monto: 0, sd: saldo, tasa }); await saveSaldo_db(); } renderSaldoResumen(); renderMovs(); showToast('Saldo actualizado','success'); }
+function renderMovs(){ const tb = document.getElementById('tabla-movs'); if(!tb) return; tb.innerHTML = movs.slice(0,30).map((m,i) => `<tr><td>${m.fecha}</td><td>${m.desc}</td><td class="${m.esIngreso?'green':m.monto>0?'red':''}">${m.esIngreso?'+':'-'}$${Math.abs(m.monto).toFixed(2)}</td><td>$${m.sd.toFixed(2)}</td><td><button class="db" onclick="delMov(${i})">✕</button></td></tr>`).join(''); }
+async function registrarTransferencia(){ const monto = parseFloat(document.getElementById('transfer-monto').value), fecha = document.getElementById('transfer-fecha').value; if(isNaN(monto)) return; const gp = getGanPend(); if(monto > gp) return showToast('Saldo insuficiente','warning'); ganT += monto; saldo -= monto; movs.unshift({ fecha, desc: 'Transferencia a personal', tipo: 'transferencia', monto, sd: saldo, tasa }); await saveSaldo_db(); renderSaldoResumen(); renderMovs(); showToast('Transferencia registrada','success'); }
+async function registrarGasto(){ const desc = document.getElementById('gasto-desc').value, monto = parseFloat(document.getElementById('gasto-monto').value), fecha = document.getElementById('gasto-fecha').value || getVEDate(); if(!desc || isNaN(monto)) return; saldo -= monto; movs.unshift({ fecha, desc, tipo: 'gasto', monto, sd: saldo, tasa }); await saveSaldo_db(); renderSaldoResumen(); renderMovs(); showToast('Gasto registrado','success'); }
+async function delMov(i){ movs.splice(i,1); await saveSaldo_db(); renderMovs(); renderSaldoResumen(); }
+
+// ============================================================
+// VIDRIERA
+// ============================================================
+async function addVidriera(){ const prod = getSelVal('v-prod'), marca = document.getElementById('v-marca').value, cont = parseFloat(document.getElementById('v-cont').value), precio = parseFloat(document.getElementById('v-precio').value), tienda = document.getElementById('v-tienda').value, fecha = document.getElementById('v-fecha').value || getVEDate(); if(!prod || isNaN(precio)) return showToast('Completa producto y precio','warning'); vidriera.unshift({ fecha, prod, marca, cont, precio, pg: cont>0 ? precio/cont : null, tienda }); await saveInv_db(); renderVidriera(); showToast('Precio agregado','success'); }
+function renderVidriera(){ const tb = document.getElementById('tabla-vidriera'); if(!tb) return; if(!vidriera.length){ tb.innerHTML = '<div class="nota">Sin precios registrados</div>'; return; } tb.innerHTML = `<table><thead><tr><th>Fecha</th><th>Producto</th><th>Marca</th><th>Contenido</th><th>Precio</th><th>$/g</th><th>Tienda</th></tr></thead><tbody>${vidriera.slice(0,30).map(v => `<tr><td>${v.fecha}</td><td>${v.prod}</td><td>${v.marca||'-'}</td><td>${v.cont||'-'}g</td><td>$${v.precio.toFixed(2)}</td><td>${v.pg?'$'+v.pg.toFixed(4):'-'}</td><td>${v.tienda}</td></tr>`).join('')}</tbody></table>`; }
 
 // ============================================================
 // OTROS
 // ============================================================
-function addGastoOp(){const desc=document.getElementById('gop-desc').value,monto=parseFloat(document.getElementById('gop-monto').value);if(!desc||isNaN(monto))return;gastosOp.push({desc,monto});localStorage.setItem('lf_gastos_op',JSON.stringify(gastosOp));renderGastosOp();showToast('Gasto agregado','success');}
-function renderGastosOp(){const el=document.getElementById('gastos-op-lista');if(el)el.innerHTML=gastosOp.map((g,i)=>`<div style="display:flex;gap:8px;margin-bottom:4px"><span>${g.desc}</span><span>$${g.monto.toFixed(2)}</span><button class="db" onclick="delGastoOp(${i})">✕</button></div>`).join('');}
-function delGastoOp(i){gastosOp.splice(i,1);localStorage.setItem('lf_gastos_op',JSON.stringify(gastosOp));renderGastosOp();}
-function addPVP(){const nom=document.getElementById('pvp-nom').value,precio=parseFloat(document.getElementById('pvp-precio').value),costo=parseFloat(document.getElementById('pvp-costo').value)||0,cat=document.getElementById('pvp-cat').value;if(!nom||isNaN(precio))return;pvProds.push({nom,precio,costo,cat});saveConfig_db();renderPVPLista();showToast('Producto agregado','success');}
-function renderPVPLista(){const el=document.getElementById('pvp-lista');if(el)el.innerHTML=pvProds.map((p,i)=>`<div style="display:flex;gap:8px;margin-bottom:4px"><span>${p.nom}</span><span>$${p.precio.toFixed(2)}</span><button class="db" onclick="delPVP(${i})">✕</button></div>`).join('');}
-function agregarProducto(){const nom=document.getElementById('nuevo-prod-nom').value.trim();if(!nom)return;productosExtra.push(nom);localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));PRODS=getProds();initSearchableSelects();renderProdsExtra();showToast('Producto agregado','success');}
-function renderProdsExtra(){const el=document.getElementById('prods-extra-lista');if(el)el.innerHTML=productosExtra.map(p=>`<div>${p}</div>`).join('');}
-function addPorcion(){const nom=document.getElementById('porc-nom').value,prod=getSelVal('porc-prod'),gr=parseFloat(document.getElementById('porc-gr').value);if(!nom||!prod||isNaN(gr))return;porciones.push({nom,prod,gr});saveConfig_db();renderPorciones();showToast('Porción agregada','success');}
-function renderPorciones(){const el=document.getElementById('porciones-lista');if(el)el.innerHTML=porciones.map((p,i)=>`<div style="display:flex;gap:8px;margin-bottom:4px"><span>${p.nom}: ${p.prod} - ${p.gr}g</span><button class="db" onclick="delPorcion(${i})">✕</button></div>`).join('');}
-function addEmp(tipo){const prod=getSelVal(tipo==='papas'?'emp-papas-prod':'emp-prod'),cant=parseFloat(document.getElementById(tipo==='papas'?'emp-papas-cant':'emp-cant').value);if(!prod||isNaN(cant))return;if(tipo==='papas')empaquePapas.push({prod,cant});else empaque.push({prod,cant});saveConfig_db();renderEmp();showToast('Ítem agregado','success');}
-function renderEmp(){renderEmpLista(empaque,'emp-lista');renderEmpLista(empaquePapas,'emp-papas-lista');updateCostosPreview();}
-function renderEmpLista(lista,elId){const el=document.getElementById(elId);if(!el)return;el.innerHTML=lista.map((e,i)=>`<div style="display:flex;gap:8px;margin-bottom:4px"><span>${e.prod} x${e.cant}</span><button class="db" onclick="delEmpItem('${elId}',${i})">✕</button></div>`).join('');}
-function addEnvio(){const cli=document.getElementById('env-cli').value,costo=parseFloat(document.getElementById('env-cost').value),fecha=document.getElementById('env-fecha').value||getVEDate();if(!cli||isNaN(costo))return;envios.unshift({fecha,cli,costo});saveInv_db();renderEnvios();showToast('Envío registrado','success');}
-function renderEnvios(){const tb=document.getElementById('tabla-envios');if(tb)tb.innerHTML=envios.map(e=>`<div>${e.fecha} ${e.cli} - $${e.costo.toFixed(2)}</div>`).join('');renderMetricsEnvios();}
-function renderMetricsEnvios(){const el=document.getElementById('metrics-envios');if(el){const total=envios.reduce((a,e)=>a+e.costo,0);el.innerHTML=`<div class="metric"><div class="ml">Total envíos</div><div class="mv">$${total.toFixed(2)}</div></div>`;}}
-function renderMetricsPOS(){const el=document.getElementById('metrics-pos');if(!el)return;const hoy=getVEDate();const vHoy=ventas.filter(v=>v.fecha===hoy).reduce((a,v)=>a+v.total,0);const gHoy=ventas.filter(v=>v.fecha===hoy).reduce((a,v)=>a+(v.gan||0),0);el.innerHTML=`<div class="metric accent"><div class="ml">Ventas hoy</div><div class="mv">$${vHoy.toFixed(2)}</div></div><div class="metric green-m"><div class="ml">Ganancia hoy</div><div class="mv green">$${gHoy.toFixed(2)}</div></div><div class="metric"><div class="ml">Por transferir</div><div class="mv">${fUSD(getGanPend())}</div></div>`;}
-function renderStats(){const data=ventas;const prodCount={};data.forEach(v=>v.items.forEach(it=>{prodCount[it.nom]=(prodCount[it.nom]||0)+(it.qty||1);}));const prods=Object.entries(prodCount).sort((a,b)=>b[1]-a[1]);const prodEl=document.getElementById('stats-productos');if(prodEl){if(!prods.length)prodEl.innerHTML='<div class="nota">Sin datos</div>';else prodEl.innerHTML=prods.slice(0,10).map(([nom,qty])=>`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>${nom}</span><span class="hl">${qty}</span></div>`).join('');}const cliCount={};data.forEach(v=>{if(v.cliente&&v.cliente!=='Sin nombre')cliCount[v.cliente]=(cliCount[v.cliente]||0)+v.items.reduce((a,i)=>a+(i.qty||1),0);});const clis=Object.entries(cliCount).sort((a,b)=>b[1]-a[1]);const cliEl=document.getElementById('stats-clientes');if(cliEl){if(!clis.length)cliEl.innerHTML='<div class="nota">Sin datos</div>';else cliEl.innerHTML=clis.slice(0,10).map(([nom,qty])=>`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>${nom}</span><span class="hl">${qty} items</span></div>`).join('');}const eqEl=document.getElementById('stats-equilibrio');if(eqEl){const totalGastos=gastosOp.reduce((a,g)=>a+g.monto,0);const ganMes=data.reduce((a,v)=>a+(v.gan||0),0);eqEl.innerHTML=`<div>Gastos mensuales: $${totalGastos.toFixed(2)}</div><div>Ganancia: $${ganMes.toFixed(2)}</div><div>${ganMes>=totalGastos?'✅ Cubres los gastos':'⚠️ Faltan $'+(totalGastos-ganMes).toFixed(2)}</div>`;}}
-function editarNombreVenta(i){const v=ventas[i];document.getElementById('modal-cliente-nuevo').value=v.cliente;window.editVentaIdx=i;document.getElementById('modal-cliente').style.display='flex';}
-async function guardarNombreVenta(){if(window.editVentaIdx!==undefined){ventas[window.editVentaIdx].cliente=document.getElementById('modal-cliente-nuevo').value;await saveInv_db();renderVentas();}document.getElementById('modal-cliente').style.display='none';}
-async function delVenta(i){ventas.splice(i,1);await saveInv_db();renderVentas();renderPendientes();renderMetricsPOS();}
-async function delVentaById(vid){const idx=ventas.findIndex(v=>v.vid===vid);if(idx>=0){ventas.splice(idx,1);await saveInv_db();renderVentas();renderPendientes();}}
-async function delPorcion(i){porciones.splice(i,1);await saveConfig_db();renderPorciones();}
-async function delEmpItem(listId,i){if(listId.includes('papas'))empaquePapas.splice(i,1);else empaque.splice(i,1);await saveConfig_db();renderEmp();}
-async function delPVP(i){pvProds.splice(i,1);await saveConfig_db();renderPVPLista();}
-async function guardarUmbrales(){document.getElementById('modal-umbral').style.display='none';}
-function abrirModal(p){document.getElementById('modal-umbral').style.display='flex';}
-function tog(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
-function getClientesGuardados(){return{mes:getVEDate().slice(0,7),nombres:[]};}
+function addGastoOp(){ const desc = document.getElementById('gop-desc').value, monto = parseFloat(document.getElementById('gop-monto').value); if(!desc || isNaN(monto)) return; gastosOp.push({ desc, monto }); localStorage.setItem('lf_gastos_op', JSON.stringify(gastosOp)); renderGastosOp(); showToast('Gasto agregado','success'); }
+function renderGastosOp(){ const el = document.getElementById('gastos-op-lista'); if(el) el.innerHTML = gastosOp.map((g,i) => `<div style="display:flex;gap:8px;margin-bottom:4px"><span>${g.desc}</span><span>$${g.monto.toFixed(2)}</span><button class="db" onclick="delGastoOp(${i})">✕</button></div>`).join(''); }
+function delGastoOp(i){ gastosOp.splice(i,1); localStorage.setItem('lf_gastos_op', JSON.stringify(gastosOp)); renderGastosOp(); }
+function addPVP(){ const nom = document.getElementById('pvp-nom').value, precio = parseFloat(document.getElementById('pvp-precio').value), costo = parseFloat(document.getElementById('pvp-costo').value)||0, cat = document.getElementById('pvp-cat').value; if(!nom || isNaN(precio)) return; pvProds.push({ nom, precio, costo, cat }); saveConfig_db(); renderPVPLista(); showToast('Producto agregado','success'); }
+function renderPVPLista(){ const el = document.getElementById('pvp-lista'); if(el) el.innerHTML = pvProds.map((p,i) => `<div style="display:flex;gap:8px;margin-bottom:4px"><span>${p.nom}</span><span>$${p.precio.toFixed(2)}</span><button class="db" onclick="delPVP(${i})">✕</button></div>`).join(''); }
+function agregarProducto(){ const nom = document.getElementById('nuevo-prod-nom').value.trim(); if(!nom) return; productosExtra.push(nom); localStorage.setItem('lf_prods_extra', JSON.stringify(productosExtra)); PRODS = getProds(); initSearchableSelects(); renderProdsExtra(); showToast('Producto agregado','success'); }
+function renderProdsExtra(){ const el = document.getElementById('prods-extra-lista'); if(el) el.innerHTML = productosExtra.map(p => `<div>${p}</div>`).join(''); }
+function addPorcion(){ const nom = document.getElementById('porc-nom').value, prod = getSelVal('porc-prod'), gr = parseFloat(document.getElementById('porc-gr').value); if(!nom || !prod || isNaN(gr)) return; porciones.push({ nom, prod, gr }); saveConfig_db(); renderPorciones(); showToast('Porción agregada','success'); }
+function renderPorciones(){ const el = document.getElementById('porciones-lista'); if(el) el.innerHTML = porciones.map((p,i) => `<div style="display:flex;gap:8px;margin-bottom:4px"><span>${p.nom}: ${p.prod} - ${p.gr}g</span><button class="db" onclick="delPorcion(${i})">✕</button></div>`).join(''); }
+function addEmp(tipo){ const prod = getSelVal(tipo==='papas'?'emp-papas-prod':'emp-prod'), cant = parseFloat(document.getElementById(tipo==='papas'?'emp-papas-cant':'emp-cant').value); if(!prod || isNaN(cant)) return; if(tipo==='papas') empaquePapas.push({ prod, cant }); else empaque.push({ prod, cant }); saveConfig_db(); renderEmp(); showToast('Ítem agregado','success'); }
+function renderEmp(){ renderEmpLista(empaque,'emp-lista'); renderEmpLista(empaquePapas,'emp-papas-lista'); updateCostosPreview(); }
+function renderEmpLista(lista,elId){ const el = document.getElementById(elId); if(!el) return; el.innerHTML = lista.map((e,i) => `<div style="display:flex;gap:8px;margin-bottom:4px"><span>${e.prod} x${e.cant}</span><button class="db" onclick="delEmpItem('${elId}',${i})">✕</button></div>`).join(''); }
+function addEnvio(){ const cli = document.getElementById('env-cli').value, costo = parseFloat(document.getElementById('env-cost').value), fecha = document.getElementById('env-fecha').value || getVEDate(); if(!cli || isNaN(costo)) return; envios.unshift({ fecha, cli, costo }); saveInv_db(); renderEnvios(); showToast('Envío registrado','success'); }
+function renderEnvios(){ const tb = document.getElementById('tabla-envios'); if(tb) tb.innerHTML = envios.map(e => `<div>${e.fecha} ${e.cli} - $${e.costo.toFixed(2)}</div>`).join(''); renderMetricsEnvios(); }
+function renderMetricsEnvios(){ const el = document.getElementById('metrics-envios'); if(el){ const total = envios.reduce((a,e)=>a+e.costo,0); el.innerHTML = `<div class="metric"><div class="ml">Total envíos</div><div class="mv">$${total.toFixed(2)}</div></div>`; } }
+function renderMetricsPOS(){ const el = document.getElementById('metrics-pos'); if(!el) return; const hoy = getVEDate(); const vHoy = ventas.filter(v=>v.fecha===hoy).reduce((a,v)=>a+v.total,0); const gHoy = ventas.filter(v=>v.fecha===hoy).reduce((a,v)=>a+(v.gan||0),0); el.innerHTML = `<div class="metric accent"><div class="ml">Ventas hoy</div><div class="mv">$${vHoy.toFixed(2)}</div></div><div class="metric green-m"><div class="ml">Ganancia hoy</div><div class="mv green">$${gHoy.toFixed(2)}</div></div><div class="metric"><div class="ml">Por transferir</div><div class="mv">${fUSD(getGanPend())}</div></div>`; }
+function renderStats(){ const data = ventas; const prodCount = {}; data.forEach(v=>v.items.forEach(it=>{ prodCount[it.nom] = (prodCount[it.nom]||0) + (it.qty||1); })); const prods = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]); const prodEl = document.getElementById('stats-productos'); if(prodEl){ if(!prods.length) prodEl.innerHTML = '<div class="nota">Sin datos</div>'; else prodEl.innerHTML = prods.slice(0,10).map(([nom,qty])=>`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>${nom}</span><span class="hl">${qty}</span></div>`).join(''); } const cliCount = {}; data.forEach(v=>{ if(v.cliente && v.cliente !== 'Sin nombre') cliCount[v.cliente] = (cliCount[v.cliente]||0) + v.items.reduce((a,i)=>a+(i.qty||1),0); }); const clis = Object.entries(cliCount).sort((a,b)=>b[1]-a[1]); const cliEl = document.getElementById('stats-clientes'); if(cliEl){ if(!clis.length) cliEl.innerHTML = '<div class="nota">Sin datos</div>'; else cliEl.innerHTML = clis.slice(0,10).map(([nom,qty])=>`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>${nom}</span><span class="hl">${qty} items</span></div>`).join(''); } const eqEl = document.getElementById('stats-equilibrio'); if(eqEl){ const totalGastos = gastosOp.reduce((a,g)=>a+g.monto,0); const ganMes = data.reduce((a,v)=>a+(v.gan||0),0); eqEl.innerHTML = `<div>Gastos mensuales: $${totalGastos.toFixed(2)}</div><div>Ganancia: $${ganMes.toFixed(2)}</div><div>${ganMes >= totalGastos ? '✅ Cubres los gastos' : '⚠️ Faltan $' + (totalGastos-ganMes).toFixed(2)}</div>`; } }
+function editarNombreVenta(i){ const v = ventas[i]; document.getElementById('modal-cliente-nuevo').value = v.cliente; window.editVentaIdx = i; document.getElementById('modal-cliente').style.display = 'flex'; }
+async function guardarNombreVenta(){ if(window.editVentaIdx !== undefined){ ventas[window.editVentaIdx].cliente = document.getElementById('modal-cliente-nuevo').value; await saveInv_db(); renderVentas(); } document.getElementById('modal-cliente').style.display = 'none'; }
+async function delVenta(i){ ventas.splice(i,1); await saveInv_db(); renderVentas(); renderPendientes(); renderMetricsPOS(); }
+async function delVentaById(vid){ const idx = ventas.findIndex(v=>v.vid===vid); if(idx>=0){ ventas.splice(idx,1); await saveInv_db(); renderVentas(); renderPendientes(); } }
+async function delPorcion(i){ porciones.splice(i,1); await saveConfig_db(); renderPorciones(); }
+async function delEmpItem(listId,i){ if(listId.includes('papas')) empaquePapas.splice(i,1); else empaque.splice(i,1); await saveConfig_db(); renderEmp(); }
+async function delPVP(i){ pvProds.splice(i,1); await saveConfig_db(); renderPVPLista(); }
+function tog(id){ const el = document.getElementById(id); if(el) el.classList.toggle('open'); }
+function getClientesGuardados(){ return { mes: getVEDate().slice(0,7), nombres: [] }; }
 function guardarCliente(n){}
 function showClientSuggestions(){}
-function initSearchableSelects(){['v-prod','c-prod','si-prod','emp-prod','emp-papas-prod','porc-prod','cfg-salsa-envase'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='<option value="">Seleccionar...</option>'+getProds().map(p=>`<option value="${p}">${p}</option>`).join('');}});['cfg-papas-prep','cfg-salsa-prep'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Seleccionar...</option>'+preps.map(p=>`<option value="${p.nom}">${p.nom}</option>`).join('');});}
-function showTab(n,el){document.querySelectorAll('.section').forEach(s=>s.classList.remove('visible'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('tab-'+n).classList.add('visible');el.classList.add('active');if(n==='config'){refreshConfigSelects();renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();}if(n==='menu')renderMenuItems();if(n==='preparados')renderPreps();if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();renderPendientes();document.getElementById('pos-fecha').value=getVEDate();}if(n==='saldo'){renderSaldoResumen();renderMovs();}if(n==='inventario'){renderInventario();renderSI();renderInvHist();}if(n==='vidriera')renderVidriera();if(n==='stats')renderStats();}
-function showPanel(name,el){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('visible'));document.querySelectorAll('.tl').forEach(t=>t.classList.remove('active'));document.getElementById('panel-'+name).classList.add('visible');el.classList.add('active');}
+function initSearchableSelects(){ ['v-prod','c-prod','si-prod','emp-prod','emp-papas-prod','porc-prod','cfg-salsa-envase'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.innerHTML = '<option value="">Seleccionar...</option>' + getProds().map(p=>`<option value="${p}">${p}</option>`).join(''); } }); ['cfg-papas-prep','cfg-salsa-prep'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML = '<option value="">Seleccionar...</option>' + preps.map(p=>`<option value="${p.nom}">${p.nom}</option>`).join(''); }); }
+function showTab(n,el){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('visible')); document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.getElementById('tab-'+n).classList.add('visible'); el.classList.add('active'); if(n==='config'){ refreshConfigSelects(); renderEmp(); renderPVPLista(); renderProdsExtra(); renderGastosOp(); } if(n==='menu') renderMenuItems(); if(n==='preparados') renderPreps(); if(n==='pos'){ renderPOSCats(); renderVentas(); renderMetricsPOS(); renderPendientes(); document.getElementById('pos-fecha').value = getVEDate(); } if(n==='saldo'){ renderSaldoResumen(); renderMovs(); } if(n==='inventario'){ renderInventario(); renderSI(); renderInvHist(); } if(n==='vidriera') renderVidriera(); if(n==='stats') renderStats(); }
+function showPanel(name,el){ document.querySelectorAll('.panel').forEach(p=>p.classList.remove('visible')); document.querySelectorAll('.tl').forEach(t=>t.classList.remove('active')); document.getElementById('panel-'+name).classList.add('visible'); el.classList.add('active'); }
 
 // ============================================================
 // SYNC
 // ============================================================
-function saveOfflineQueue(){localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));}
-function updateOfflineBadge(){const b=document.getElementById('offline-badge');if(b){if(offlineQueue.length)b.textContent=offlineQueue.length+' pendiente',b.style.display='inline-block';else b.style.display='none';}}
-function addToOfflineQueue(type,data){offlineQueue.push({type,data});saveOfflineQueue();updateOfflineBadge();}
-async function syncOfflineQueue(){if(!offlineQueue.length)return;setSyncStatus('syncing');const failed=[];for(const item of offlineQueue){try{if(item.type==='compra')await sb.from('compras').insert([{data:item.data}]);else if(item.type==='venta')await sb.from('ventas').insert([{data:item.data}]);else if(item.type==='config')await sb.from('config').upsert(item.data);}catch(e){failed.push(item);}}offlineQueue=failed;saveOfflineQueue();updateOfflineBadge();if(!failed.length)setSyncStatus('ok');else setSyncStatus('error');}
-async function loadAll(){try{const{data:cfg}=await sb.from('config').select('*');if(cfg){cfg.forEach(r=>{if(r.id==='empaque')empaque=r.data||[];if(r.id==='empaque_papas')empaquePapas=r.data||[];if(r.id==='pvprods')pvProds=r.data||[];if(r.id==='porciones')porciones=r.data||[];if(r.id==='saldo'){saldo=r.data.saldo;movs=r.data.movs||[];ganT=r.data.ganT||0;}});}const{data:comp}=await sb.from('compras').select('*');if(comp)compras=comp.map(r=>r.data);const{data:vent}=await sb.from('ventas').select('*');if(vent)ventas=vent.map(r=>r.data);const{data:inv}=await sb.from('inventario').select('*');if(inv){inv.forEach(r=>{if(r.id==='stock_inicial')stockInicial=r.data||[];if(r.id==='preparados')preps=r.data||[];if(r.id==='menu')menuItems=r.data||[];if(r.id==='envios')envios=r.data||[];if(r.id==='vidriera')vidriera=r.data||[];});}const bc=localStorage.getItem('lf_bcv');if(bc)tasa=parseFloat(bc);setSyncStatus('ok');}catch(e){setSyncStatus('error');}}
-async function saveConfig_db(){if(!isOnline()){addToOfflineQueue('config',[{id:'empaque',data:empaque},{id:'empaque_papas',data:empaquePapas},{id:'pvprods',data:pvProds},{id:'porciones',data:porciones}]);return;}setSyncStatus('syncing');try{await sb.from('config').upsert([{id:'empaque',data:empaque},{id:'empaque_papas',data:empaquePapas},{id:'pvprods',data:pvProds},{id:'porciones',data:porciones}]);setSyncStatus('ok');}catch(e){setSyncStatus('error');}}
-async function saveSaldo_db(){setSyncStatus('syncing');try{await sb.from('config').upsert([{id:'saldo',data:{saldo,movs,ganT}}]);setSyncStatus('ok');}catch(e){setSyncStatus('error');}}
-async function saveInv_db(){setSyncStatus('syncing');try{await sb.from('inventario').upsert([{id:'stock_inicial',data:stockInicial},{id:'preparados',data:preps},{id:'menu',data:menuItems},{id:'envios',data:envios},{id:'vidriera',data:vidriera}]);setSyncStatus('ok');}catch(e){setSyncStatus('error');}}
-async function addCompra_db(c){if(!isOnline()){addToOfflineQueue('compra',c);return;}setSyncStatus('syncing');try{await sb.from('compras').insert([{data:c}]);setSyncStatus('ok');}catch(e){setSyncStatus('error');}}
-async function addVenta_db(v){if(!isOnline()){addToOfflineQueue('venta',v);return;}setSyncStatus('syncing');try{await sb.from('ventas').insert([{data:v}]);setSyncStatus('ok');}catch(e){setSyncStatus('error');}}
-async function fetchBCV(){try{const r=await fetch('https://tasa-dolar.fly.dev/');const d=await r.json();tasa=d.divisas?.USD||0;localStorage.setItem('lf_bcv',tasa);document.getElementById('bcv-lbl').textContent='BCV Bs.'+tasa.toFixed(2);document.getElementById('bcv-dot').style.background='var(--verde)';}catch(e){document.getElementById('bcv-lbl').textContent='BCV error';document.getElementById('bcv-dot').style.background='var(--naranja)';}renderSaldoResumen();}
-function setTasaManual(v){const t=parseFloat(v);if(t>0){tasa=t;localStorage.setItem('lf_bcv',tasa);document.getElementById('bcv-lbl').textContent='BCV Bs.'+tasa.toFixed(2);document.getElementById('bcv-dot').style.background='var(--verde)';renderSaldoResumen();}}
-window.addEventListener('online',()=>syncOfflineQueue());
-window.addEventListener('offline',()=>setSyncStatus('error'));
-async function init(){await loadAll();initSearchableSelects();renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();updateOfflineBadge();fetchBCV();if(tasa){const el=document.getElementById('tasa-manual');if(el)el.value=tasa.toFixed(2);}document.getElementById('loading-screen').style.display='none';document.getElementById('main-app').style.display='flex';showToast('La Farra v1.8 lista','success');}
+function saveOfflineQueue(){ localStorage.setItem('lf_offline_queue', JSON.stringify(offlineQueue)); }
+function updateOfflineBadge(){ const b = document.getElementById('offline-badge'); if(b){ if(offlineQueue.length) { b.textContent = offlineQueue.length + ' pendiente'; b.style.display = 'inline-block'; } else b.style.display = 'none'; } }
+function addToOfflineQueue(type,data){ offlineQueue.push({ type, data }); saveOfflineQueue(); updateOfflineBadge(); }
+async function syncOfflineQueue(){ if(!offlineQueue.length) return; setSyncStatus('syncing'); const failed = []; for(const item of offlineQueue){ try{ if(item.type === 'compra') await sb.from('compras').insert([{ data: item.data }]); else if(item.type === 'venta') await sb.from('ventas').insert([{ data: item.data }]); else if(item.type === 'config') await sb.from('config').upsert(item.data); } catch(e){ failed.push(item); } } offlineQueue = failed; saveOfflineQueue(); updateOfflineBadge(); if(!failed.length) setSyncStatus('ok'); else setSyncStatus('error'); }
+async function loadAll(){ try{ const { data: cfg } = await sb.from('config').select('*'); if(cfg){ cfg.forEach(r => { if(r.id === 'empaque') empaque = r.data || []; if(r.id === 'empaque_papas') empaquePapas = r.data || []; if(r.id === 'pvprods') pvProds = r.data || []; if(r.id === 'porciones') porciones = r.data || []; if(r.id === 'saldo'){ saldo = r.data.saldo; movs = r.data.movs || []; ganT = r.data.ganT || 0; } if(r.id === 'umbrales') umbrales = r.data || {}; }); } const { data: comp } = await sb.from('compras').select('*'); if(comp) compras = comp.map(r => r.data); const { data: vent } = await sb.from('ventas').select('*'); if(vent) ventas = vent.map(r => r.data); const { data: inv } = await sb.from('inventario').select('*'); if(inv){ inv.forEach(r => { if(r.id === 'stock_inicial') stockInicial = r.data || []; if(r.id === 'preparados') preps = r.data || []; if(r.id === 'menu') menuItems = r.data || []; if(r.id === 'envios') envios = r.data || []; if(r.id === 'vidriera') vidriera = r.data || []; }); } const bc = localStorage.getItem('lf_bcv'); if(bc) tasa = parseFloat(bc); setSyncStatus('ok'); } catch(e){ setSyncStatus('error'); } }
+async function saveConfig_db(){ if(!isOnline()){ addToOfflineQueue('config', [{ id: 'empaque', data: empaque }, { id: 'empaque_papas', data: empaquePapas }, { id: 'pvprods', data: pvProds }, { id: 'porciones', data: porciones }]); return; } setSyncStatus('syncing'); try{ await sb.from('config').upsert([{ id: 'empaque', data: empaque }, { id: 'empaque_papas', data: empaquePapas }, { id: 'pvprods', data: pvProds }, { id: 'porciones', data: porciones }]); setSyncStatus('ok'); } catch(e){ setSyncStatus('error'); } }
+async function saveSaldo_db(){ setSyncStatus('syncing'); try{ await sb.from('config').upsert([{ id: 'saldo', data: { saldo, movs, ganT } }]); setSyncStatus('ok'); } catch(e){ setSyncStatus('error'); } }
+async function saveUmbrales_db(){ setSyncStatus('syncing'); try{ await sb.from('config').upsert([{ id: 'umbrales', data: umbrales }]); setSyncStatus('ok'); } catch(e){ setSyncStatus('error'); } }
+async function saveInv_db(){ setSyncStatus('syncing'); try{ await sb.from('inventario').upsert([{ id: 'stock_inicial', data: stockInicial }, { id: 'preparados', data: preps }, { id: 'menu', data: menuItems }, { id: 'envios', data: envios }, { id: 'vidriera', data: vidriera }]); setSyncStatus('ok'); } catch(e){ setSyncStatus('error'); } }
+async function addCompra_db(c){ if(!isOnline()){ addToOfflineQueue('compra', c); return; } setSyncStatus('syncing'); try{ await sb.from('compras').insert([{ data: c }]); setSyncStatus('ok'); } catch(e){ setSyncStatus('error'); } }
+async function addVenta_db(v){ if(!isOnline()){ addToOfflineQueue('venta', v); return; } setSyncStatus('syncing'); try{ await sb.from('ventas').insert([{ data: v }]); setSyncStatus('ok'); } catch(e){ setSyncStatus('error'); } }
+async function fetchBCV(){ try{ const r = await fetch('https://tasa-dolar.fly.dev/'); const d = await r.json(); tasa = d.divisas?.USD || 0; localStorage.setItem('lf_bcv', tasa); document.getElementById('bcv-lbl').textContent = 'BCV Bs.' + tasa.toFixed(2); document.getElementById('bcv-dot').style.background = 'var(--verde)'; } catch(e){ document.getElementById('bcv-lbl').textContent = 'BCV error'; document.getElementById('bcv-dot').style.background = 'var(--naranja)'; } renderSaldoResumen(); }
+function setTasaManual(v){ const t = parseFloat(v); if(t > 0){ tasa = t; localStorage.setItem('lf_bcv', tasa); document.getElementById('bcv-lbl').textContent = 'BCV Bs.' + tasa.toFixed(2); document.getElementById('bcv-dot').style.background = 'var(--verde)'; renderSaldoResumen(); } }
+window.addEventListener('online', () => syncOfflineQueue());
+window.addEventListener('offline', () => setSyncStatus('error'));
+async function init(){ await loadAll(); initSearchableSelects(); renderEmp(); renderPVPLista(); renderProdsExtra(); renderGastosOp(); updateOfflineBadge(); fetchBCV(); if(tasa){ const el = document.getElementById('tasa-manual'); if(el) el.value = tasa.toFixed(2); } document.getElementById('loading-screen').style.display = 'none'; document.getElementById('main-app').style.display = 'flex'; showToast('La Farra v2.0 lista', 'success'); }
 init();
 </script>
 </body>
