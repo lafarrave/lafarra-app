@@ -1760,11 +1760,16 @@ function renderSaldoResumen(){
   document.getElementById('p-usd').textContent='$'+sPVusd.toFixed(2);
   // Costos pendientes de transferir a Bancaribe desde Provincial
   // Pending to Bancaribe (costos from Provincial ventas)
-  // ventas en Provincial: banco='provincial' en la venta o en el movimiento correspondiente
-  const ventasPV=ventas.filter(v=>v.estado==='cobrado'&&v.banco==='provincial');
-  // Also get from movs — ventas that were recorded as provincial in movs
-  const ventasIDsEnMovsProvincial=new Set(
+  // ventas en Provincial — detectar por v.banco O por descripción en movs provinciales
+  const descMovsProvincial=new Set(
     movs.filter(m=>m.banco==='provincial'&&m.esIngreso).map(m=>m.desc)
+  );
+  const ventasPV=ventas.filter(v=>
+    v.estado==='cobrado'&&(
+      v.banco==='provincial'||
+      descMovsProvincial.has('Venta — '+v.cliente)||
+      descMovsProvincial.has('Venta — '+v.cliente+' (Provincial)')
+    )
   );
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
@@ -2900,7 +2905,11 @@ function renderVentas(){
   const lista=document.getElementById('ventas-lista');if(!lista)return;
   if(!data.length){lista.innerHTML='<div style="font-size:12px;color:var(--texto-dim);text-align:center;padding:1rem">Sin ventas</div>';return;}
   lista.innerHTML=data.map(v=>{const i=ventas.indexOf(v);const str=v.items.map(it=>`${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ');
-    return`<div class="vcard"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><div><span style="font-weight:600">${v.cliente}</span><span style="color:var(--texto-dim);font-size:11px;margin-left:5px">${v.fecha}</span></div><div style="display:flex;gap:5px;align-items:center"><span class="hl">$${v.total.toFixed(2)}</span>${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}<span class="green" style="font-size:11px">+$${v.gan.toFixed(2)}</span><button class="edit-btn" title="Editar nombre" onclick="editarNombreVenta(${i})">✏</button><button class="db" onclick="delVenta(${i})">✕</button></div></div><div style="font-size:11px;color:var(--texto-dim)">${str}</div></div>`;
+    const esPV=v.banco==='provincial';
+    const bancoColor=esPV?'#1a3a5a':'rgba(232,98,26,.12)';
+    const bancoBorde=esPV?'#2a5a8a':'var(--naranja)';
+    const bancoLabel=esPV?'<span style="font-size:10px;font-weight:700;color:#60a0d0;background:#0d1520;border:1px solid #2a5a8a;border-radius:3px;padding:1px 5px;margin-left:4px">PROV</span>':'<span style="font-size:10px;font-weight:700;color:var(--naranja);background:rgba(232,98,26,.1);border:1px solid var(--naranja);border-radius:3px;padding:1px 5px;margin-left:4px">BC</span>';
+    return`<div class="vcard" style="border-color:${bancoBorde};background:${bancoColor}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><div><span style="font-weight:600">${v.cliente}</span>${bancoLabel}<span style="color:var(--texto-dim);font-size:11px;margin-left:5px">${v.fecha}</span></div><div style="display:flex;gap:5px;align-items:center"><span class="hl">$${v.total.toFixed(2)}</span>${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}<span class="green" style="font-size:11px">+$${v.gan.toFixed(2)}</span><button class="edit-btn" title="Editar nombre" onclick="editarNombreVenta(${i})">✏</button><button class="db" onclick="delVenta(${i})">✕</button></div></div><div style="font-size:11px;color:var(--texto-dim)">${str}</div></div>`;
   }).join('');
 }
 async function delVenta(i){if(!confirm('Eliminar venta?'))return;const v=ventas[i];await deleteVenta_db(v.fecha,v.cliente);ventas.splice(i,1);renderVentas();renderPendientes();renderMetricsPOS();renderSaldoResumen();}
