@@ -1734,16 +1734,14 @@ function renderSaldoResumen(){
   const sBCusd = tasa>0 ? sBC/tasa : saldo;
   document.getElementById('s-bs').textContent=fBsFixed(sBC);
   document.getElementById('s-usd').textContent='$'+sBCusd.toFixed(2);
-  // Ganancia pendiente de transferir a Provincial
-  // Total ganancias de ventas en Bancaribe
-  const totalGanBC=movs.filter(m=>m.banco==='bancaribe'&&m.esIngreso)
-    .reduce((a,m)=>a+(m.ganancia||0),0);
-  // Total ya transferido Bancaribe→Provincial
-  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv')
-    .reduce((a,m)=>a+(m.monto||0),0)+ganT;
-  const pendAProvincial=Math.max(0,totalGanBC-totalTransfBCtoPC);
+  // Bancaribe: ventas cobradas (con o sin campo banco, default=bancaribe)
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco));
+  const ganVentasBC=ventasBC.reduce((a,v)=>a+(v.gan||0),0);
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv').reduce((a,m)=>a+(m.monto||0),0)+ganT;
+  const pendAProvincial=Math.max(0,ganVentasBC-totalTransfBCtoPC);
+  const pendAProvincialBs=tasa>0?pendAProvincial*tasa:0;
   const spt=document.getElementById('s-pendiente-transferir');
-  if(spt) spt.textContent=pendAProvincial>0.01?'→ a Provincial: $'+pendAProvincial.toFixed(2):'';
+  if(spt) spt.textContent='';
   // PROVINCIAL — base en Bs, $ derivado
   const sPV = saldoProvincialBs>0 ? saldoProvincialBs : (saldoProvincial*tasa);
   const sPVusd = tasa>0 ? sPV/tasa : saldoProvincial;
