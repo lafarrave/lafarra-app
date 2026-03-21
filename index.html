@@ -236,14 +236,31 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <!-- CONFIG -->
     <div id="tab-config" class="section visible">
       <div class="card">
-        <div class="card-title">Ganancia y papas por defecto</div>
+        <div class="card-title">🍟 Papas por defecto</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Configuración de papas que se incluyen por defecto en los ítems del menú que lo tengan activado.</div>
         <div class="fgrid">
-          <div class="fg"><label>% Ganancia global</label><input type="number" id="cfg-gan" placeholder="50"/></div>
           <div class="fg"><label>Preparado de papas</label><select id="cfg-papas"><option value="">Sin papas</option></select></div>
           <div class="fg"><label>Gramos papas incluidas</label><input type="number" id="cfg-gp" placeholder="150"/></div>
           <div class="fg"><label>Gramos papas extra</label><input type="number" id="cfg-gp2" placeholder="250"/></div>
         </div>
-        <button class="btn" onclick="saveConfig()">Guardar config</button>
+        <button class="btn" onclick="saveConfig()">Guardar</button>
+      </div>
+      <div class="card">
+        <div class="card-title">🫙 Botes de salsa por defecto</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Salsas que se incluyen por defecto en los ítems del menú que lo tengan activado.</div>
+        <div id="botes-lista"></div>
+        <div class="fgrid" style="margin-top:.5rem">
+          <div class="fg"><label>Tipo</label>
+            <select id="bote-tipo" onchange="toggleBoteTipo()">
+              <option value="ing">Ingrediente</option>
+              <option value="prep">Preparado</option>
+            </select>
+          </div>
+          <div class="fg"><label>Nombre</label><select id="bote-nom"><option value="">Seleccionar...</option></select></div>
+          <div class="fg"><label>Cantidad (g/ud)</label><input type="number" id="bote-cant" placeholder="30"/></div>
+        </div>
+        <button class="btn" onclick="addBote()">Agregar salsa</button>
+        <div id="botes-total" style="font-size:12px;color:var(--texto-dim);margin-top:.4rem"></div>
       </div>
       <div class="card">
         <div class="card-title">🍔 Empaque fijo por burger</div>
@@ -1159,6 +1176,58 @@ function renderPorciones(){
 
 async function delPorcion(i){if(!confirm('Eliminar?'))return;porciones.splice(i,1);await saveConfig_db();renderPorciones();}
 
+
+// ─── BOTES DE SALSA ──────────────────────────────────────────
+let botes = []; // [{tipo:'ing'|'prep', nom, cant}]
+
+function toggleBoteTipo(){
+  const tipo = document.getElementById('bote-tipo')?.value;
+  const sel = document.getElementById('bote-nom');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Seleccionar...</option>';
+  if(tipo==='prep'){
+    preps.forEach(p=>{ const o=document.createElement('option');o.value=p.nom;o.textContent=p.nom;sel.appendChild(o); });
+  } else {
+    getProds().forEach(p=>{ const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o); });
+  }
+}
+
+function addBote(){
+  const tipo=document.getElementById('bote-tipo').value;
+  const nom=document.getElementById('bote-nom').value;
+  const cant=parseFloat(document.getElementById('bote-cant').value);
+  if(!nom||isNaN(cant)||cant<=0) return alert('Completa todos los campos');
+  botes.push({tipo,nom,cant});
+  saveConfig_db(); renderBotes();
+  document.getElementById('bote-cant').value='';
+  document.getElementById('bote-nom').value='';
+}
+
+function getCosteBote(b){
+  if(b.tipo==='prep'){ const p=preps.find(x=>x.nom===b.nom); return p?b.cant*getCPGP(p):0; }
+  return b.cant*(getPG(b.nom)||0);
+}
+
+function getCB(){ return botes.reduce((a,b)=>a+getCosteBote(b),0); }
+
+function renderBotes(){
+  const el=document.getElementById('botes-lista'); if(!el) return;
+  const tot=document.getElementById('botes-total');
+  if(!botes.length){ el.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin salsas configuradas.</div>'; if(tot)tot.textContent=''; return; }
+  el.innerHTML=botes.map((b,i)=>{
+    const costo=getCosteBote(b);
+    return`<div style="display:grid;grid-template-columns:auto 1fr 60px 60px 20px;gap:6px;align-items:center;margin-bottom:4px;font-size:12px">
+      <span class="badge ${b.tipo==='prep'?'tp':'ti'}">${b.tipo}</span>
+      <span>${b.nom}</span><span>${b.cant}g</span>
+      <span class="hl">$${costo.toFixed(4)}</span>
+      <button class="db" onclick="delBote(${i})">✕</button>
+    </div>`;
+  }).join('');
+  if(tot) tot.innerHTML=`Total botes/pedido: <strong class="hl">$${getCB().toFixed(4)}</strong>`;
+}
+
+async function delBote(i){ if(!confirm('Eliminar?'))return; botes.splice(i,1); await saveConfig_db(); renderBotes(); }
+
 // ─── SUPABASE ───────────────────────────────────────────────
 const SUPA_URL = 'https://ljgjpmlvjnqfpstltjmy.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqZ2pwbWx2am5xZnBzdGx0am15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTM5NDYsImV4cCI6MjA4OTA2OTk0Nn0.rGaBuq2DxLi_uhYh8ynpItGxO249Ng7PyK9S_XQ07Oc';
@@ -1281,6 +1350,7 @@ async function loadAll(){
         if(row.id==='cfg') cfg=row.data;
         if(row.id==='empaque') empaque=row.data;
         if(row.id==='empaque_papas') empaquePapas=row.data||[];
+        if(row.id==='botes') botes=row.data||[];
         if(row.id==='porciones') porciones=row.data||[];
         if(row.id==='pvprods') pvProds=row.data;
         if(row.id==='saldo'){ saldo=row.data.saldo; movs=row.data.movs||[]; ganT=row.data.ganT||0; }
@@ -1315,7 +1385,7 @@ async function loadAll(){
 }
 
 async function saveConfig_db(){
-  const payload=[{id:'cfg',data:cfg,updated_at:new Date()},{id:'empaque',data:empaque,updated_at:new Date()},{id:'empaque_papas',data:empaquePapas,updated_at:new Date()},{id:'pvprods',data:pvProds,updated_at:new Date()},{id:'porciones',data:porciones,updated_at:new Date()}];
+  const payload=[{id:'cfg',data:cfg,updated_at:new Date()},{id:'empaque',data:empaque,updated_at:new Date()},{id:'empaque_papas',data:empaquePapas,updated_at:new Date()},{id:'botes',data:botes,updated_at:new Date()},{id:'pvprods',data:pvProds,updated_at:new Date()},{id:'porciones',data:porciones,updated_at:new Date()}];
   if(!isOnline()){ addToOfflineQueue('config', payload); return; }
   setSyncStatus('syncing');
   try{
@@ -1446,9 +1516,16 @@ function getCPapas(g){if(!cfg.papas)return 0;const p=preps.find(x=>x.nom===cfg.p
 function calcCM(item){return item.comps.reduce((a,c)=>{if(c.tipo==='ing')return a+c.cant*(c.pg||getPG(c.nom)||0);const p=preps.find(x=>x.nom===c.nom);return p?a+c.cant*getCPGP(p):a;},0);}
 function getPVM(item){return item.pv||0;}
 function getCMTotal(item){
-  // Check if this item is a papas item in POS
-  if(isItemPapas(item.nom)) return calcCM(item)+getCEPapas();
-  return calcCM(item)+getCPapas(cfg.gp)+getCE();
+  let costo = calcCM(item);
+  // Papas por defecto — solo si usaPapas=true Y no es ítem de papas
+  if(item.usaPapas!==false && item.cat!=='papas') costo += getCPapas(cfg.gp);
+  // Botes de salsa
+  if(item.usaBotes!==false) costo += getCB();
+  // Empaque burger
+  if(item.usaEmpaqueBurger!==false && item.cat!=='papas') costo += getCE();
+  // Empaque papas
+  if(item.usaEmpaquePapas!==false && item.cat==='papas') costo += getCEPapas();
+  return costo;
 }
 function getGanPend(){return Math.max(0,ventas.reduce((a,v)=>a+(v.gan||0),0)-ganT);}
 function tog(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
@@ -1485,7 +1562,6 @@ function refreshPapasSelect(){
   sp.innerHTML='<option value="">Sin papas</option>';
   preps.forEach(p=>{const o=document.createElement('option');o.value=p.nom;o.textContent=p.nom;sp.appendChild(o);});
   sp.value=cfg.papas||'';
-  const gan=document.getElementById('cfg-gan');if(gan)gan.value=cfg.gan||'';
   const gp=document.getElementById('cfg-gp');if(gp)gp.value=cfg.gp||'';
   const gp2=document.getElementById('cfg-gp2');if(gp2)gp2.value=cfg.gp2||'';
 }
@@ -1533,7 +1609,6 @@ function delProducto(i){
 
 // ─── CONFIG ──────────────────────────────────────────────────
 async function saveConfig(){
-  cfg.gan=parseFloat(document.getElementById('cfg-gan').value)||50;
   cfg.papas=document.getElementById('cfg-papas').value;
   cfg.gp=parseFloat(document.getElementById('cfg-gp').value)||150;
   cfg.gp2=parseFloat(document.getElementById('cfg-gp2').value)||250;
@@ -1561,7 +1636,9 @@ function renderEmpLista(lista, elId, totId, getCostFn, delFn){
 function renderEmp(){
   renderEmpLista(empaque,'emp-lista','emp-total',getCE,'delEmp');
   renderEmpLista(empaquePapas,'emp-papas-lista','emp-papas-total',getCEPapas,'delEmpPapas');
+  renderBotes();
   renderPorciones();
+  toggleBoteTipo();
 }
 async function delEmp(i){if(!confirm('Eliminar?'))return;empaque.splice(i,1);await saveConfig_db();renderEmp();}
 async function delEmpPapas(i){if(!confirm('Eliminar?'))return;empaquePapas.splice(i,1);await saveConfig_db();renderEmp();}
@@ -1725,13 +1802,15 @@ function calcConsumo(){
             });
           }
         });
-        // Descontar empaque según tipo de ítem
-        if(isItemPapas(item.nom)){
-          // Es un ítem de papas — usar empaque de papas
+        // Descontar extras según configuración por ítem del menú
+        if(mi.usaEmpaquePapas!==false && mi.cat==='papas'){
           empaquePapas.forEach(e=>{ consumo[e.prod]=(consumo[e.prod]||0)+e.cant*qty; });
-        } else {
-          // Es una burger — usar empaque de burger
+        }
+        if(mi.usaEmpaqueBurger!==false && mi.cat!=='papas'){
           empaque.forEach(e=>{ consumo[e.prod]=(consumo[e.prod]||0)+e.cant*qty; });
+        }
+        if(mi.usaBotes!==false){
+          botes.forEach(b=>{ if(b.tipo==='ing') consumo[b.nom]=(consumo[b.nom]||0)+b.cant*qty; });
         }
         // Descontar papas incluidas si configuradas
         if(cfg.papas){
@@ -2126,15 +2205,24 @@ function renderMenuItems(){
   const cont=document.getElementById('lista-menu');if(!cont)return;
   if(!menuItems.length){cont.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--texto-dim);font-size:12px">Sin ítems.</div>';return;}
   cont.innerHTML=menuItems.map((item,mi)=>{
-    const pv=item.pv||0;const cB=calcCM(item),cP=getCPapas(cfg.gp),cE=getCE(),cT=cB+cP+cE;const ganPct=pv>0?((pv-cT)/pv*100):0;const ganColor=ganPct>=40?"var(--verde)":ganPct>=25?"var(--amarillo)":"var(--rojo)";
+    const pv=item.pv||0;const cT=getCMTotal(item);const ganPct=pv>0?((pv-cT)/pv*100):0;const ganColor=ganPct>=40?"var(--verde)":ganPct>=25?"var(--amarillo)":"var(--rojo)";
     const rows=item.comps.map((c,ci)=>{let pg=0,sub=0;if(c.tipo==='ing'){pg=c.pg||getPG(c.nom)||0;sub=c.cant*pg;}else{const p=preps.find(x=>x.nom===c.nom);if(p){pg=getCPGP(p);sub=c.cant*pg;}}return`<div style="display:grid;grid-template-columns:2fr 90px 1fr 1fr 22px;gap:5px;align-items:center;margin-bottom:5px;font-size:12px"><span><span class="tag ${c.tipo==='prep'?'tp':'ti'}">${c.tipo}</span>${c.nom}</span><div style="display:flex;align-items:center;gap:3px"><input type="number" value="${c.cant}" min="1" style="width:58px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 5px;font-size:12px;text-align:right" onchange="editCompGramos(${mi},${ci},this.value)" onclick="event.stopPropagation()"/>g</div><span style="color:var(--texto-dim)">$${pg.toFixed(4)}/g</span><span class="hl">$${sub.toFixed(4)}</span><button class="db" onclick="event.stopPropagation();delComp(${mi},${ci})">✕</button></div>`;}).join('');
-    return`<div class="xcard"><div class="xhead" onclick="tog('mb${item.id}')"><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${item.nom}</span><span class="badge ${item.cat==='papas'?'bp':'bi'}" style="font-size:10px">${item.cat==='papas'?'🍟 papas':'🍔 burger'}</span></div><div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center"><span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span><span style="color:${ganColor};font-weight:600">Ganancia: ${ganPct.toFixed(1)}% <span style="opacity:.8">($${(pv-cT).toFixed(2)})</span></span><span>Venta: <strong class="green">$${pv.toFixed(2)}</strong></span><select onchange="cambiarCatMenu(${mi},this.value)" onclick="event.stopPropagation()" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:2px 5px;font-size:10px"><option value="burger" ${item.cat!=='papas'?'selected':''}>🍔 burger</option><option value="papas" ${item.cat==='papas'?'selected':''}>🍟 papas</option><option value="otro" ${item.cat==='otro'?'selected':''}>📦 otro</option></select><button class="db" onclick="event.stopPropagation();delMenu(${mi})">✕</button></div></div>
+    return`<div class="xcard"><div class="xhead" onclick="tog('mb${item.id}')"><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${item.nom}</span><span class="badge ${item.cat==='papas'?'bp':'bi'}" style="font-size:10px">${item.cat==='papas'?'🍟 papas':'🍔 burger'}</span></div><div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center"><span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span><span style="color:${ganColor};font-weight:600">Ganancia: ${ganPct.toFixed(1)}% <span style="opacity:.8">($${(pv-cT).toFixed(2)})</span></span><span>Venta: <strong class="green">$${pv.toFixed(2)}</strong></span><select onchange="cambiarCatMenu(${mi},this.value)" onclick="event.stopPropagation()" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:2px 5px;font-size:10px"><option value="burger" ${!item.cat||item.cat==='burger'?'selected':''}>🍔 burger</option><option value="papas" ${item.cat==='papas'?'selected':''}>🍟 papas</option><option value="otro" ${item.cat==='otro'?'selected':''}>📦 otro</option></select><button class="db" onclick="event.stopPropagation();delMenu(${mi})">✕</button></div></div>
     <div class="xbody" id="mb${item.id}">${rows||'<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin componentes.</div>'}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:5px;background:var(--gris-mid);border-radius:6px;padding:.55rem .75rem;margin:.4rem 0;font-size:12px">
         <div style="display:flex;justify-content:space-between"><span style="color:var(--texto-dim)">Burger</span><span class="hl">$${cB.toFixed(4)}</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--texto-dim)">Papas ${cfg.gp}g</span><span>$${cP.toFixed(4)}</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--texto-dim)">Empaque</span><span>$${cE.toFixed(4)}</span></div>
 
+      </div>
+      <div style="background:var(--gris-mid);border-radius:6px;padding:6px 10px;margin:.4rem 0;font-size:12px">
+        <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px">Extras incluidos</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${item.usaPapas!==false&&item.cat!=='papas'?'checked':''} onchange="toggleExtra(${mi},'usaPapas',this.checked)" onclick="event.stopPropagation()"/> 🍟 Papas por defecto</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${item.usaBotes!==false?'checked':''} onchange="toggleExtra(${mi},'usaBotes',this.checked)" onclick="event.stopPropagation()"/> 🫙 Botes de salsa</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${item.usaEmpaqueBurger!==false&&item.cat!=='papas'?'checked':''} onchange="toggleExtra(${mi},'usaEmpaqueBurger',this.checked)" onclick="event.stopPropagation()"/> 🍔 Empaque burger</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${item.usaEmpaquePapas!==false&&item.cat==='papas'?'checked':''} onchange="toggleExtra(${mi},'usaEmpaquePapas',this.checked)" onclick="event.stopPropagation()"/> 📦 Empaque papas</label>
+        </div>
       </div>
       <div style="font-size:12px;padding-top:.4rem;border-top:1px solid var(--gris-mid)">
         <div style="display:flex;justify-content:space-between;font-weight:600"><span>Costo total</span><span class="hl">$${cT.toFixed(4)}</span></div>
@@ -2157,6 +2245,12 @@ function updMC(mi){const tipo=document.getElementById(`mc-t-${mi}`).value,sel=do
 async function addComp(mi){const tipo=document.getElementById(`mc-t-${mi}`).value,nom=document.getElementById(`mc-n-${mi}`).value,cant=parseFloat(document.getElementById(`mc-c-${mi}`).value);if(!nom||isNaN(cant)||cant<=0)return alert('Completa nombre y cantidad');menuItems[mi].comps.push({tipo,nom,cant,pg:null});await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById(`mb${menuItems[mi].id}`);if(el)el.classList.add('open');},50);}
 async function actualizarPV(mi,val){const pv=parseFloat(val);if(isNaN(pv)||pv<=0)return;menuItems[mi].pv=pv;await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById("mb"+menuItems[mi].id);if(el)el.classList.add("open");},50);}
 async function delMenu(mi){if(!confirm('Eliminar ítem?'))return;menuItems.splice(mi,1);await saveInv_db();renderMenuItems();}
+async function toggleExtra(mi,key,val){
+  menuItems[mi][key]=val;
+  await saveInv_db();
+  renderMenuItems();
+  setTimeout(()=>{const el=document.getElementById('mb'+menuItems[mi]?.id);if(el)el.classList.add('open');},50);
+}
 async function cambiarCatMenu(mi,cat){menuItems[mi].cat=cat;await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById('mb'+menuItems[mi].id);if(el)el.classList.add('open');},50);}
 async function delComp(mi,ci){if(!confirm('Eliminar este componente?'))return;menuItems[mi].comps.splice(ci,1);await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById('mb'+menuItems[mi].id);if(el)el.classList.add('open');},50);}
 async function editCompGramos(mi,ci,val){const g=parseFloat(val);if(isNaN(g)||g<=0)return;menuItems[mi].comps[ci].cant=g;await saveInv_db();renderMenuItems();setTimeout(()=>{const el=document.getElementById('mb'+menuItems[mi].id);if(el)el.classList.add('open');},50);}
