@@ -361,6 +361,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <div class="sval-bs" id="g-bs">Bs. —</div>
         <div class="sval-usd" id="g-usd">$—</div>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem" id="saldo-metrics-mes"></div>
       <div class="card">
         <div class="card-title">Actualizar saldos manualmente</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1769,6 +1770,27 @@ function renderSaldoResumen(){
   document.getElementById('g-bs').textContent=fBsFixed(gpBs);
   document.getElementById('g-usd').textContent='$'+gp.toFixed(2);
   const gi=document.getElementById('gan-inline');if(gi)gi.textContent='$'+gp.toFixed(2)+' / '+fBsFixed(gpBs);
+
+  // Ventas y ganancia del mes
+  try{
+    const mes=getVEDate().slice(0,7);
+    const vM=(ventas||[]).filter(v=>v.fecha&&v.fecha.startsWith(mes)&&v.estado!=='pendiente');
+    const totalMes=vM.reduce((a,v)=>a+(v.total||0),0);
+    const ganMes=vM.reduce((a,v)=>a+(v.gan||0),0);
+    const ganMesBs=tasa>0?ganMes*tasa:0;
+    const el=document.getElementById('saldo-metrics-mes');
+    if(el) el.innerHTML=`
+      <div class="sbox">
+        <div class="slbl">📊 Ventas del mes</div>
+        <div class="sval-bs" style="font-size:20px">${vM.length} pedido${vM.length!==1?'s':''}</div>
+        <div class="sval-usd">$${totalMes.toFixed(2)}</div>
+      </div>
+      <div class="sbox" style="border-color:#1a3a2a;background:#0d1a10">
+        <div class="slbl" style="color:var(--verde)">💰 Ganancia del mes</div>
+        <div class="sval-bs" style="font-size:20px;color:var(--verde)">${fBsFixed(ganMesBs)}</div>
+        <div class="sval-usd" style="color:#4caf7d">$${ganMes.toFixed(2)}</div>
+      </div>`;
+  }catch(e){}
 }
 async function actualizarSaldo(banco='bancaribe'){
   if(banco==='bancaribe'){
@@ -2916,6 +2938,7 @@ async function init(){
   renderGastosOp();
   renderPendientes();
   renderVidriera();
+  renderSaldoResumen();
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
   fetchBCV();
