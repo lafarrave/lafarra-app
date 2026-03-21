@@ -1743,12 +1743,12 @@ function renderSaldoResumen(){
   const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco));
   // gan = total - costo. Si costo=0 (sin receta), gan=total. Recalcular por si acaso.
   const ganVentasBC=ventasBC.reduce((a,v)=>{
-    // Use stored gan if available, otherwise derive from total-costo
     if((v.gan||0)>0) return a+(v.gan||0);
     const costoReal=getVentaCosto(v);
     return a+Math.max(0,(v.total||0)-costoReal);
   },0);
-  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv').reduce((a,m)=>a+(m.monto||0),0)+ganT;
+  // Only count actual registered transfers, not ganT (which may include old data)
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv').reduce((a,m)=>a+(m.monto||0),0);
   const pendAProvincial=Math.max(0,ganVentasBC-totalTransfBCtoPC);
   const pendAProvincialBs=tasa>0?pendAProvincial*tasa:0;
   const spt=document.getElementById('s-pendiente-transferir');
@@ -1760,7 +1760,12 @@ function renderSaldoResumen(){
   document.getElementById('p-usd').textContent='$'+sPVusd.toFixed(2);
   // Costos pendientes de transferir a Bancaribe desde Provincial
   // Pending to Bancaribe (costos from Provincial ventas)
+  // ventas en Provincial: banco='provincial' en la venta o en el movimiento correspondiente
   const ventasPV=ventas.filter(v=>v.estado==='cobrado'&&v.banco==='provincial');
+  // Also get from movs — ventas that were recorded as provincial in movs
+  const ventasIDsEnMovsProvincial=new Set(
+    movs.filter(m=>m.banco==='provincial'&&m.esIngreso).map(m=>m.desc)
+  );
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
     // If costo stored and non-zero, use it
@@ -1780,11 +1785,6 @@ function renderSaldoResumen(){
   const costosPend=Math.max(0,costosProvincial-totalTransfPVtoBC);
   const costosPendBs=tasa>0?costosPend*tasa:0;
 
-  // DEBUG
-  console.log('ventasBC:', ventasBC.length, ventasBC.map(v=>({nom:v.items?.[0]?.nom, gan:v.gan, costo:v.costo, total:v.total, banco:v.banco, estado:v.estado})));
-  console.log('ventasPV:', ventasPV.length, ventasPV.map(v=>({nom:v.items?.[0]?.nom, gan:v.gan, costo:v.costo, total:v.total, banco:v.banco, estado:v.estado})));
-  console.log('pendAProvincial:', pendAProvincial, 'ganVentasBC:', ganVentasBC, 'totalTransfBCtoPC:', totalTransfBCtoPC);
-  console.log('costosPend:', costosPend, 'costosProvincial:', costosProvincial, 'totalTransfPVtoBC:', totalTransfPVtoBC);
   // Build transfer boxes dynamically
   const gridEl=document.getElementById('grid-transferencias');
   if(gridEl){
