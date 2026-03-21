@@ -1532,6 +1532,7 @@ async function fetchBCV(){
         if(dot) dot.style.background='var(--verde)';
         if(lbl) lbl.textContent='BCV '+tasa.toFixed(2);
         renderSaldoResumen();
+        try{ renderPOSCats(); }catch(e){}
         return;
       }
     }catch(e){continue;}
@@ -2977,6 +2978,8 @@ async function init(){
   try{ renderPendientes(); }catch(e){}
   try{ renderVidriera(); }catch(e){}
   try{ renderSaldoResumen(); }catch(e){ console.error('saldo init error',e); }
+  // Re-render POS after all data loaded so costs calculate correctly
+  try{ renderPOSCats(); }catch(e){}
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
   fetchBCV();
