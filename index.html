@@ -523,34 +523,37 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
 
     <!-- VIDRIERA -->
     <div id="tab-vidriera" class="section">
-      <div class="card">
-        <div class="card-title">Agregar precio visto</div>
+      <!-- Formulario agregar -->
+      <div class="card" id="vid-form-card" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+          <div class="card-title" style="margin:0" id="vid-form-titulo">Agregar precio</div>
+          <button class="btns" style="padding:4px 10px;font-size:12px" onclick="cerrarVidForm()">✕ Cerrar</button>
+        </div>
         <div class="fgrid">
           <div class="fg"><label>Producto</label><select id="v-prod"><option value="">Seleccionar...</option></select></div>
           <div class="fg"><label>Marca</label><input type="text" id="v-marca"/></div>
           <div class="fg"><label>Unidad</label><select id="v-unidad"><option>Kg</option><option>Frasco</option><option>Paquete</option><option>Bolsa</option><option>Envase</option><option>Unidad</option></select></div>
           <div class="fg"><label>Contenido (g)</label><input type="number" id="v-cont" oninput="calcVpg()"/></div>
-          <div class="fg"><label>Precio ($)</label><input type="number" id="v-precio" oninput="calcVpg()"/></div>
+          <div class="fg"><label>Precio (Bs)</label><input type="number" id="v-precio-bs" oninput="calcVpg()"/></div>
+          <div class="fg"><label>Precio $ (auto)</label><input type="text" id="v-precio" readonly style="background:var(--gris-light)"/></div>
           <div class="fg"><label>Precio/g (auto)</label><input type="text" id="v-pg" readonly style="background:var(--gris-light)"/></div>
           <div class="fg"><label>Tienda</label><input type="text" id="v-tienda"/></div>
           <div class="fg"><label>Fecha</label><input type="date" id="v-fecha"/></div>
         </div>
         <button class="btn" onclick="addVidriera()">Agregar</button>
       </div>
+      <!-- Navegación por secciones -->
       <div class="card">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.7rem">
-          <span class="card-title" style="margin:0;flex:1">Precios registrados</span>
-          <select class="inline" id="fv-p" onchange="renderVidriera()"><option value="">Todos</option></select>
-          <select class="inline" id="sv" onchange="renderVidriera()">
-            <option value="fecha-desc">Reciente</option>
-            <option value="prod-asc">A-Z</option>
-            <option value="pg-asc">$/g menor</option>
-          </select>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;flex-wrap:wrap;gap:8px">
+          <div class="card-title" style="margin:0">👁 Vidriera de precios</div>
+          <button class="btn" style="padding:5px 14px;font-size:12px" onclick="abrirVidForm()">+ Agregar precio</button>
         </div>
-        <div class="tw"><table>
-          <thead><tr><th>Fecha</th><th>Producto</th><th>Marca</th><th>Unid.</th><th>Cont.</th><th>Precio</th><th>$/g</th><th>Tienda</th><th></th></tr></thead>
-          <tbody id="tabla-vidriera"></tbody>
-        </table></div>
+        <!-- Sección activa -->
+        <div id="vid-sec-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.8rem"></div>
+        <!-- Productos de la sección activa -->
+        <div id="vid-prods-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.8rem"></div>
+        <!-- Detalle del producto seleccionado -->
+        <div id="vid-detalle"></div>
       </div>
     </div>
 
@@ -2218,39 +2221,162 @@ async function guardarUmbrales(){
 }
 
 // ─── VIDRIERA ────────────────────────────────────────────────
-function calcVpg(){const p=parseFloat(document.getElementById('v-precio').value),c=parseFloat(document.getElementById('v-cont').value);document.getElementById('v-pg').value=(!isNaN(p)&&!isNaN(c)&&c>0)?'$'+(p/c).toFixed(4):'—';}
+function calcVpg(){
+  const pBs=parseFloat(document.getElementById('v-precio-bs').value);
+  const pUSD=tasa>0&&!isNaN(pBs)?pBs/tasa:NaN;
+  const precioEl=document.getElementById('v-precio');
+  if(precioEl) precioEl.value=!isNaN(pUSD)?'$'+pUSD.toFixed(4):'—';
+  const cont=parseFloat(document.getElementById('v-cont').value);
+  document.getElementById('v-pg').value=(!isNaN(pUSD)&&!isNaN(cont)&&cont>0)?'$'+(pUSD/cont).toFixed(4):'—';
+}
 function getSelVal(id){
-  // Works for both normal selects and searchable selects
   const el=document.getElementById(id);
   return el?el.value:'';
 }
 async function addVidriera(){
-  const prod=getSelVal('v-prod'),marca=document.getElementById('v-marca').value.trim(),unidad=document.getElementById('v-unidad').value,cont=parseFloat(document.getElementById('v-cont').value),precio=parseFloat(document.getElementById('v-precio').value),tienda=document.getElementById('v-tienda').value.trim(),fecha=document.getElementById('v-fecha').value;
+  const prod=getSelVal('v-prod'),marca=document.getElementById('v-marca').value.trim(),unidad=document.getElementById('v-unidad').value,cont=parseFloat(document.getElementById('v-cont').value);
+  const precioBs=parseFloat(document.getElementById('v-precio-bs').value);
+  const precio=tasa>0&&!isNaN(precioBs)?precioBs/tasa:NaN;
+  const tienda=document.getElementById('v-tienda').value.trim(),fecha=document.getElementById('v-fecha').value;
   if(!prod) return alert('Falta seleccionar el Producto');
-  if(isNaN(precio)||precio<=0) return alert('Falta el Precio');
+  if(isNaN(precioBs)||precioBs<=0) return alert('Falta el Precio en Bs');
   if(!tienda) return alert('Falta la Tienda');
   if(!fecha) return alert('Falta la Fecha');
-  const pg=(!isNaN(cont)&&cont>0)?precio/cont:null;
-  vidriera.unshift({fecha,prod,marca,unidad,cont,precio,pg,tienda});
-  await saveInv_db();renderVidriera();
-  // Reset searchable select label
+  const pg=(!isNaN(cont)&&cont>0&&!isNaN(precio))?precio/cont:null;
+  vidriera.unshift({fecha,prod,marca,unidad,cont,precio,precioBs,pg,tienda,tasa});
+  await saveInv_db();renderVidriera();cerrarVidForm();
   const lbl=document.getElementById('v-prod_lbl');if(lbl)lbl.textContent='Seleccionar...';
   document.getElementById('v-prod').value='';
-  ['v-marca','v-precio','v-cont','v-tienda'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('v-pg').value='';
+  ['v-marca','v-precio-bs','v-cont','v-tienda'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('v-pg').value='';document.getElementById('v-precio').value='';
 }
+// ─── VIDRIERA UI ─────────────────────────────────────────────
+let vidSecActiva = '';
+let vidProdActivo = '';
+
+function abrirVidForm(prod){
+  const card=document.getElementById('vid-form-card');
+  if(card) card.style.display='block';
+  if(prod){
+    // Pre-select product in searchable select
+    document.getElementById('v-prod').value=prod;
+    const lbl=document.getElementById('v-prod_lbl');
+    if(lbl) lbl.textContent=prod;
+    document.getElementById('vid-form-titulo').textContent='Agregar precio — '+prod;
+  } else {
+    document.getElementById('vid-form-titulo').textContent='Agregar precio';
+  }
+  card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function cerrarVidForm(){
+  const card=document.getElementById('vid-form-card');
+  if(card) card.style.display='none';
+}
+
 function renderVidriera(){
-  const fp=document.getElementById('fv-p')?.value||'',sv=document.getElementById('sv')?.value||'fecha-desc';
-  let data=fp?vidriera.filter(v=>v.prod===fp):[...vidriera];
-  data.sort((a,b)=>{if(sv==='prod-asc')return a.prod.localeCompare(b.prod);if(sv==='pg-asc')return(a.pg||999)-(b.pg||999);return new Date(b.fecha)-new Date(a.fecha);});
-  const prods=[...new Set(vidriera.map(v=>v.prod))];
-  const sel=document.getElementById('fv-p');if(sel){const cur=sel.value;sel.innerHTML='<option value="">Todos</option>'+prods.map(p=>`<option ${p===cur?'selected':''} value="${p}">${p}</option>`).join('');}
-  const minG={};vidriera.forEach(v=>{if(v.pg&&(!minG[v.prod]||v.pg<minG[v.prod]))minG[v.prod]=v.pg;});
-  const cnt={};vidriera.forEach(v=>cnt[v.prod]=(cnt[v.prod]||0)+1);
-  const tb=document.getElementById('tabla-vidriera');if(!tb)return;
-  if(!data.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:1rem;color:var(--texto-dim)">Sin registros</td></tr>';return;}
-  tb.innerHTML=data.map(v=>{const i=vidriera.indexOf(v);const mejor=v.pg&&v.pg===minG[v.prod]&&cnt[v.prod]>1;return`<tr><td>${v.fecha}</td><td>${v.prod}${mejor?` <span class="badge bm">mejor</span>`:''}</td><td>${v.marca||'—'}</td><td>${v.unidad}</td><td>${v.cont||'—'}</td><td class="hl">$${v.precio.toFixed(2)}</td><td>${v.pg?'$'+v.pg.toFixed(4):'—'}</td><td>${v.tienda}</td><td><button class="db" onclick="delV(${i})">✕</button></td></tr>`;}).join('');
+  // Build section nav buttons
+  const secNav=document.getElementById('vid-sec-nav');
+  const prodBtns=document.getElementById('vid-prods-btns');
+  const detalle=document.getElementById('vid-detalle');
+  if(!secNav||!prodBtns||!detalle) return;
+
+  // Sections: use seccionesInv + "Sin sección"
+  const secsConDatos=['Todas',...seccionesInv,'Sin sección'].filter(s=>{
+    if(s==='Todas') return true;
+    const prodsEnSec=getProds().filter(p=>getSeccion(p)===(s==='Sin sección'?'':s));
+    return prodsEnSec.some(p=>vidriera.some(v=>v.prod===p));
+  });
+
+  if(!vidSecActiva||!secsConDatos.includes(vidSecActiva)) vidSecActiva=secsConDatos[0]||'Todas';
+
+  secNav.innerHTML=secsConDatos.map(s=>`
+    <button onclick="setVidSec('${s}')" style="padding:5px 12px;border-radius:99px;border:2px solid ${s===vidSecActiva?'var(--naranja)':'var(--gris-light)'};background:${s===vidSecActiva?'rgba(232,98,26,.15)':'var(--gris-dark)'};color:${s===vidSecActiva?'var(--naranja)':'var(--texto)'};font-size:12px;font-weight:${s===vidSecActiva?'700':'400'};cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.5px">${s}</button>
+  `).join('');
+
+  // Products in active section
+  let prodsEnSec;
+  if(vidSecActiva==='Todas'){
+    prodsEnSec=[...new Set(vidriera.map(v=>v.prod))].sort();
+  } else if(vidSecActiva==='Sin sección'){
+    prodsEnSec=getProds().filter(p=>!getSeccion(p)&&vidriera.some(v=>v.prod===p)).sort();
+  } else {
+    prodsEnSec=getProds().filter(p=>getSeccion(p)===vidSecActiva&&vidriera.some(v=>v.prod===p)).sort();
+  }
+
+  if(!prodsEnSec.length){
+    prodBtns.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin precios registrados en esta sección.</div>';
+    detalle.innerHTML='';
+    return;
+  }
+
+  if(!vidProdActivo||!prodsEnSec.includes(vidProdActivo)) vidProdActivo=prodsEnSec[0];
+
+  // Min price per product for badge
+  const minG={};
+  vidriera.forEach(v=>{if(v.pg&&(!minG[v.prod]||v.pg<minG[v.prod]))minG[v.prod]=v.pg;});
+
+  prodBtns.innerHTML=prodsEnSec.map(p=>{
+    const cnt=vidriera.filter(v=>v.prod===p).length;
+    const isActive=p===vidProdActivo;
+    return`<button onclick="setVidProd('${p.replace(/'/g,"\'")}')
+" style="padding:6px 12px;border-radius:8px;border:2px solid ${isActive?'var(--naranja)':'var(--gris-mid)'};background:${isActive?'var(--gris-mid)':'var(--gris-dark)'};color:${isActive?'var(--texto)':'var(--texto-dim)'};font-size:12px;cursor:pointer;position:relative;text-align:left">
+      <div style="font-weight:600">${p}</div>
+      <div style="font-size:10px;color:var(--texto-dim)">${cnt} precio${cnt>1?'s':''}</div>
+    </button>`;
+  }).join('');
+
+  // Detail of active product
+  renderVidDetalle();
 }
+
+function setVidSec(sec){ vidSecActiva=sec; vidProdActivo=''; renderVidriera(); }
+function setVidProd(prod){ vidProdActivo=prod; renderVidDetalle(); }
+
+function renderVidDetalle(){
+  const el=document.getElementById('vid-detalle'); if(!el) return;
+  if(!vidProdActivo){ el.innerHTML=''; return; }
+  const registros=vidriera.filter(v=>v.prod===vidProdActivo).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  if(!registros.length){ el.innerHTML=''; return; }
+  const minPg=Math.min(...registros.filter(v=>v.pg).map(v=>v.pg));
+  el.innerHTML=`
+    <div style="border-top:1px solid var(--gris-mid);padding-top:.8rem;margin-top:.4rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;gap:6px">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;color:var(--naranja)">${vidProdActivo}</span>
+        <button class="btn" style="padding:4px 10px;font-size:11px" onclick="abrirVidForm('${vidProdActivo.replace(/'/g,"\'")}')">+ Agregar precio</button>
+      </div>
+      ${registros.map((v,idx)=>{
+        const i=vidriera.indexOf(v);
+        const mejor=v.pg&&v.pg===minPg&&registros.length>1;
+        const precioBsDisplay=v.precioBs?`<span style="font-weight:700;font-size:14px">Bs.${Math.round(v.precioBs).toLocaleString('es-VE')}</span><span style="font-size:11px;color:var(--texto-dim);margin-left:4px">$${v.precio?.toFixed(2)||'—'}</span>`:`<span class="hl" style="font-size:14px;font-weight:700">$${v.precio?.toFixed(2)||'—'}</span>`;
+        return`<div style="background:var(--gris-mid);border-radius:8px;padding:.6rem .8rem;margin-bottom:.4rem;border:1px solid ${mejor?'var(--verde)':'var(--gris-light)'}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px">
+            <div>
+              <span style="font-weight:600;font-size:13px">${v.marca||'Sin marca'}</span>
+              ${mejor?'<span class="badge bm" style="margin-left:5px">⭐ mejor precio</span>':''}
+              <div style="font-size:11px;color:var(--texto-dim);margin-top:1px">${v.tienda} · ${v.fecha}</div>
+            </div>
+            <div style="text-align:right">
+              ${precioBsDisplay}
+              <div style="font-size:11px;color:var(--texto-dim)">${v.cont?v.cont+'g':'—'} · ${v.pg?'$'+v.pg.toFixed(4)+'/g':'—'}</div>
+            </div>
+          </div>
+          <button class="db" onclick="delV(${i})" style="font-size:10px;padding:2px 6px">✕ Eliminar</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  // Also update product buttons highlight
+  const btns=document.getElementById('vid-prods-btns');
+  if(btns){
+    btns.querySelectorAll('button').forEach(btn=>{
+      const isActive=btn.querySelector('div')?.textContent===vidProdActivo;
+      btn.style.borderColor=isActive?'var(--naranja)':'var(--gris-mid)';
+      btn.style.background=isActive?'var(--gris-mid)':'var(--gris-dark)';
+      btn.querySelector('div').style.color=isActive?'var(--texto)':'var(--texto-dim)';
+    });
+  }
+}
+
 async function delV(i){if(!confirm('Eliminar?'))return;vidriera.splice(i,1);await saveInv_db();renderVidriera();}
 
 // ─── PREPARADOS ──────────────────────────────────────────────
