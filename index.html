@@ -1571,6 +1571,7 @@ function showTab(n,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+n).classList.add('visible');
   el.classList.add('active');
+  if(n==='vidriera')renderVidriera();
   if(n==='preparados')renderPreps();
   if(n==='menu')renderMenuItems();
   if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();}
@@ -2332,14 +2333,14 @@ function renderVidriera(){
   const detalle=document.getElementById('vid-detalle');
   if(!secNav||!prodBtns||!detalle) return;
 
-  // Sections: use seccionesInv + "Sin sección"
-  const secsConDatos=['Todas',...seccionesInv,'Sin sección'].filter(s=>{
-    if(s==='Todas') return true;
-    const prodsEnSec=getProds().filter(p=>getSeccion(p)===(s==='Sin sección'?'':s));
-    return prodsEnSec.some(p=>vidriera.some(v=>v.prod===p));
-  });
+  // Always show Todas + sections that have data + Sin sección if applicable
+  const prodsEnVidriera=[...new Set(vidriera.map(v=>v.prod))];
+  const secsUsadas=new Set(prodsEnVidriera.map(p=>getSeccion(p)||'__sin'));
+  const secsConDatos=['Todas'];
+  seccionesInv.forEach(s=>{ if(secsUsadas.has(s)) secsConDatos.push(s); });
+  if(secsUsadas.has('__sin')) secsConDatos.push('Sin sección');
 
-  if(!vidSecActiva||!secsConDatos.includes(vidSecActiva)) vidSecActiva=secsConDatos[0]||'Todas';
+  if(!vidSecActiva||!secsConDatos.includes(vidSecActiva)) vidSecActiva='Todas';
 
   secNav.innerHTML=secsConDatos.map(s=>`
     <button onclick="setVidSec('${s}')" style="padding:5px 12px;border-radius:99px;border:2px solid ${s===vidSecActiva?'var(--naranja)':'var(--gris-light)'};background:${s===vidSecActiva?'rgba(232,98,26,.15)':'var(--gris-dark)'};color:${s===vidSecActiva?'var(--naranja)':'var(--texto)'};font-size:12px;font-weight:${s===vidSecActiva?'700':'400'};cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.5px">${s}</button>
@@ -2350,13 +2351,13 @@ function renderVidriera(){
   if(vidSecActiva==='Todas'){
     prodsEnSec=[...new Set(vidriera.map(v=>v.prod))].sort();
   } else if(vidSecActiva==='Sin sección'){
-    prodsEnSec=getProds().filter(p=>!getSeccion(p)&&vidriera.some(v=>v.prod===p)).sort();
+    prodsEnSec=[...new Set(vidriera.filter(v=>!getSeccion(v.prod)).map(v=>v.prod))].sort();
   } else {
-    prodsEnSec=getProds().filter(p=>getSeccion(p)===vidSecActiva&&vidriera.some(v=>v.prod===p)).sort();
+    prodsEnSec=[...new Set(vidriera.filter(v=>getSeccion(v.prod)===vidSecActiva).map(v=>v.prod))].sort();
   }
 
   if(!prodsEnSec.length){
-    prodBtns.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin precios registrados en esta sección.</div>';
+    prodBtns.innerHTML='<div style="font-size:12px;color:var(--texto-dim);padding:.5rem 0">Sin precios registrados aquí. Toca "+ Agregar precio" para registrar el primero.</div>';
     detalle.innerHTML='';
     return;
   }
@@ -2841,6 +2842,7 @@ async function init(){
   renderProdsExtra();
   renderGastosOp();
   renderPendientes();
+  renderVidriera();
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
   fetchBCV();
