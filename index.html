@@ -393,7 +393,11 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       </div>
       <div class="card">
         <div class="card-title">Transferir entre cuentas</div>
-        <p style="font-size:12px;color:var(--texto-dim);margin-bottom:.8rem">Ganancia pendiente de transferir: <strong id="gan-inline" class="green">$0.00</strong></p>
+        <div style="margin-bottom:.8rem;font-size:12px;display:flex;flex-direction:column;gap:4px">
+          <div style="color:var(--texto-dim)">🏦 Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" class="green">$0.00 / Bs.—</strong></div>
+          <div style="color:var(--texto-dim)">🏦 Provincial → Bancaribe (insumos): <strong id="gan-inline-pv" style="color:#4caf7d">$0.00 / Bs.—</strong></div>
+        </div>
+        <div id="gan-inline" style="display:none"></div>
         <div class="fgrid">
           <div class="fg"><label>Dirección</label>
             <select id="transfer-dir">
@@ -1782,9 +1786,12 @@ function renderSaldoResumen(){
       gridEl.innerHTML=html;
     }
   }
-  // GANANCIA (for gan-inline reference in transfer card)
+  // GANANCIA — two info lines in transfer card
   const gpBs=tasa>0?gp*tasa:0;
-  const gi=document.getElementById('gan-inline');if(gi)gi.textContent='$'+gp.toFixed(2)+' / '+fBsFixed(gpBs);
+  const giBC=document.getElementById('gan-inline-bc');
+  if(giBC) giBC.textContent='$'+pendAProvincial.toFixed(2)+' / '+fBsFixed(pendAProvincialBs);
+  const giPV=document.getElementById('gan-inline-pv');
+  if(giPV) giPV.textContent='$'+costosPend.toFixed(2)+' / '+fBsFixed(costosPendBs);
 
   // Ventas y ganancia del mes
   try{
