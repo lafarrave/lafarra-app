@@ -236,6 +236,16 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <!-- CONFIG -->
     <div id="tab-config" class="section visible">
       <div class="card">
+        <div class="card-title">📱 Pago Móvil</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Se muestra en el carrito para que el cliente pueda hacer la transferencia.</div>
+        <div class="fgrid">
+          <div class="fg"><label>📞 Teléfono</label><input type="text" id="cfg-tel" placeholder="ej: 0412-1234567"/></div>
+          <div class="fg"><label>🪪 Cédula</label><input type="text" id="cfg-ci" placeholder="ej: V-12345678"/></div>
+          <div class="fg"><label>🏦 Banco</label><input type="text" id="cfg-banco-pm" placeholder="ej: Bancaribe"/></div>
+        </div>
+        <button class="btn" onclick="saveConfig()">Guardar</button>
+      </div>
+      <div class="card">
         <div class="card-title">🍟 Papas por defecto</div>
         <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Configuración de papas que se incluyen por defecto en los ítems del menú que lo tengan activado.</div>
         <div class="fgrid">
@@ -669,10 +679,19 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
             </div>
             <hr class="divider"/>
             <div style="background:var(--gris-mid);border-radius:6px;padding:6px 8px;margin-bottom:.4rem;font-size:12px">
-              <div style="color:var(--texto-dim);margin-bottom:5px;font-size:11px;text-transform:uppercase;letter-spacing:.3px">Banco receptor</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px">
                 <button id="banco-bancaribe-btn" onclick="setBanco('bancaribe')" style="padding:6px;border-radius:5px;border:2px solid var(--naranja);background:rgba(232,98,26,.15);color:var(--naranja);font-size:11px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">🏦 Bancaribe</button>
                 <button id="banco-provincial-btn" onclick="setBanco('provincial')" style="padding:6px;border-radius:5px;border:1px solid var(--gris-light);background:var(--gris-dark);color:var(--texto-dim);font-size:11px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">🏦 Provincial</button>
+              </div>
+              <div id="pagomovil-info" style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+                <div style="background:var(--gris-dark);border-radius:5px;padding:5px 8px;text-align:center">
+                  <div style="font-size:10px;color:var(--texto-dim);margin-bottom:2px">📞 TELÉFONO</div>
+                  <div style="font-weight:700;color:#fff;font-size:13px;letter-spacing:.3px" id="pm-tel">—</div>
+                </div>
+                <div style="background:var(--gris-dark);border-radius:5px;padding:5px 8px;text-align:center">
+                  <div style="font-size:10px;color:var(--texto-dim);margin-bottom:2px">🪪 CÉDULA</div>
+                  <div style="font-weight:700;color:#fff;font-size:13px;letter-spacing:.3px" id="pm-ci">—</div>
+                </div>
               </div>
             </div>
             <button class="btn" style="width:100%;margin-bottom:.4rem" onclick="confirmarVenta('cobrado')">Confirmar cobrado</button>
@@ -1284,7 +1303,7 @@ function getProds(){return[...PRODS_BASE,...productosExtra].sort((a,b)=>a.locale
 let PRODS=getProds();
 const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'},{key:'bebida',label:'🥤 Bebidas'},{key:'extra',label:'➕ Extras'},{key:'otro',label:'📦 Otros'}];
 
-let cfg={gan:50,papas:'',gp:150,gp2:250};
+let cfg={gan:50,papas:'',gp:150,gp2:250,tel:'',ci:'',bancopm:''};
 let empaque=[], empaquePapas=[], pvProds=[], porciones=[];
 let seccionesInv=JSON.parse(localStorage.getItem('lf_secciones')||'["Proteínas","Salsas","Vegetales","Descartables","Otros"]');
 let prodSecciones=JSON.parse(localStorage.getItem('lf_prod_secciones')||'{}');
@@ -1608,7 +1627,7 @@ function showTab(n,el){
   if(n==='preparados')renderPreps();
   if(n==='menu')renderMenuItems();
   if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();}
-  if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();renderPendientes();}
+  if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();renderPendientes();renderPagoMovilInfo();}
   if(n==='envios')renderEnvios();
   if(n==='stats')renderStats();
   if(n==='saldo'){renderSaldoResumen();renderMovs();}
@@ -1633,6 +1652,10 @@ function refreshPapasSelect(){
   preps.forEach(p=>{const o=document.createElement('option');o.value=p.nom;o.textContent=p.nom;sp.appendChild(o);});
   sp.value=cfg.papas||'';
   const gp=document.getElementById('cfg-gp');if(gp)gp.value=cfg.gp||'';
+  renderPagoMovilInfo();
+  const tel=document.getElementById('cfg-tel');if(tel)tel.value=cfg.tel||'';
+  const ci=document.getElementById('cfg-ci');if(ci)ci.value=cfg.ci||'';
+  const bpm=document.getElementById('cfg-banco-pm');if(bpm)bpm.value=cfg.bancopm||'';
   const gp2=document.getElementById('cfg-gp2');if(gp2)gp2.value=cfg.gp2||'';
 }
 
@@ -1682,6 +1705,9 @@ async function saveConfig(){
   cfg.papas=document.getElementById('cfg-papas').value;
   cfg.gp=parseFloat(document.getElementById('cfg-gp').value)||150;
   cfg.gp2=parseFloat(document.getElementById('cfg-gp2').value)||250;
+  cfg.tel=document.getElementById('cfg-tel')?.value.trim()||'';
+  cfg.ci=document.getElementById('cfg-ci')?.value.trim()||'';
+  cfg.bancopm=document.getElementById('cfg-banco-pm')?.value.trim()||'';
   await saveConfig_db();
   alert('✓ Configuración guardada');
 }
@@ -2838,6 +2864,16 @@ function limpiarCarrito(){carrito=[];deliveryMonto=0;descuentoPct=0;const row=do
 
 // ─── BANCO SELECTOR ──────────────────────────────────────────
 let bancoActual = 'bancaribe'; // default
+
+function renderPagoMovilInfo(){
+  const tel=document.getElementById('pm-tel');
+  const ci=document.getElementById('pm-ci');
+  if(tel) tel.textContent=cfg.tel||'—';
+  if(ci) ci.textContent=cfg.ci||'—';
+  // Hide section if not configured
+  const info=document.getElementById('pagomovil-info');
+  if(info) info.style.display=(cfg.tel||cfg.ci)?'grid':'none';
+}
 let saldoProvincial = parseFloat(localStorage.getItem('lf_saldo_provincial')||'0');
 let saldoProvincialBs = parseFloat(localStorage.getItem('lf_saldo_provincial_bs')||'0');
 
