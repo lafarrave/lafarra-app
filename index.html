@@ -241,7 +241,6 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <div class="fgrid">
           <div class="fg"><label>Preparado de papas</label><select id="cfg-papas"><option value="">Sin papas</option></select></div>
           <div class="fg"><label>Gramos papas incluidas</label><input type="number" id="cfg-gp" placeholder="150"/></div>
-          <div class="fg"><label>Gramos papas extra</label><input type="number" id="cfg-gp2" placeholder="250"/></div>
         </div>
         <button class="btn" onclick="saveConfig()">Guardar</button>
       </div>
@@ -249,15 +248,13 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <div class="card-title">🫙 Botes de salsa por defecto</div>
         <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Salsas que se incluyen por defecto en los ítems del menú que lo tengan activado.</div>
         <div id="botes-lista"></div>
-        <div class="fgrid" style="margin-top:.5rem">
-          <div class="fg"><label>Tipo</label>
-            <select id="bote-tipo" onchange="toggleBoteTipo()">
-              <option value="ing">Ingrediente</option>
-              <option value="prep">Preparado</option>
-            </select>
-          </div>
-          <div class="fg"><label>Nombre</label><select id="bote-nom"><option value="">Seleccionar...</option></select></div>
-          <div class="fg"><label>Cantidad (g/ud)</label><input type="number" id="bote-cant" placeholder="30"/></div>
+        <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:.5rem;align-items:end">
+          <div class="fg" style="margin:0"><label>🫙 Ingrediente (bote físico)</label><select id="bote-ing-nom"><option value="">Seleccionar ingrediente...</option></select></div>
+          <div class="fg" style="margin:0"><label>Cantidad</label><input type="number" id="bote-ing-cant" placeholder="1" min="1"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:.5rem;align-items:end">
+          <div class="fg" style="margin:0"><label>🥣 Preparado (salsa del bote)</label><select id="bote-prep-nom"><option value="">Seleccionar preparado...</option></select></div>
+          <div class="fg" style="margin:0"><label>Gramos</label><input type="number" id="bote-prep-cant" placeholder="30"/></div>
         </div>
         <button class="btn" onclick="addBote()">Agregar salsa</button>
         <div id="botes-total" style="font-size:12px;color:var(--texto-dim);margin-top:.4rem"></div>
@@ -1181,31 +1178,48 @@ async function delPorcion(i){if(!confirm('Eliminar?'))return;porciones.splice(i,
 let botes = []; // [{tipo:'ing'|'prep', nom, cant}]
 
 function toggleBoteTipo(){
-  const tipo = document.getElementById('bote-tipo')?.value;
-  const sel = document.getElementById('bote-nom');
-  if(!sel) return;
-  sel.innerHTML = '<option value="">Seleccionar...</option>';
-  if(tipo==='prep'){
-    preps.forEach(p=>{ const o=document.createElement('option');o.value=p.nom;o.textContent=p.nom;sel.appendChild(o); });
-  } else {
-    getProds().forEach(p=>{ const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o); });
+  // Populate ingredient selector (for the physical bote)
+  const ingSel = document.getElementById('bote-ing-nom');
+  if(ingSel && ingSel.options.length <= 1){
+    getProds().forEach(p=>{ const o=document.createElement('option');o.value=p;o.textContent=p;ingSel.appendChild(o); });
+  }
+  // Populate prep selector (for the salsa inside)
+  const prepSel = document.getElementById('bote-prep-nom');
+  if(prepSel){
+    prepSel.innerHTML = '<option value="">Sin preparado (solo bote)</option>';
+    preps.forEach(p=>{ const o=document.createElement('option');o.value=p.nom;o.textContent=p.nom;prepSel.appendChild(o); });
   }
 }
 
 function addBote(){
-  const tipo=document.getElementById('bote-tipo').value;
-  const nom=document.getElementById('bote-nom').value;
-  const cant=parseFloat(document.getElementById('bote-cant').value);
-  if(!nom||isNaN(cant)||cant<=0) return alert('Completa todos los campos');
-  botes.push({tipo,nom,cant});
+  const ingNom=document.getElementById('bote-ing-nom').value;
+  const ingCant=parseFloat(document.getElementById('bote-ing-cant').value)||1;
+  const prepNom=document.getElementById('bote-prep-nom').value;
+  const prepCant=parseFloat(document.getElementById('bote-prep-cant').value)||0;
+  if(!ingNom) return alert('Selecciona el ingrediente (bote físico)');
+  botes.push({ingNom, ingCant, prepNom: prepNom||null, prepCant: prepCant||0});
   saveConfig_db(); renderBotes();
-  document.getElementById('bote-cant').value='';
-  document.getElementById('bote-nom').value='';
+  document.getElementById('bote-ing-cant').value='';
+  document.getElementById('bote-prep-cant').value='';
+  const il=document.getElementById('bote-ing-nom');if(il)il.value='';
+  const pl=document.getElementById('bote-prep-nom');if(pl)pl.value='';
 }
 
 function getCosteBote(b){
-  if(b.tipo==='prep'){ const p=preps.find(x=>x.nom===b.nom); return p?b.cant*getCPGP(p):0; }
-  return b.cant*(getPG(b.nom)||0);
+  // Bote físico (ingrediente)
+  const costoIng = (b.ingCant||1) * (getPG(b.ingNom)||0);
+  // Salsa dentro del bote (preparado)
+  let costoPrep = 0;
+  if(b.prepNom && b.prepCant > 0){
+    const p = preps.find(x=>x.nom===b.prepNom);
+    if(p) costoPrep = b.prepCant * getCPGP(p);
+  }
+  // Legacy support for old format
+  if(b.nom !== undefined){
+    if(b.tipo==='prep'){ const p=preps.find(x=>x.nom===b.nom); return p?b.cant*getCPGP(p):0; }
+    return b.cant*(getPG(b.nom)||0);
+  }
+  return costoIng + costoPrep;
 }
 
 function getCB(){ return botes.reduce((a,b)=>a+getCosteBote(b),0); }
@@ -1216,9 +1230,10 @@ function renderBotes(){
   if(!botes.length){ el.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Sin salsas configuradas.</div>'; if(tot)tot.textContent=''; return; }
   el.innerHTML=botes.map((b,i)=>{
     const costo=getCosteBote(b);
-    return`<div style="display:grid;grid-template-columns:auto 1fr 60px 60px 20px;gap:6px;align-items:center;margin-bottom:4px;font-size:12px">
-      <span class="badge ${b.tipo==='prep'?'tp':'ti'}">${b.tipo}</span>
-      <span>${b.nom}</span><span>${b.cant}g</span>
+    const ingLabel=b.ingNom?`🫙 ${b.ingCant||1}× ${b.ingNom}`:(b.nom||'');
+    const prepLabel=b.prepNom?` + 🥣 ${b.prepCant}g ${b.prepNom}`:'';
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;background:var(--gris-mid);border-radius:6px;padding:5px 8px;font-size:12px">
+      <div style="flex:1"><span style="color:var(--texto)">${ingLabel}</span><span style="color:var(--texto-dim)">${prepLabel}</span></div>
       <span class="hl">$${costo.toFixed(4)}</span>
       <button class="db" onclick="delBote(${i})">✕</button>
     </div>`;
@@ -1638,7 +1653,11 @@ function renderEmp(){
   renderEmpLista(empaquePapas,'emp-papas-lista','emp-papas-total',getCEPapas,'delEmpPapas');
   renderBotes();
   renderPorciones();
-  toggleBoteTipo();
+  // Populate bote selectors
+  const bIngSel=document.getElementById('bote-ing-nom');
+  if(bIngSel){bIngSel.innerHTML='<option value="">Seleccionar ingrediente...</option>';getProds().forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;bIngSel.appendChild(o);});}
+  const bPrepSel=document.getElementById('bote-prep-nom');
+  if(bPrepSel){bPrepSel.innerHTML='<option value="">Sin preparado (solo bote)</option>';preps.forEach(p=>{const o=document.createElement('option');o.value=p.nom;o.textContent=p.nom;bPrepSel.appendChild(o);});}
 }
 async function delEmp(i){if(!confirm('Eliminar?'))return;empaque.splice(i,1);await saveConfig_db();renderEmp();}
 async function delEmpPapas(i){if(!confirm('Eliminar?'))return;empaquePapas.splice(i,1);await saveConfig_db();renderEmp();}
