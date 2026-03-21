@@ -2949,19 +2949,19 @@ async function init(){
   await loadAll();
   initSelects();
   setToday();
-  renderEmp();
-  renderPVPLista();
-  renderProdsExtra();
-  renderGastosOp();
-  renderPendientes();
-  renderVidriera();
-  renderSaldoResumen();
+  try{ renderEmp(); }catch(e){}
+  try{ renderPVPLista(); }catch(e){}
+  try{ renderProdsExtra(); }catch(e){}
+  try{ renderGastosOp(); }catch(e){}
+  try{ renderPendientes(); }catch(e){}
+  try{ renderVidriera(); }catch(e){}
+  try{ renderSaldoResumen(); }catch(e){ console.error('saldo init error',e); }
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
   fetchBCV();
   if(tasa>0){const el=document.getElementById("tasa-manual");if(el)el.value=tasa.toFixed(2);}
-  document.getElementById('loading-screen').style.display='none';
-  document.getElementById('main-app').style.display='flex';
+  try{ document.getElementById('loading-screen').style.display='none'; }catch(e){}
+  try{ document.getElementById('main-app').style.display='flex'; }catch(e){}
 }
 
 init();
