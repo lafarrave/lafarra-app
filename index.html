@@ -1510,17 +1510,38 @@ async function deleteCompra_db(idx){
 
 // ─── BCV ─────────────────────────────────────────────────────
 async function fetchBCV(){
-  try{
-    const r=await fetch('https://tasa-dolar.fly.dev/');
-    const d=await r.json();
-    tasa=d.divisas&&d.divisas.USD?d.divisas.USD:0;
-    localStorage.setItem('lf_bcv',tasa);
-    document.getElementById('bcv-lbl').textContent='BCV Bs.'+tasa.toFixed(2);
-    document.getElementById('bcv-dot').style.background='var(--verde)';
-  }catch(e){
-    document.getElementById('bcv-lbl').textContent='BCV manual';
-    document.getElementById('bcv-dot').style.background='var(--naranja)';
+  const dot=document.getElementById('bcv-dot');
+  const lbl=document.getElementById('bcv-lbl');
+  if(dot) dot.style.background='var(--amarillo)';
+  if(lbl) lbl.textContent='BCV...';
+  const apis=[
+    {url:'https://bcv-api.vercel.app/api/rates',      get:d=>d?.data?.dollar?.rate},
+    {url:'https://pydolarve.org/api/v1/dollar/',       get:d=>d?.monitors?.bcv?.price},
+    {url:'https://ve.dolarapi.com/v1/dolares/oficial', get:d=>d?.promedio},
+  ];
+  for(const api of apis){
+    try{
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),5000);
+      const r=await fetch(api.url,{signal:ctrl.signal});
+      clearTimeout(timer);
+      const d=await r.json();
+      const t=parseFloat(api.get(d));
+      if(t&&t>0){
+        tasa=t;
+        localStorage.setItem('lf_bcv',tasa);
+        if(dot) dot.style.background='var(--verde)';
+        if(lbl) lbl.textContent='BCV '+tasa.toFixed(2);
+        renderSaldoResumen();
+        return;
+      }
+    }catch(e){continue;}
   }
+  // Todas fallaron — usar cache
+  const cached=parseFloat(localStorage.getItem('lf_bcv')||'0');
+  if(cached>0){ tasa=cached; if(lbl) lbl.textContent='BCV '+cached.toFixed(2)+' (cache)'; }
+  else { if(lbl) lbl.textContent='BCV manual'; }
+  if(dot) dot.style.background='var(--naranja)';
   renderSaldoResumen();
 }
 function setTasaManual(val){
