@@ -2720,7 +2720,8 @@ async function marcarCobrado(vid){
   const v=ventas[idx];
   const tasaUsada=v.tasa||tasa||1;
   const montoBsCob=v.totalBs||(v.total*tasaUsada);
-  if(v.banco==='provincial'){
+  const bancoCob=v.banco||bancoActual||'bancaribe';
+  if(bancoCob==='provincial'){
     saldoProvincial+=v.total; saldoProvincialBs+=montoBsCob;
     localStorage.setItem('lf_saldo_provincial',saldoProvincial);
     localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
@@ -2852,7 +2853,7 @@ async function confirmarVenta(estado='cobrado'){
   const totalBs=tasa>0?totalFinal*tasa:null;
   const fechaVenta=fecha||getVEDate();
   const vid='v'+Date.now();
-  const venta={fecha:fechaVenta,cliente,items:[...carrito],total:totalFinal,totalItems,delivery:deliveryMonto||0,costo,gan,totalBs,tasa,estado,vid};
+  const venta={fecha:fechaVenta,cliente,items:[...carrito],total:totalFinal,totalItems,delivery:deliveryMonto||0,costo,gan,totalBs,tasa,estado,vid,banco:bancoActual};
   ventas.unshift(venta);
   await addVenta_db(venta);
   if(estado==='cobrado'){
