@@ -347,20 +347,29 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <div class="slbl">🏦 Bancaribe (insumos)</div>
           <div class="sval-bs" id="s-bs">Bs. —</div>
           <div class="sval-usd" id="s-usd">$—</div>
-          <div style="margin-top:6px;font-size:11px;color:var(--texto-dim)" id="s-pendiente-transferir"></div>
         </div>
         <div class="sbox" style="border-color:#1a3a5a;background:#0d1520">
           <div class="slbl" style="color:#60a0d0">🏦 Provincial (personal)</div>
           <div class="sval-bs" id="p-bs" style="color:#60a0d0">Bs. —</div>
           <div class="sval-usd" id="p-usd" style="color:#4080b0">$—</div>
-          <div style="margin-top:6px;font-size:11px;color:var(--texto-dim)" id="p-pendiente-transferir"></div>
         </div>
       </div>
-      <div class="sbox green-box" style="margin-bottom:1rem">
-        <div class="slbl">Ganancia acumulada por transferir</div>
-        <div class="sval-bs" id="g-bs">Bs. —</div>
-        <div class="sval-usd" id="g-usd">$—</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
+        <div class="sbox green-box" id="box-transferir-bc" style="display:none!important">
+          <div class="slbl">💸 Transferir a Provincial</div>
+          <div class="sval-bs" id="g-bc-bs">Bs. —</div>
+          <div class="sval-usd" id="g-bc-usd">$—</div>
+          <div style="font-size:11px;color:#4caf7d;margin-top:4px">Ganancia de ventas en Bancaribe</div>
+        </div>
+        <div class="sbox" style="border-color:#1a4a2a;background:#0a1a0d;display:none" id="box-transferir-pv">
+          <div class="slbl" style="color:#4caf7d">💸 Transferir a Bancaribe</div>
+          <div class="sval-bs" id="g-pv-bs" style="color:#4caf7d">Bs. —</div>
+          <div class="sval-usd" id="g-pv-usd" style="color:#3a9a5d">$—</div>
+          <div style="font-size:11px;color:#4caf7d;margin-top:4px">Costos de ventas en Provincial</div>
+        </div>
       </div>
+      <div id="g-bs" style="display:none"></div>
+      <div id="g-usd" style="display:none"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem" id="saldo-metrics-mes"></div>
       <div class="card">
         <div class="card-title">Actualizar saldos manualmente</div>
@@ -1756,19 +1765,23 @@ function renderSaldoResumen(){
   document.getElementById('p-bs').textContent=fBsFixed(sPV);
   document.getElementById('p-usd').textContent='$'+sPVusd.toFixed(2);
   // Costos pendientes de transferir a Bancaribe desde Provincial
-  // Total costos de ventas en Provincial (lo que debería ir a Bancaribe)
+  // Pending to Bancaribe (costos from Provincial ventas)
   const totalCostosProvincial=movs.filter(m=>m.banco==='provincial'&&m.esIngreso)
     .reduce((a,m)=>a+(m.costoATransferir||0),0);
-  // Total ya transferido Provincial→Bancaribe
   const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc')
     .reduce((a,m)=>a+(m.monto||0),0);
   const costosPend=Math.max(0,totalCostosProvincial-totalTransfPVtoBC);
-  const ppt=document.getElementById('p-pendiente-transferir');
-  if(ppt) ppt.textContent=costosPend>0.01?'→ a Bancaribe: $'+costosPend.toFixed(2):'';
-  // GANANCIA
+  const costosPendBs=tasa>0?costosPend*tasa:0;
+  const boxPV=document.getElementById('box-transferir-pv');
+  if(boxPV){
+    boxPV.style.display=costosPend>0.01?'block':'none';
+    const bsPVel=document.getElementById('g-pv-bs');
+    const usdPVel=document.getElementById('g-pv-usd');
+    if(bsPVel) bsPVel.textContent=fBsFixed(costosPendBs);
+    if(usdPVel) usdPVel.textContent='$'+costosPend.toFixed(2);
+  }
+  // GANANCIA (for gan-inline reference in transfer card)
   const gpBs=tasa>0?gp*tasa:0;
-  document.getElementById('g-bs').textContent=fBsFixed(gpBs);
-  document.getElementById('g-usd').textContent='$'+gp.toFixed(2);
   const gi=document.getElementById('gan-inline');if(gi)gi.textContent='$'+gp.toFixed(2)+' / '+fBsFixed(gpBs);
 
   // Ventas y ganancia del mes
