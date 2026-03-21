@@ -1695,19 +1695,30 @@ function renderSaldoResumen(){
   document.getElementById('s-bs').textContent=fBsFixed(sBC);
   document.getElementById('s-usd').textContent='$'+sBCusd.toFixed(2);
   // Ganancia pendiente de transferir a Provincial
-  const ganVentasBC=movs.filter(m=>m.banco==='bancaribe'&&m.esIngreso&&m.ganancia>0).reduce((a,m)=>a+m.ganancia,0);
-  const pendAProvincial=Math.max(0,ganVentasBC-ganT);
+  // Total ganancias de ventas en Bancaribe
+  const totalGanBC=movs.filter(m=>m.banco==='bancaribe'&&m.esIngreso)
+    .reduce((a,m)=>a+(m.ganancia||0),0);
+  // Total ya transferido Bancaribe→Provincial
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv')
+    .reduce((a,m)=>a+(m.monto||0),0)+ganT;
+  const pendAProvincial=Math.max(0,totalGanBC-totalTransfBCtoPC);
   const spt=document.getElementById('s-pendiente-transferir');
-  if(spt) spt.textContent=pendAProvincial>0?'→ a Provincial: $'+pendAProvincial.toFixed(2):'';
+  if(spt) spt.textContent=pendAProvincial>0.01?'→ a Provincial: $'+pendAProvincial.toFixed(2):'';
   // PROVINCIAL — base en Bs, $ derivado
   const sPV = saldoProvincialBs>0 ? saldoProvincialBs : (saldoProvincial*tasa);
   const sPVusd = tasa>0 ? sPV/tasa : saldoProvincial;
   document.getElementById('p-bs').textContent=fBsFixed(sPV);
   document.getElementById('p-usd').textContent='$'+sPVusd.toFixed(2);
   // Costos pendientes de transferir a Bancaribe desde Provincial
-  const costosPend=movs.filter(m=>m.banco==='provincial'&&m.esIngreso&&m.costoATransferir>0).reduce((a,m)=>a+m.costoATransferir,0);
+  // Total costos de ventas en Provincial (lo que debería ir a Bancaribe)
+  const totalCostosProvincial=movs.filter(m=>m.banco==='provincial'&&m.esIngreso)
+    .reduce((a,m)=>a+(m.costoATransferir||0),0);
+  // Total ya transferido Provincial→Bancaribe
+  const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc')
+    .reduce((a,m)=>a+(m.monto||0),0);
+  const costosPend=Math.max(0,totalCostosProvincial-totalTransfPVtoBC);
   const ppt=document.getElementById('p-pendiente-transferir');
-  if(ppt) ppt.textContent=costosPend>0?'→ a Bancaribe: $'+costosPend.toFixed(2):'';
+  if(ppt) ppt.textContent=costosPend>0.01?'→ a Bancaribe: $'+costosPend.toFixed(2):'';
   // GANANCIA
   const gpBs=tasa>0?gp*tasa:0;
   document.getElementById('g-bs').textContent=fBsFixed(gpBs);
@@ -1756,6 +1767,16 @@ async function registrarTransferencia(){
     saldoProvincial+=monto; saldoProvincialBs+=montoBs;
     localStorage.setItem('lf_saldo_provincial',saldoProvincial);
     localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
+    // Marcar ventas bancaribe como ganancia ya transferida
+    let restBC=monto;
+    movs.forEach(m=>{
+      if(m.banco==='bancaribe'&&m.esIngreso&&(m.ganancia||0)>0&&(m.gananciaTransferida||0)<(m.ganancia||0)&&restBC>0){
+        const pendiente=(m.ganancia||0)-(m.gananciaTransferida||0);
+        const aplicado=Math.min(pendiente,restBC);
+        m.gananciaTransferida=(m.gananciaTransferida||0)+aplicado;
+        restBC-=aplicado;
+      }
+    });
     movs.unshift({fecha,desc:'Transferencia Bancaribe → Provincial',tipo:'transferencia',monto,montoBs,sd:saldo,tasa,esTransferencia:true,dir:'bc_to_pv'});
   } else {
     // Provincial → Bancaribe (transferir insumos)
@@ -1764,6 +1785,15 @@ async function registrarTransferencia(){
     saldo+=monto; saldoBs+=montoBs;
     localStorage.setItem('lf_saldo_provincial',saldoProvincial);
     localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
+    // Marcar ventas provinciales como costos ya transferidos (reduce señal pendiente)
+    let restante=monto;
+    movs.forEach(m=>{
+      if(m.banco==='provincial'&&m.esIngreso&&(m.costoATransferir||0)>0&&restante>0){
+        const aplicado=Math.min(m.costoATransferir,restante);
+        m.costoATransferir=Math.max(0,m.costoATransferir-aplicado);
+        restante-=aplicado;
+      }
+    });
     movs.unshift({fecha,desc:'Transferencia Provincial → Bancaribe',tipo:'transferencia',monto,montoBs,sd:saldo,tasa,esTransferencia:true,dir:'pv_to_bc'});
   }
   await saveSaldo_db();renderSaldoResumen();renderMovs();
