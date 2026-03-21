@@ -1780,6 +1780,11 @@ function renderSaldoResumen(){
   const costosPend=Math.max(0,costosProvincial-totalTransfPVtoBC);
   const costosPendBs=tasa>0?costosPend*tasa:0;
 
+  // DEBUG
+  console.log('ventasBC:', ventasBC.length, ventasBC.map(v=>({nom:v.items?.[0]?.nom, gan:v.gan, costo:v.costo, total:v.total, banco:v.banco, estado:v.estado})));
+  console.log('ventasPV:', ventasPV.length, ventasPV.map(v=>({nom:v.items?.[0]?.nom, gan:v.gan, costo:v.costo, total:v.total, banco:v.banco, estado:v.estado})));
+  console.log('pendAProvincial:', pendAProvincial, 'ganVentasBC:', ganVentasBC, 'totalTransfBCtoPC:', totalTransfBCtoPC);
+  console.log('costosPend:', costosPend, 'costosProvincial:', costosProvincial, 'totalTransfPVtoBC:', totalTransfPVtoBC);
   // Build transfer boxes dynamically
   const gridEl=document.getElementById('grid-transferencias');
   if(gridEl){
