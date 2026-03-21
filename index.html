@@ -237,13 +237,12 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div id="tab-config" class="section visible">
       <div class="card">
         <div class="card-title">📱 Pago Móvil</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Se muestra en el carrito para que el cliente pueda hacer la transferencia.</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Se muestra en el carrito para que el cliente vea a dónde transferir.</div>
         <div class="fgrid">
-          <div class="fg"><label>📞 Teléfono</label><input type="text" id="cfg-tel" placeholder="ej: 0412-1234567"/></div>
+          <div class="fg"><label>📞 Teléfono</label><input type="text" id="cfg-tel" placeholder="ej: 0424-1234567"/></div>
           <div class="fg"><label>🪪 Cédula</label><input type="text" id="cfg-ci" placeholder="ej: V-12345678"/></div>
-          <div class="fg"><label>🏦 Banco</label><input type="text" id="cfg-banco-pm" placeholder="ej: Bancaribe"/></div>
         </div>
-        <button class="btn" onclick="saveConfig()">Guardar</button>
+        <button class="btn" onclick="savePagoMovil()">Guardar</button>
       </div>
       <div class="card">
         <div class="card-title">🍟 Papas por defecto</div>
@@ -1656,7 +1655,7 @@ function refreshPapasSelect(){
   renderPagoMovilInfo();
   const tel=document.getElementById('cfg-tel');if(tel)tel.value=cfg.tel||'';
   const ci=document.getElementById('cfg-ci');if(ci)ci.value=cfg.ci||'';
-  const bpm=document.getElementById('cfg-banco-pm');if(bpm)bpm.value=cfg.bancopm||'';
+
   const gp2=document.getElementById('cfg-gp2');if(gp2)gp2.value=cfg.gp2||'';
 }
 
@@ -1702,13 +1701,21 @@ function delProducto(i){
 }
 
 // ─── CONFIG ──────────────────────────────────────────────────
+async function savePagoMovil(){
+  cfg.tel=document.getElementById('cfg-tel')?.value.trim()||'';
+  cfg.ci=document.getElementById('cfg-ci')?.value.trim()||'';
+  await saveConfig_db();
+  renderPagoMovilInfo();
+  alert('✓ Datos de pago guardados');
+}
+
 async function saveConfig(){
   cfg.papas=document.getElementById('cfg-papas').value;
   cfg.gp=parseFloat(document.getElementById('cfg-gp').value)||150;
   cfg.gp2=parseFloat(document.getElementById('cfg-gp2').value)||250;
   cfg.tel=document.getElementById('cfg-tel')?.value.trim()||'';
   cfg.ci=document.getElementById('cfg-ci')?.value.trim()||'';
-  cfg.bancopm=document.getElementById('cfg-banco-pm')?.value.trim()||'';
+
   await saveConfig_db();
   alert('✓ Configuración guardada');
 }
