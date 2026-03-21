@@ -1741,7 +1741,11 @@ function renderSaldoResumen(){
   // Bancaribe: ventas cobradas (con o sin campo banco, default=bancaribe)
   const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco));
   // gan = total - costo. Si costo=0 (sin receta), gan=total. Recalcular por si acaso.
-  const ganVentasBC=ventasBC.reduce((a,v)=>a+(v.gan!=null?v.gan:(v.total||0)-(v.costo||0)),0);
+  const ganVentasBC=ventasBC.reduce((a,v)=>{
+    const costoReal=(v.costo||0)>0?v.costo:getVentaCosto(v);
+    const ganReal=v.gan!=null&&(v.gan>0||(v.total||0)===0)?v.gan:(v.total||0)-costoReal;
+    return a+ganReal;
+  },0);
   const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv').reduce((a,m)=>a+(m.monto||0),0)+ganT;
   const pendAProvincial=Math.max(0,ganVentasBC-totalTransfBCtoPC);
   const pendAProvincialBs=tasa>0?pendAProvincial*tasa:0;
@@ -1755,8 +1759,18 @@ function renderSaldoResumen(){
   // Costos pendientes de transferir a Bancaribe desde Provincial
   // Pending to Bancaribe (costos from Provincial ventas)
   const ventasPV=ventas.filter(v=>v.estado==='cobrado'&&v.banco==='provincial');
-  // Si costo=0 usar total-gan como costo estimado
-  const costosProvincial=ventasPV.reduce((a,v)=>a+((v.costo||0)>0?v.costo:(v.total||0)-(v.gan!=null?v.gan:0)),0);
+  // Recalculate costo from current menu prices (in case venta was saved with costo=0)
+  function getVentaCosto(v){
+    if((v.costo||0)>0) return v.costo;
+    // Recalculate from items
+    return (v.items||[]).reduce((a,it)=>{
+      const mi=menuItems.find(m=>m.nom===it.nom);
+      const pvp=pvProds.find(p=>p.nom===it.nom);
+      const costo=mi?getCMTotal(mi):(pvp?pvp.costo:0);
+      return a+costo*(it.qty||1);
+    },0);
+  }
+  const costosProvincial=ventasPV.reduce((a,v)=>a+getVentaCosto(v),0);
   const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc').reduce((a,m)=>a+(m.monto||0),0);
   const costosPend=Math.max(0,costosProvincial-totalTransfPVtoBC);
   const costosPendBs=tasa>0?costosPend*tasa:0;
