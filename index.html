@@ -684,13 +684,13 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
                 <button id="banco-provincial-btn" onclick="setBanco('provincial')" style="padding:6px;border-radius:5px;border:1px solid var(--gris-light);background:var(--gris-dark);color:var(--texto-dim);font-size:11px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">🏦 Provincial</button>
               </div>
               <div id="pagomovil-info" style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
-                <div style="background:var(--gris-dark);border-radius:5px;padding:5px 8px;text-align:center">
-                  <div style="font-size:10px;color:var(--texto-dim);margin-bottom:2px">📞 TELÉFONO</div>
-                  <div style="font-weight:700;color:#fff;font-size:13px;letter-spacing:.3px" id="pm-tel">—</div>
+                <div style="background:var(--gris-dark);border-radius:6px;padding:8px;text-align:center;border:1px solid var(--gris-light)">
+                  <div style="font-size:10px;color:var(--texto-dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">📞 Teléfono</div>
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#fff;font-size:18px;letter-spacing:.5px" id="pm-tel">—</div>
                 </div>
-                <div style="background:var(--gris-dark);border-radius:5px;padding:5px 8px;text-align:center">
-                  <div style="font-size:10px;color:var(--texto-dim);margin-bottom:2px">🪪 CÉDULA</div>
-                  <div style="font-weight:700;color:#fff;font-size:13px;letter-spacing:.3px" id="pm-ci">—</div>
+                <div style="background:var(--gris-dark);border-radius:6px;padding:8px;text-align:center;border:1px solid var(--gris-light)">
+                  <div style="font-size:10px;color:var(--texto-dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">🪪 Cédula</div>
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#fff;font-size:18px;letter-spacing:.5px" id="pm-ci">—</div>
                 </div>
               </div>
             </div>
@@ -1555,6 +1555,7 @@ async function fetchBCV(){
         if(lbl) lbl.textContent='BCV '+tasa.toFixed(2);
         renderSaldoResumen();
         try{ renderPOSCats(); }catch(e){}
+  try{ renderPagoMovilInfo(); }catch(e){}
         return;
       }
     }catch(e){continue;}
@@ -2870,9 +2871,8 @@ function renderPagoMovilInfo(){
   const ci=document.getElementById('pm-ci');
   if(tel) tel.textContent=cfg.tel||'—';
   if(ci) ci.textContent=cfg.ci||'—';
-  // Hide section if not configured
   const info=document.getElementById('pagomovil-info');
-  if(info) info.style.display=(cfg.tel||cfg.ci)?'grid':'none';
+  if(info) info.style.display='grid';
 }
 let saldoProvincial = parseFloat(localStorage.getItem('lf_saldo_provincial')||'0');
 let saldoProvincialBs = parseFloat(localStorage.getItem('lf_saldo_provincial_bs')||'0');
@@ -3050,6 +3050,7 @@ async function init(){
   try{ renderSaldoResumen(); }catch(e){ console.error('saldo init error',e); }
   // Re-render POS after all data loaded so costs calculate correctly
   try{ renderPOSCats(); }catch(e){}
+  try{ renderPagoMovilInfo(); }catch(e){}
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
   fetchBCV();
