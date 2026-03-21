@@ -1743,9 +1743,10 @@ function renderSaldoResumen(){
   const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco));
   // gan = total - costo. Si costo=0 (sin receta), gan=total. Recalcular por si acaso.
   const ganVentasBC=ventasBC.reduce((a,v)=>{
-    const costoReal=(v.costo||0)>0?v.costo:getVentaCosto(v);
-    const ganReal=v.gan!=null&&(v.gan>0||(v.total||0)===0)?v.gan:(v.total||0)-costoReal;
-    return a+ganReal;
+    // Use stored gan if available, otherwise derive from total-costo
+    if((v.gan||0)>0) return a+(v.gan||0);
+    const costoReal=getVentaCosto(v);
+    return a+Math.max(0,(v.total||0)-costoReal);
   },0);
   const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv').reduce((a,m)=>a+(m.monto||0),0)+ganT;
   const pendAProvincial=Math.max(0,ganVentasBC-totalTransfBCtoPC);
@@ -1762,12 +1763,15 @@ function renderSaldoResumen(){
   const ventasPV=ventas.filter(v=>v.estado==='cobrado'&&v.banco==='provincial');
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
+    // If costo stored and non-zero, use it
     if((v.costo||0)>0) return v.costo;
-    // Recalculate from items
+    // If gan stored and total stored, derive costo = total - gan
+    if((v.gan||0)>0 && (v.total||0)>0) return Math.max(0,(v.total||0)-(v.gan||0));
+    // Last resort: recalculate from current menu
     return (v.items||[]).reduce((a,it)=>{
       const mi=menuItems.find(m=>m.nom===it.nom);
       const pvp=pvProds.find(p=>p.nom===it.nom);
-      const costo=mi?getCMTotal(mi):(pvp?pvp.costo:0);
+      const costo=mi?getCMTotal(mi):(pvp?(pvp.costo||0):0);
       return a+costo*(it.qty||1);
     },0);
   }
