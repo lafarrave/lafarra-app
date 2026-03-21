@@ -492,7 +492,8 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
               <select id="c-unit"><option value="g">Gramos (g)</option><option value="ud">Unidades (ud)</option><option value="kg">Kg</option><option value="ml">ml</option></select>
             </div>
             <div class="fg"><label>Cantidad</label><input type="number" id="c-cant" oninput="calcCpg()"/></div>
-            <div class="fg"><label>Precio total ($)</label><input type="number" id="c-precio" oninput="calcCpg()"/></div>
+            <div class="fg"><label>Precio total (Bs)</label><input type="number" id="c-precio-bs" oninput="calcCpg()"/></div>
+            <div class="fg"><label>Precio en $ (auto)</label><input type="text" id="c-precio" readonly style="background:var(--gris-light)" placeholder="auto según tasa BCV"/></div>
             <div class="fg"><label>Precio/unidad (auto)</label><input type="text" id="c-pg" readonly style="background:var(--gris-light)"/></div>
             <div class="fg"><label>Tienda</label><input type="text" id="c-tienda"/></div>
             <div class="fg"><label>Fecha</label><input type="date" id="c-fecha"/></div>
@@ -1807,7 +1808,8 @@ function renderMovs(){
   const tipos={compra:'Compra',inversion:'Inversión',otro:'Otro',ajuste:'Ajuste',transferencia:'Transferir',venta:'Venta cobrada'};
   const cls={compra:'bi',inversion:'bp',otro:'bi',ajuste:'bm',transferencia:'bm',venta:'bm'};
   tb.innerHTML=filteredMovs.map((m,i)=>{const t=m.tasa||tasa||0;const mBs=t>0&&m.monto>0?'Bs.'+Math.round(m.monto*t).toLocaleString('es-VE'):'—';
-    return`<tr><td>${m.fecha}</td><td>${m.desc}</td><td><span class="badge ${cls[m.tipo]||'bi'}">${tipos[m.tipo]||m.tipo}</span></td><td class="${m.tipo==='transferencia'||m.esIngreso?'green':m.monto>0?'red':''}">${m.esIngreso?'+':m.monto>0?(m.tipo==='transferencia'?'→ -':'-'):''}}$${m.monto.toFixed(2)}</td><td style="color:var(--texto-dim)">${mBs}</td><td>$${m.sd.toFixed(2)}</td><td><button class="db" onclick="delMov(${i})">✕</button></td></tr>`;
+    const mBsDisplay=m.montoBs?'Bs.'+Math.round(m.montoBs).toLocaleString('es-VE'):mBs;
+    return`<tr><td>${m.fecha}</td><td>${m.desc}</td><td><span class="badge ${cls[m.tipo]||'bi'}">${tipos[m.tipo]||m.tipo}</span></td><td class="${m.tipo==='transferencia'||m.esIngreso?'green':m.monto>0?'red':''}">${m.esIngreso?'+':m.monto>0?(m.tipo==='transferencia'?'→ -':'-'):''}}$${m.monto.toFixed(2)}</td><td style="color:var(--texto-dim)">${mBsDisplay}</td><td>$${m.sd.toFixed(2)}</td><td><button class="db" onclick="delMov(${i})">✕</button></td></tr>`;
   }).join('');
 }
 async function delMov(i){
@@ -1841,8 +1843,13 @@ async function delMov(i){
 
 // ─── INVENTARIO ───────────────────────────────────────────────
 function calcCpg(){
-  const p=parseFloat(document.getElementById('c-precio').value),c=parseFloat(document.getElementById('c-cant').value),u=document.getElementById('c-unit').value;
-  document.getElementById('c-pg').value=(!isNaN(p)&&!isNaN(c)&&c>0)?'$'+(p/c).toFixed(4)+'/'+u:'—';
+  const pBs=parseFloat(document.getElementById('c-precio-bs').value);
+  const pUSD=tasa>0&&!isNaN(pBs)?pBs/tasa:NaN;
+  const precioEl=document.getElementById('c-precio');
+  if(precioEl) precioEl.value=!isNaN(pUSD)?'$'+pUSD.toFixed(4):'—';
+  const cant=parseFloat(document.getElementById('c-cant').value);
+  const u=document.getElementById('c-unit').value;
+  document.getElementById('c-pg').value=(!isNaN(pUSD)&&!isNaN(cant)&&cant>0)?'$'+(pUSD/cant).toFixed(4)+'/'+u:'—';
 }
 
 async function cargarStockInicial(){
@@ -1860,21 +1867,28 @@ async function cargarStockInicial(){
 }
 
 async function registrarCompra(){
-  const prod=getSelVal('c-prod'),marca=document.getElementById('c-marca').value.trim(),unit=document.getElementById('c-unit').value,cant=parseFloat(document.getElementById('c-cant').value),precio=parseFloat(document.getElementById('c-precio').value),tienda=document.getElementById('c-tienda').value.trim(),fecha=document.getElementById('c-fecha').value,desc=document.getElementById('c-desc').checked,am=document.getElementById('c-am').value,ro=document.getElementById('c-ro').value;
+  const prod=getSelVal('c-prod'),marca=document.getElementById('c-marca').value.trim(),unit=document.getElementById('c-unit').value,cant=parseFloat(document.getElementById('c-cant').value);
+  const precioBs=parseFloat(document.getElementById('c-precio-bs').value);
+  const precio=tasa>0&&!isNaN(precioBs)?precioBs/tasa:NaN;
+  const tienda=document.getElementById('c-tienda').value.trim(),fecha=document.getElementById('c-fecha').value,desc=document.getElementById('c-desc').checked,am=document.getElementById('c-am').value,ro=document.getElementById('c-ro').value;
   if(!prod) return alert('Falta seleccionar el Producto');
   if(isNaN(cant)||cant<=0) return alert('Falta la Cantidad');
-  if(isNaN(precio)||precio<=0) return alert('Falta el Precio total');
+  if(isNaN(precioBs)||precioBs<=0) return alert('Falta el Precio total en Bs');
+  if(tasa<=0) return alert('No hay tasa BCV disponible. Actualiza la tasa primero.');
   if(!tienda) return alert('Falta la Tienda');
   if(!fecha) return alert('Falta la Fecha');
   const pg=cant>0?precio/cant:null;
-  const compra={fecha,prod,marca,stockunit:unit,cont:cant,precio,pg,tienda};
+  const compra={fecha,prod,marca,stockunit:unit,cont:cant,precio,precioBs,pg,tienda,tasa};
   compras.unshift(compra);
   if(am||ro){umbrales[prod]={amarillo:am?parseFloat(am):(umbrales[prod]?.amarillo??null),rojo:ro?parseFloat(ro):(umbrales[prod]?.rojo??null),unit};}
-  if(desc){saldo-=precio;movs.unshift({fecha,desc:(marca?marca+' ':'')+prod+' — '+tienda,tipo:'compra',monto:precio,sd:saldo,tasa});}
+  if(desc){
+    saldo-=precio; saldoBs-=precioBs;
+    movs.unshift({fecha,desc:(marca?marca+' ':'')+prod+' — '+tienda,tipo:'compra',monto:precio,montoBs:precioBs,sd:saldo,tasa});
+  }
   await Promise.all([addCompra_db(compra),saveUmbrales_db(),saveSaldo_db()]);
   renderInventario();renderInvHist();
-  ['c-marca','c-precio','c-cant','c-tienda','c-am','c-ro'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('c-pg').value='';
+  ['c-marca','c-precio-bs','c-cant','c-tienda','c-am','c-ro'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('c-pg').value='';document.getElementById('c-precio').value='';
   document.getElementById('c-prod').value='';const cl=document.getElementById('c-prod_lbl');if(cl)cl.textContent='Seleccionar...';
 }
 
