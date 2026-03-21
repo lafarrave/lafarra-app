@@ -1751,8 +1751,8 @@ function renderSaldoResumen(){
   document.getElementById('p-usd').textContent='$'+sPVusd.toFixed(2);
   // Costos pendientes de transferir a Bancaribe desde Provincial
   // Pending to Bancaribe (costos from Provincial ventas)
-  const costosProvincial=ventas.filter(v=>v.estado==='cobrado'&&v.banco==='provincial')
-    .reduce((a,v)=>a+(v.costo||0),0);
+  const ventasPV=ventas.filter(v=>v.estado==='cobrado'&&v.banco==='provincial');
+  const costosProvincial=ventasPV.reduce((a,v)=>a+(v.costo||0),0);
   const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc').reduce((a,m)=>a+(m.monto||0),0);
   const costosPend=Math.max(0,costosProvincial-totalTransfPVtoBC);
   const costosPendBs=tasa>0?costosPend*tasa:0;
@@ -1760,25 +1760,26 @@ function renderSaldoResumen(){
   // Build transfer boxes dynamically
   const gridEl=document.getElementById('grid-transferencias');
   if(gridEl){
-    const haBC=pendAProvincial>0.01;
-    const haPV=costosPend>0.01;
-    if(!haBC&&!haPV){ gridEl.innerHTML=''; }
-    else {
+    const haBC=ventasBC.length>0&&pendAProvincial>0.01;
+    const haPV=ventasPV.length>0&&costosPend>0.01;
+    if(!haBC&&!haPV){
+      gridEl.innerHTML='';
+    } else {
       gridEl.style.display='grid';
       gridEl.style.gridTemplateColumns=haBC&&haPV?'1fr 1fr':'1fr';
       gridEl.style.gap='10px';
       let html='';
       if(haBC) html+=`<div class="sbox green-box">
-        <div class="slbl">💸 Transferir a Provincial</div>
-        <div class="sval-bs" style="color:var(--verde)">${fBsFixed(pendAProvincialBs)}</div>
+        <div class="slbl">💸 Bancaribe → Provincial</div>
+        <div class="sval-bs" style="color:var(--verde);font-size:24px">${fBsFixed(pendAProvincialBs)}</div>
         <div class="sval-usd" style="color:#4caf7d">$${pendAProvincial.toFixed(2)}</div>
-        <div style="font-size:11px;color:#4caf7d;margin-top:4px">Ganancia de ventas en Bancaribe</div>
+        <div style="font-size:11px;color:#4caf7d;margin-top:4px">Tu ganancia — ${ventasBC.length} venta${ventasBC.length!==1?'s':''} en Bancaribe</div>
       </div>`;
       if(haPV) html+=`<div class="sbox" style="border-color:#1a4a2a;background:#0a1a0d">
-        <div class="slbl" style="color:#4caf7d">💸 Transferir a Bancaribe</div>
-        <div class="sval-bs" style="font-size:22px;color:#4caf7d">${fBsFixed(costosPendBs)}</div>
+        <div class="slbl" style="color:#4caf7d">💸 Provincial → Bancaribe</div>
+        <div class="sval-bs" style="font-size:24px;color:#4caf7d">${fBsFixed(costosPendBs)}</div>
         <div class="sval-usd" style="color:#3a9a5d">$${costosPend.toFixed(2)}</div>
-        <div style="font-size:11px;color:#4caf7d;margin-top:4px">Costos de ventas en Provincial</div>
+        <div style="font-size:11px;color:#4caf7d;margin-top:4px">Costo de insumos — ${ventasPV.length} venta${ventasPV.length!==1?'s':''} en Provincial</div>
       </div>`;
       gridEl.innerHTML=html;
     }
