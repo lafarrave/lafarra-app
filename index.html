@@ -534,8 +534,18 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <div class="fg"><label>Marca</label><input type="text" id="v-marca"/></div>
           <div class="fg"><label>Unidad</label><select id="v-unidad"><option>Kg</option><option>Frasco</option><option>Paquete</option><option>Bolsa</option><option>Envase</option><option>Unidad</option></select></div>
           <div class="fg"><label>Contenido (g)</label><input type="number" id="v-cont" oninput="calcVpg()"/></div>
-          <div class="fg"><label>Precio (Bs)</label><input type="number" id="v-precio-bs" oninput="calcVpg()"/></div>
-          <div class="fg"><label>Precio $ (auto)</label><input type="text" id="v-precio" readonly style="background:var(--gris-light)"/></div>
+          <div class="fg">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <label style="margin:0">Precio</label>
+              <div style="display:flex;gap:3px">
+                <button id="v-modo-bs" onclick="setVidModo('bs')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--naranja);background:var(--naranja);color:#fff;font-size:10px;cursor:pointer;font-weight:600">Bs</button>
+                <button id="v-modo-usd" onclick="setVidModo('usd')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--gris-light);background:var(--gris-dark);color:var(--texto-dim);font-size:10px;cursor:pointer">$</button>
+              </div>
+            </div>
+            <input type="number" id="v-precio-bs" placeholder="Monto en Bs" oninput="calcVpg()" style="display:block;width:100%"/>
+            <input type="number" id="v-precio-usd" placeholder="Monto en $" oninput="calcVpgUSD()" style="display:none;width:100%"/>
+          </div>
+          <div class="fg"><label>Equivalente (auto)</label><input type="text" id="v-precio" readonly style="background:var(--gris-light)" placeholder="conversión automática"/></div>
           <div class="fg"><label>Precio/g (auto)</label><input type="text" id="v-pg" readonly style="background:var(--gris-light)"/></div>
           <div class="fg"><label>Tienda</label><input type="text" id="v-tienda"/></div>
           <div class="fg"><label>Fecha</label><input type="date" id="v-fecha"/></div>
@@ -2221,11 +2231,45 @@ async function guardarUmbrales(){
 }
 
 // ─── VIDRIERA ────────────────────────────────────────────────
+let vidModo='bs'; // 'bs' or 'usd'
+
+function setVidModo(modo){
+  vidModo=modo;
+  const bsBtn=document.getElementById('v-modo-bs');
+  const usdBtn=document.getElementById('v-modo-usd');
+  const bsInp=document.getElementById('v-precio-bs');
+  const usdInp=document.getElementById('v-precio-usd');
+  if(modo==='bs'){
+    if(bsBtn){bsBtn.style.background='var(--naranja)';bsBtn.style.borderColor='var(--naranja)';bsBtn.style.color='#fff';}
+    if(usdBtn){usdBtn.style.background='var(--gris-dark)';usdBtn.style.borderColor='var(--gris-light)';usdBtn.style.color='var(--texto-dim)';}
+    if(bsInp)bsInp.style.display='block';
+    if(usdInp)usdInp.style.display='none';
+  } else {
+    if(usdBtn){usdBtn.style.background='var(--naranja)';usdBtn.style.borderColor='var(--naranja)';usdBtn.style.color='#fff';}
+    if(bsBtn){bsBtn.style.background='var(--gris-dark)';bsBtn.style.borderColor='var(--gris-light)';bsBtn.style.color='var(--texto-dim)';}
+    if(usdInp)usdInp.style.display='block';
+    if(bsInp)bsInp.style.display='none';
+  }
+  document.getElementById('v-precio').value='';
+  document.getElementById('v-pg').value='';
+}
+
 function calcVpg(){
+  // Called when Bs input changes
   const pBs=parseFloat(document.getElementById('v-precio-bs').value);
   const pUSD=tasa>0&&!isNaN(pBs)?pBs/tasa:NaN;
   const precioEl=document.getElementById('v-precio');
-  if(precioEl) precioEl.value=!isNaN(pUSD)?'$'+pUSD.toFixed(4):'—';
+  if(precioEl) precioEl.value=!isNaN(pUSD)?'$'+pUSD.toFixed(4)+' / Bs.'+Math.round(pBs).toLocaleString('es-VE'):'—';
+  const cont=parseFloat(document.getElementById('v-cont').value);
+  document.getElementById('v-pg').value=(!isNaN(pUSD)&&!isNaN(cont)&&cont>0)?'$'+(pUSD/cont).toFixed(4):'—';
+}
+
+function calcVpgUSD(){
+  // Called when USD input changes
+  const pUSD=parseFloat(document.getElementById('v-precio-usd').value);
+  const pBs=tasa>0&&!isNaN(pUSD)?pUSD*tasa:NaN;
+  const precioEl=document.getElementById('v-precio');
+  if(precioEl) precioEl.value=!isNaN(pBs)?'Bs.'+Math.round(pBs).toLocaleString('es-VE')+' / $'+pUSD.toFixed(4):'—';
   const cont=parseFloat(document.getElementById('v-cont').value);
   document.getElementById('v-pg').value=(!isNaN(pUSD)&&!isNaN(cont)&&cont>0)?'$'+(pUSD/cont).toFixed(4):'—';
 }
@@ -2235,11 +2279,18 @@ function getSelVal(id){
 }
 async function addVidriera(){
   const prod=getSelVal('v-prod'),marca=document.getElementById('v-marca').value.trim(),unidad=document.getElementById('v-unidad').value,cont=parseFloat(document.getElementById('v-cont').value);
-  const precioBs=parseFloat(document.getElementById('v-precio-bs').value);
-  const precio=tasa>0&&!isNaN(precioBs)?precioBs/tasa:NaN;
+  let precio, precioBs;
+  if(vidModo==='bs'){
+    precioBs=parseFloat(document.getElementById('v-precio-bs').value);
+    precio=tasa>0&&!isNaN(precioBs)?precioBs/tasa:NaN;
+    if(isNaN(precioBs)||precioBs<=0) return alert('Falta el Precio en Bs');
+  } else {
+    precio=parseFloat(document.getElementById('v-precio-usd').value);
+    precioBs=tasa>0&&!isNaN(precio)?precio*tasa:NaN;
+    if(isNaN(precio)||precio<=0) return alert('Falta el Precio en $');
+  }
   const tienda=document.getElementById('v-tienda').value.trim(),fecha=document.getElementById('v-fecha').value;
   if(!prod) return alert('Falta seleccionar el Producto');
-  if(isNaN(precioBs)||precioBs<=0) return alert('Falta el Precio en Bs');
   if(!tienda) return alert('Falta la Tienda');
   if(!fecha) return alert('Falta la Fecha');
   const pg=(!isNaN(cont)&&cont>0&&!isNaN(precio))?precio/cont:null;
@@ -2247,7 +2298,7 @@ async function addVidriera(){
   await saveInv_db();renderVidriera();cerrarVidForm();
   const lbl=document.getElementById('v-prod_lbl');if(lbl)lbl.textContent='Seleccionar...';
   document.getElementById('v-prod').value='';
-  ['v-marca','v-precio-bs','v-cont','v-tienda'].forEach(id=>document.getElementById(id).value='');
+  ['v-marca','v-precio-bs','v-precio-usd','v-cont','v-tienda'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('v-pg').value='';document.getElementById('v-precio').value='';
 }
 // ─── VIDRIERA UI ─────────────────────────────────────────────
