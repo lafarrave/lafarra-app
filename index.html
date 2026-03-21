@@ -392,7 +392,10 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <button class="btn" onclick="registrarGasto()">Registrar</button>
       </div>
       <div class="card">
-        <div class="card-title">Transferir entre cuentas</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+          <div class="card-title" style="margin:0">Transferir entre cuentas</div>
+          <button class="btns" style="font-size:11px;padding:4px 10px" onclick="resetearContadores()" title="Marcar todo como transferido — empieza desde hoy">🔄 Resetear contadores</button>
+        </div>
         <div style="margin-bottom:.8rem;font-size:12px;display:flex;flex-direction:column;gap:4px">
           <div style="color:var(--texto-dim)">🏦 Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" class="green">$0.00 / Bs.—</strong></div>
           <div style="color:var(--texto-dim)">🏦 Provincial → Bancaribe (insumos): <strong id="gan-inline-pv" style="color:#4caf7d">$0.00 / Bs.—</strong></div>
@@ -1872,6 +1875,17 @@ async function registrarGasto(){
   await saveSaldo_db();renderSaldoResumen();renderMovs();
   document.getElementById('gasto-desc').value='';document.getElementById('gasto-monto').value='';
 }
+async function resetearContadores(){
+  if(!confirm('¿Marcar todo como transferido? Los contadores empezarán desde hoy.')) return;
+  const hoy = getVEDate();
+  // Register a $0 transfer in both directions with today's date as marker
+  movs.unshift({fecha:hoy, desc:'Reseteo de contadores', tipo:'transferencia', monto:0, montoBs:0, sd:saldo, tasa, esTransferencia:true, dir:'bc_to_pv'});
+  movs.unshift({fecha:hoy, desc:'Reseteo de contadores', tipo:'transferencia', monto:0, montoBs:0, sd:saldo, tasa, esTransferencia:true, dir:'pv_to_bc'});
+  await saveSaldo_db();
+  renderSaldoResumen();
+  renderMovs();
+}
+
 async function registrarTransferencia(){
   const monto=parseFloat(document.getElementById('transfer-monto').value);
   const fecha=document.getElementById('transfer-fecha').value;
