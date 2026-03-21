@@ -1740,7 +1740,10 @@ function renderSaldoResumen(){
   document.getElementById('s-bs').textContent=fBsFixed(sBC);
   document.getElementById('s-usd').textContent='$'+sBCusd.toFixed(2);
   // Bancaribe: ventas cobradas (con o sin campo banco, default=bancaribe)
-  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco));
+  // Solo ventas DESPUÉS de la última transferencia BC→Provincial
+  const ultimaTransfBC=movs.filter(m=>m.dir==='bc_to_pv').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
+  const fechaCorteBC=ultimaTransfBC?.fecha||'2000-01-01';
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>=fechaCorteBC);
   // gan = total - costo. Si costo=0 (sin receta), gan=total. Recalcular por si acaso.
   const ganVentasBC=ventasBC.reduce((a,v)=>{
     if((v.gan||0)>0) return a+(v.gan||0);
@@ -1748,7 +1751,8 @@ function renderSaldoResumen(){
     return a+Math.max(0,(v.total||0)-costoReal);
   },0);
   // Only count actual registered transfers, not ganT (which may include old data)
-  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv').reduce((a,m)=>a+(m.monto||0),0);
+  // Solo transferencias DESPUÉS del corte (las anteriores ya estaban contadas)
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
   const pendAProvincial=Math.max(0,ganVentasBC-totalTransfBCtoPC);
   const pendAProvincialBs=tasa>0?pendAProvincial*tasa:0;
   const spt=document.getElementById('s-pendiente-transferir');
@@ -1760,16 +1764,13 @@ function renderSaldoResumen(){
   document.getElementById('p-usd').textContent='$'+sPVusd.toFixed(2);
   // Costos pendientes de transferir a Bancaribe desde Provincial
   // Pending to Bancaribe (costos from Provincial ventas)
-  // ventas en Provincial — detectar por v.banco O por descripción en movs provinciales
-  const descMovsProvincial=new Set(
-    movs.filter(m=>m.banco==='provincial'&&m.esIngreso).map(m=>m.desc)
-  );
+  // Solo ventas DESPUÉS de la última transferencia Provincial→BC
+  const ultimaTransfPV=movs.filter(m=>m.dir==='pv_to_bc').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
+  const fechaCortePV=ultimaTransfPV?.fecha||'2000-01-01';
   const ventasPV=ventas.filter(v=>
-    v.estado==='cobrado'&&(
-      v.banco==='provincial'||
-      descMovsProvincial.has('Venta — '+v.cliente)||
-      descMovsProvincial.has('Venta — '+v.cliente+' (Provincial)')
-    )
+    v.estado==='cobrado'&&
+    v.banco==='provincial'&&
+    v.fecha>=fechaCortePV
   );
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
@@ -1786,7 +1787,7 @@ function renderSaldoResumen(){
     },0);
   }
   const costosProvincial=ventasPV.reduce((a,v)=>a+getVentaCosto(v),0);
-  const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc').reduce((a,m)=>a+(m.monto||0),0);
+  const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc'&&m.fecha>fechaCortePV).reduce((a,m)=>a+(m.monto||0),0);
   const costosPend=Math.max(0,costosProvincial-totalTransfPVtoBC);
   const costosPendBs=tasa>0?costosPend*tasa:0;
 
