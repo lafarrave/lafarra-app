@@ -367,14 +367,14 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <div>
             <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:5px">🏦 Bancaribe (insumos)</div>
             <div style="display:flex;gap:6px;align-items:flex-end">
-              <div class="fg" style="flex:1"><label>Nuevo saldo ($)</label><input type="number" id="nuevo-saldo" placeholder="80.00"/></div>
+              <div class="fg" style="flex:1"><label>Nuevo saldo (Bs)</label><input type="number" id="nuevo-saldo" placeholder="ej: 22000"/></div>
               <button class="btn" onclick="actualizarSaldo('bancaribe')">OK</button>
             </div>
           </div>
           <div>
             <div style="font-size:11px;color:#60a0d0;font-weight:600;text-transform:uppercase;margin-bottom:5px">🏦 Provincial (personal)</div>
             <div style="display:flex;gap:6px;align-items:flex-end">
-              <div class="fg" style="flex:1"><label>Nuevo saldo ($)</label><input type="number" id="nuevo-saldo-provincial" placeholder="0.00"/></div>
+              <div class="fg" style="flex:1"><label>Nuevo saldo (Bs)</label><input type="number" id="nuevo-saldo-provincial" placeholder="ej: 5000"/></div>
               <button class="btn" style="background:#1565C0" onclick="actualizarSaldo('provincial')">OK</button>
             </div>
           </div>
@@ -397,13 +397,19 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <button class="btn" onclick="registrarGasto()">Registrar</button>
       </div>
       <div class="card">
-        <div class="card-title">Transferir ganancia</div>
-        <p style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Acumulado sin transferir: <strong id="gan-inline" class="green">$0.00</strong></p>
-        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-          <div class="fg"><label>Monto ($)</label><input type="number" id="transfer-monto" style="width:140px"/></div>
-          <div class="fg"><label>Fecha</label><input type="date" id="transfer-fecha" style="width:130px"/></div>
-          <button class="btn-green" onclick="registrarTransferencia()">Transferir</button>
+        <div class="card-title">Transferir entre cuentas</div>
+        <p style="font-size:12px;color:var(--texto-dim);margin-bottom:.8rem">Ganancia pendiente de transferir: <strong id="gan-inline" class="green">$0.00</strong></p>
+        <div class="fgrid">
+          <div class="fg"><label>Dirección</label>
+            <select id="transfer-dir">
+              <option value="bc_to_pv">🏦 Bancaribe → Provincial (ganancia)</option>
+              <option value="pv_to_bc">🏦 Provincial → Bancaribe (insumos)</option>
+            </select>
+          </div>
+          <div class="fg"><label>Monto ($)</label><input type="number" id="transfer-monto" placeholder="0.00"/></div>
+          <div class="fg"><label>Fecha</label><input type="date" id="transfer-fecha"/></div>
         </div>
+        <button class="btn-green" onclick="registrarTransferencia()">Registrar transferencia</button>
       </div>
       <div class="card">
         <div class="card-title">Historial</div>
@@ -1261,7 +1267,8 @@ let seccionesInv=JSON.parse(localStorage.getItem('lf_secciones')||'["Proteínas"
 let prodSecciones=JSON.parse(localStorage.getItem('lf_prod_secciones')||'{}');
 function saveSecciones(){localStorage.setItem('lf_secciones',JSON.stringify(seccionesInv));localStorage.setItem('lf_prod_secciones',JSON.stringify(prodSecciones));}
 function getSeccion(prod){return prodSecciones[prod]||'';}
-let saldo=0, movs=[], ganT=0;
+let saldo=0, saldoBs=0, movs=[], ganT=0;
+// saldoBs es la base real en bolívares. saldo en $ se calcula como saldoBs/tasa
 let vidriera=[], compras=[], stockInicial=[], umbrales={};
 let preps=[], menuItems=[], ventas=[], envios=[];
 let tasa=0, carrito=[];
@@ -1368,7 +1375,7 @@ async function loadAll(){
         if(row.id==='botes') botes=row.data||[];
         if(row.id==='porciones') porciones=row.data||[];
         if(row.id==='pvprods') pvProds=row.data;
-        if(row.id==='saldo'){ saldo=row.data.saldo; movs=row.data.movs||[]; ganT=row.data.ganT||0; }
+        if(row.id==='saldo'){ saldo=row.data.saldo||0; saldoBs=row.data.saldoBs||0; movs=row.data.movs||[]; ganT=row.data.ganT||0; }
         if(row.id==='umbrales') umbrales=row.data;
       });
     }
@@ -1412,7 +1419,7 @@ async function saveConfig_db(){
 async function saveSaldo_db(){
   setSyncStatus('syncing');
   try{
-    await sb.from('config').upsert([{id:'saldo',data:{saldo,movs,ganT},updated_at:new Date()}]);
+    await sb.from('config').upsert([{id:'saldo',data:{saldo,saldoBs,movs,ganT},updated_at:new Date()}]);
     setSyncStatus('ok');
   }catch(e){setSyncStatus('error');}
 }
@@ -1676,38 +1683,50 @@ function renderPVPLista(){
 async function delPVP(i){if(!confirm('Eliminar?'))return;pvProds.splice(i,1);await saveConfig_db();renderPVPLista();}
 
 // ─── SALDO ───────────────────────────────────────────────────
+function getSaldoUSD(bs){ return tasa>0?bs/tasa:0; }
+function fBsFixed(bs){ return 'Bs.'+Math.round(bs).toLocaleString('es-VE'); }
+function fUSDfromBs(bs){ return tasa>0?('$'+(bs/tasa).toFixed(2)):'$—'; }
+
 function renderSaldoResumen(){
   const gp=getGanPend();
-  // Bancaribe
-  document.getElementById('s-bs').textContent=fBs(saldo);
-  document.getElementById('s-usd').textContent=fUSD(saldo);
-  // Calculate pending transfer TO provincial from bancaribe ventas
-  const pendTransferirAProvincial=movs.filter(m=>m.banco==='bancaribe'&&m.esIngreso&&m.ganancia>0).reduce((a,m)=>a+m.ganancia,0)-ganT;
+  // BANCARIBE — base en Bs, $ derivado
+  const sBC = saldoBs>0 ? saldoBs : (saldo*tasa); // migración: si no hay Bs usar $ * tasa
+  const sBCusd = tasa>0 ? sBC/tasa : saldo;
+  document.getElementById('s-bs').textContent=fBsFixed(sBC);
+  document.getElementById('s-usd').textContent='$'+sBCusd.toFixed(2);
+  // Ganancia pendiente de transferir a Provincial
+  const ganVentasBC=movs.filter(m=>m.banco==='bancaribe'&&m.esIngreso&&m.ganancia>0).reduce((a,m)=>a+m.ganancia,0);
+  const pendAProvincial=Math.max(0,ganVentasBC-ganT);
   const spt=document.getElementById('s-pendiente-transferir');
-  if(spt&&pendTransferirAProvincial>0) spt.textContent='→ transferir a Provincial: '+fUSD(Math.max(0,pendTransferirAProvincial));
-  else if(spt) spt.textContent='';
-  // Provincial
-  document.getElementById('p-bs').textContent=fBs(saldoProvincial);
-  document.getElementById('p-usd').textContent=fUSD(saldoProvincial);
-  // Calculate pending transfer TO bancaribe from provincial ventas
-  const costosPendientes=movs.filter(m=>m.banco==='provincial'&&m.esIngreso&&m.costoATransferir>0).reduce((a,m)=>a+m.costoATransferir,0);
+  if(spt) spt.textContent=pendAProvincial>0?'→ a Provincial: $'+pendAProvincial.toFixed(2):'';
+  // PROVINCIAL — base en Bs, $ derivado
+  const sPV = saldoProvincialBs>0 ? saldoProvincialBs : (saldoProvincial*tasa);
+  const sPVusd = tasa>0 ? sPV/tasa : saldoProvincial;
+  document.getElementById('p-bs').textContent=fBsFixed(sPV);
+  document.getElementById('p-usd').textContent='$'+sPVusd.toFixed(2);
+  // Costos pendientes de transferir a Bancaribe desde Provincial
+  const costosPend=movs.filter(m=>m.banco==='provincial'&&m.esIngreso&&m.costoATransferir>0).reduce((a,m)=>a+m.costoATransferir,0);
   const ppt=document.getElementById('p-pendiente-transferir');
-  if(ppt&&costosPendientes>0) ppt.textContent='→ transferir a Bancaribe: '+fUSD(costosPendientes);
-  else if(ppt) ppt.textContent='';
-  // Ganancia
-  document.getElementById('g-bs').textContent=fBs(gp);
-  document.getElementById('g-usd').textContent=fUSD(gp);
-  const gi=document.getElementById('gan-inline');if(gi)gi.textContent=fBs(gp)+' ('+fUSD(gp)+')';
+  if(ppt) ppt.textContent=costosPend>0?'→ a Bancaribe: $'+costosPend.toFixed(2):'';
+  // GANANCIA
+  const gpBs=tasa>0?gp*tasa:0;
+  document.getElementById('g-bs').textContent=fBsFixed(gpBs);
+  document.getElementById('g-usd').textContent='$'+gp.toFixed(2);
+  const gi=document.getElementById('gan-inline');if(gi)gi.textContent='$'+gp.toFixed(2)+' / '+fBsFixed(gpBs);
 }
 async function actualizarSaldo(banco='bancaribe'){
   if(banco==='bancaribe'){
     const v=parseFloat(document.getElementById('nuevo-saldo').value);if(isNaN(v))return alert('Monto inválido');
-    saldo=v;movs.unshift({fecha:getVEDate(),desc:'Saldo Bancaribe actualizado',tipo:'ajuste',monto:0,sd:saldo,tasa});
+    // Input is in Bs — that's the base
+    saldoBs=v; saldo=tasa>0?v/tasa:0;
+    movs.unshift({fecha:getVEDate(),desc:'Saldo Bancaribe actualizado',tipo:'ajuste',monto:saldo,montoBs:v,sd:saldo,tasa});
     await saveSaldo_db();document.getElementById('nuevo-saldo').value='';
   } else {
     const v=parseFloat(document.getElementById('nuevo-saldo-provincial').value);if(isNaN(v))return alert('Monto inválido');
-    saldoProvincial=v;localStorage.setItem('lf_saldo_provincial',saldoProvincial);
-    movs.unshift({fecha:getVEDate(),desc:'Saldo Provincial actualizado',tipo:'ajuste',monto:0,sd:saldo,tasa});
+    saldoProvincialBs=v; saldoProvincial=tasa>0?v/tasa:0;
+    localStorage.setItem('lf_saldo_provincial',saldoProvincial);
+    localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
+    movs.unshift({fecha:getVEDate(),desc:'Saldo Provincial actualizado',tipo:'ajuste',monto:saldoProvincial,montoBs:v,sd:saldo,tasa});
     await saveSaldo_db();document.getElementById('nuevo-saldo-provincial').value='';
   }
   renderSaldoResumen();renderMovs();
@@ -1715,18 +1734,40 @@ async function actualizarSaldo(banco='bancaribe'){
 async function registrarGasto(){
   const desc=document.getElementById('gasto-desc').value.trim(),monto=parseFloat(document.getElementById('gasto-monto').value),tipo=document.getElementById('gasto-tipo').value,fecha=document.getElementById('gasto-fecha').value;
   if(!desc||isNaN(monto)||!fecha)return alert('Completa todos los campos');
-  saldo-=monto;movs.unshift({fecha,desc,tipo,monto,sd:saldo,tasa});
+  const montoBs=tasa>0?monto*tasa:0;
+  saldo-=monto; saldoBs-=montoBs;
+  movs.unshift({fecha,desc,tipo,monto,montoBs,sd:saldo,tasa});
   await saveSaldo_db();renderSaldoResumen();renderMovs();
   document.getElementById('gasto-desc').value='';document.getElementById('gasto-monto').value='';
 }
 async function registrarTransferencia(){
-  const monto=parseFloat(document.getElementById('transfer-monto').value),fecha=document.getElementById('transfer-fecha').value;
-  if(isNaN(monto)||monto<=0)return alert('Ingresa el monto');if(!fecha)return alert('Indica la fecha');
-  const gp=getGanPend();if(monto>gp+0.01)return alert('Solo tienes '+fUSD(gp)+' disponibles');
-  ganT+=monto;
-  saldo-=monto;
-  movs.unshift({fecha,desc:'Transferencia a cuenta personal',tipo:'transferencia',monto,sd:saldo,tasa,esTransferencia:true});
-  await saveSaldo_db();renderSaldoResumen();renderMovs();document.getElementById('transfer-monto').value='';
+  const monto=parseFloat(document.getElementById('transfer-monto').value);
+  const fecha=document.getElementById('transfer-fecha').value;
+  const dir=document.getElementById('transfer-dir').value;
+  if(isNaN(monto)||monto<=0)return alert('Ingresa el monto');
+  if(!fecha)return alert('Indica la fecha');
+  const montoBs=tasa>0?monto*tasa:0;
+  if(dir==='bc_to_pv'){
+    // Bancaribe → Provincial (sacar ganancia)
+    const gp=getGanPend();
+    if(monto>gp+0.01)return alert('Ganancia disponible: $'+gp.toFixed(2));
+    ganT+=monto;
+    saldo-=monto; saldoBs-=montoBs;
+    saldoProvincial+=monto; saldoProvincialBs+=montoBs;
+    localStorage.setItem('lf_saldo_provincial',saldoProvincial);
+    localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
+    movs.unshift({fecha,desc:'Transferencia Bancaribe → Provincial',tipo:'transferencia',monto,montoBs,sd:saldo,tasa,esTransferencia:true,dir:'bc_to_pv'});
+  } else {
+    // Provincial → Bancaribe (transferir insumos)
+    if(monto>saldoProvincial+0.01)return alert('Saldo Provincial insuficiente: $'+saldoProvincial.toFixed(2));
+    saldoProvincial-=monto; saldoProvincialBs-=montoBs;
+    saldo+=monto; saldoBs+=montoBs;
+    localStorage.setItem('lf_saldo_provincial',saldoProvincial);
+    localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
+    movs.unshift({fecha,desc:'Transferencia Provincial → Bancaribe',tipo:'transferencia',monto,montoBs,sd:saldo,tasa,esTransferencia:true,dir:'pv_to_bc'});
+  }
+  await saveSaldo_db();renderSaldoResumen();renderMovs();
+  document.getElementById('transfer-monto').value='';
 }
 function renderMovs(){
   const tb=document.getElementById('tabla-movs');if(!tb)return;
@@ -1742,12 +1783,16 @@ function renderMovs(){
 async function delMov(i){
   if(!confirm('Eliminar?'))return;
   const m=movs[i];
-  // Revert effect on saldo
-  if(m.esIngreso) saldo-=m.monto;
-  else if(m.tipo==='transferencia'||m.esTransferencia){ saldo+=m.monto; ganT-=m.monto; }
-  else if(m.monto>0 && m.tipo!=='ajuste') saldo+=m.monto;
-  // Floor to 0
-  saldo=Math.max(0,saldo);
+  const mBs=m.montoBs||(m.monto*(m.tasa||tasa||1));
+  if(m.esIngreso){
+    if(m.banco==='provincial'){ saldoProvincial-=m.monto; saldoProvincialBs-=mBs; localStorage.setItem('lf_saldo_provincial',saldoProvincial); localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs); }
+    else { saldo-=m.monto; saldoBs-=mBs; }
+  } else if(m.tipo==='transferencia'||m.esTransferencia){
+    if(m.dir==='bc_to_pv'){ saldo+=m.monto; saldoBs+=mBs; ganT-=m.monto; saldoProvincial-=m.monto; saldoProvincialBs-=mBs; localStorage.setItem('lf_saldo_provincial',saldoProvincial); localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs); }
+    else if(m.dir==='pv_to_bc'){ saldo-=m.monto; saldoBs-=mBs; saldoProvincial+=m.monto; saldoProvincialBs+=mBs; localStorage.setItem('lf_saldo_provincial',saldoProvincial); localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs); }
+    else { saldo+=m.monto; saldoBs+=mBs; ganT-=m.monto; }
+  } else if(m.monto>0 && m.tipo!=='ajuste'){ saldo+=m.monto; saldoBs+=mBs; }
+  saldo=Math.max(0,saldo); saldoBs=Math.max(0,saldoBs);
   ganT=Math.max(0,ganT);
   movs.splice(i,1);
   // Update sd (saldo after) on remaining movs — recalc from bottom up
@@ -2309,8 +2354,16 @@ async function marcarCobrado(vid){
   if(idx<0)return;
   ventas[idx].estado='cobrado';
   const v=ventas[idx];
-  saldo+=v.total;
-  movs.unshift({fecha:getVEDate(),desc:'Cobro pendiente — '+v.cliente,tipo:'venta',monto:v.total,sd:saldo,tasa,esIngreso:true});
+  const tasaUsada=v.tasa||tasa||1;
+  const montoBsCob=v.totalBs||(v.total*tasaUsada);
+  if(v.banco==='provincial'){
+    saldoProvincial+=v.total; saldoProvincialBs+=montoBsCob;
+    localStorage.setItem('lf_saldo_provincial',saldoProvincial);
+    localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
+  } else {
+    saldo+=v.total; saldoBs+=montoBsCob;
+  }
+  movs.unshift({fecha:getVEDate(),desc:'Cobro pendiente — '+v.cliente,tipo:'venta',monto:v.total,montoBs:montoBsCob,sd:saldo,tasa,esIngreso:true,banco:v.banco||'bancaribe',ganancia:v.gan||0});
   setSyncStatus('syncing');
   try{
     const {data}=await sb.from('ventas').select('*');
@@ -2406,6 +2459,7 @@ function limpiarCarrito(){carrito=[];deliveryMonto=0;descuentoPct=0;const row=do
 // ─── BANCO SELECTOR ──────────────────────────────────────────
 let bancoActual = 'bancaribe'; // default
 let saldoProvincial = parseFloat(localStorage.getItem('lf_saldo_provincial')||'0');
+let saldoProvincialBs = parseFloat(localStorage.getItem('lf_saldo_provincial_bs')||'0');
 
 function setBanco(banco){
   bancoActual = banco;
@@ -2437,16 +2491,18 @@ async function confirmarVenta(estado='cobrado'){
   ventas.unshift(venta);
   await addVenta_db(venta);
   if(estado==='cobrado'){
-    const gan=totalFinal-costo;
+    const ganV=totalFinal-costo;
+    const totalBsVenta=tasa>0?totalFinal*tasa:0;
     if(bancoActual==='bancaribe'){
-      // Bancaribe: full amount goes to insumos account
       saldo+=totalFinal;
-      movs.unshift({fecha:fechaVenta,desc:'Venta — '+cliente,tipo:'venta',monto:totalFinal,sd:saldo,tasa,esIngreso:true,banco:'bancaribe',ganancia:gan});
+      saldoBs+=totalBsVenta;
+      movs.unshift({fecha:fechaVenta,desc:'Venta — '+cliente,tipo:'venta',monto:totalFinal,montoBs:totalBsVenta,sd:saldo,tasa,esIngreso:true,banco:'bancaribe',ganancia:ganV});
     } else {
-      // Provincial: full amount to personal account, need to transfer costo to bancaribe
       saldoProvincial+=totalFinal;
+      saldoProvincialBs+=totalBsVenta;
       localStorage.setItem('lf_saldo_provincial', saldoProvincial);
-      movs.unshift({fecha:fechaVenta,desc:'Venta — '+cliente+' (Provincial)',tipo:'venta',monto:totalFinal,sd:saldo,tasa,esIngreso:true,banco:'provincial',ganancia:gan,costoATransferir:costo});
+      localStorage.setItem('lf_saldo_provincial_bs', saldoProvincialBs);
+      movs.unshift({fecha:fechaVenta,desc:'Venta — '+cliente+' (Provincial)',tipo:'venta',monto:totalFinal,montoBs:totalBsVenta,sd:saldo,tasa,esIngreso:true,banco:'provincial',ganancia:ganV,costoATransferir:costo});
     }
     await saveSaldo_db();
   }
