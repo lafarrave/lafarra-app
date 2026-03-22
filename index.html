@@ -1624,6 +1624,7 @@ async function loadAll(){
         if(row.id==='botes') botes=row.data||[];
         if(row.id==='porciones') porciones=row.data||[];
         if(row.id==='pvprods') pvProds=row.data;
+        if(row.id==='prods_extra'&&row.data){ productosExtra=row.data; localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra)); }
         if(row.id==='secciones'&&row.data&&row.data.secciones){
           seccionesInv=row.data.secciones;
           prodSecciones=row.data.asignaciones||{};
@@ -1815,18 +1816,16 @@ function getCPGP(prep){
 function getCE(){return empaque.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)),0);}
 
 function getCostoPVP(p){
-  // If has ingredients list, calculate from them
+  // If ingredients configured, calculate from them (ignore stored costo)
   if(p.ings&&p.ings.length>0){
     return p.ings.reduce((a,ing)=>{
-      // Check if it's a preparado
       const prep=preps.find(x=>x.nom===ing.nom);
       if(prep) return a+ing.cant*getCPGP(prep);
-      // Otherwise it's a raw ingredient
       return a+ing.cant*(ing.pg||getPG(ing.nom)||0);
     },0);
   }
-  // Fallback to stored costo
-  return p.costo||0;
+  // No ingredients configured yet → costo = 0 (not the old manual value)
+  return 0;
 }
 function getCEPapas(){return empaquePapas.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)),0);}
 function isItemPapas(nom){
@@ -1928,10 +1927,11 @@ function renderProdsExtra(){
   }).join('');
 }
 
-function delProducto(i){
+async function delProducto(i){
   if(!confirm('Eliminar este producto de la lista?'))return;
   productosExtra.splice(i,1);
   localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+  await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]).catch(()=>{});
   PRODS=getProds();
   initSelects();
   renderProdsExtra();
