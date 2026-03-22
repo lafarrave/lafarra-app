@@ -1505,9 +1505,11 @@ let prodSecciones={};
 async function saveSecciones(){
   localStorage.setItem('lf_secciones',JSON.stringify(seccionesInv));
   localStorage.setItem('lf_prod_secciones',JSON.stringify(prodSecciones));
-  await sb.from('config').upsert([
-    {id:'secciones',data:{secciones:seccionesInv,asignaciones:prodSecciones},updated_at:new Date()}
-  ]).catch(()=>{});
+  try{
+    await sb.from('config').upsert([
+      {id:'secciones',data:{secciones:seccionesInv,asignaciones:prodSecciones},updated_at:new Date()}
+    ]);
+  }catch(e){ console.error('saveSecciones error',e); }
 }
 function getSeccion(prod){return prodSecciones[prod]||'';}
 let saldo=0, saldoBs=0, movs=[], ganT=0;
@@ -1623,9 +1625,9 @@ async function loadAll(){
         if(row.id==='botes') botes=row.data||[];
         if(row.id==='porciones') porciones=row.data||[];
         if(row.id==='pvprods') pvProds=row.data;
-        if(row.id==='secciones'&&row.data){
-          seccionesInv=row.data.secciones||seccionesInv;
-          prodSecciones=row.data.asignaciones||prodSecciones;
+        if(row.id==='secciones'&&row.data&&row.data.secciones){
+          seccionesInv=row.data.secciones;
+          prodSecciones=row.data.asignaciones||{};
           localStorage.setItem('lf_secciones',JSON.stringify(seccionesInv));
           localStorage.setItem('lf_prod_secciones',JSON.stringify(prodSecciones));
         }
@@ -2543,7 +2545,7 @@ async function guardarUmbrales(){
   const unit=document.getElementById('modal-unit').value;
   // Save section
   const seccion=document.getElementById('modal-seccion')?.value||'';
-  setProdSeccion(modalProd,seccion);
+  await setProdSeccion(modalProd,seccion);
 
   // Save umbrales
   umbrales[modalProd]={
