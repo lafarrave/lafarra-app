@@ -1777,6 +1777,20 @@ async function fetchBCV(){
         try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
   try{ renderCombos(); }catch(e){}
+  // Merge localStorage productosExtra with Supabase on every load
+  try{
+    const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
+    if(local.length>0){
+      const merged=[...new Set([...productosExtra,...local])].filter(Boolean);
+      if(merged.length>productosExtra.length){
+        productosExtra=merged;
+        await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]);
+        localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+        console.log('Merged productosExtra:',productosExtra);
+      }
+    }
+    renderProdsExtra();
+  }catch(e){}
         return;
       }
     }catch(e){continue;}
@@ -3399,6 +3413,20 @@ async function init(){
   try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
   try{ renderCombos(); }catch(e){}
+  // Merge localStorage productosExtra with Supabase on every load
+  try{
+    const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
+    if(local.length>0){
+      const merged=[...new Set([...productosExtra,...local])].filter(Boolean);
+      if(merged.length>productosExtra.length){
+        productosExtra=merged;
+        await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]);
+        localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+        console.log('Merged productosExtra:',productosExtra);
+      }
+    }
+    renderProdsExtra();
+  }catch(e){}
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
   fetchBCV();
