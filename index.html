@@ -1623,6 +1623,14 @@ async function loadAll(){
         if(row.id==='botes') botes=row.data||[];
         if(row.id==='porciones') porciones=row.data||[];
         if(row.id==='pvprods') pvProds=row.data;
+        if(row.id==='secciones'&&row.data){
+          seccionesInv=row.data.secciones||seccionesInv;
+          prodSecciones=row.data.asignaciones||prodSecciones;
+          localStorage.setItem('lf_secciones',JSON.stringify(seccionesInv));
+          localStorage.setItem('lf_prod_secciones',JSON.stringify(prodSecciones));
+        }
+        if(row.id==='cat_preps'&&row.data){ catPreps=row.data; localStorage.setItem('lf_cat_preps',JSON.stringify(catPreps)); }
+        if(row.id==='gastos_op'&&row.data){ gastosOp=row.data; localStorage.setItem('lf_gastos_op',JSON.stringify(gastosOp)); }
         if(row.id==='saldo'){
           saldo=row.data.saldo||0; saldoBs=row.data.saldoBs||0;
           movs=row.data.movs||[]; ganT=row.data.ganT||0;
