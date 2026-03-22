@@ -1918,14 +1918,12 @@ function renderProdsExtra(){
     return;
   }
   const sorted=[...productosExtra].sort((a,b)=>a.localeCompare(b,'es'));
-  el.innerHTML=sorted.map(p=>{
-    const i=productosExtra.indexOf(p);
-    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px;background:var(--gris-mid);border-radius:6px;padding:5px 8px">
+  el.innerHTML=sorted.map(p=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px;background:var(--gris-mid);border-radius:6px;padding:5px 8px">
       <span style="flex:1">${p}</span>
       <span class="badge bi">personalizado</span>
-      <button class="db" onclick="delProducto(${i})">✕</button>
-    </div>`;
-  }).join('');
+      <button class="db" onclick="delProductoNom('${p.replace(/'/g,"\'")}')">✕</button>
+    </div>`).join('');
 }
 
 async function delProducto(i){
@@ -1933,9 +1931,15 @@ async function delProducto(i){
   productosExtra.splice(i,1);
   localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
   await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]).catch(()=>{});
-  PRODS=getProds();
-  initSelects();
-  renderProdsExtra();
+  PRODS=getProds(); initSelects(); renderProdsExtra(); renderPVPLista();
+}
+
+async function delProductoNom(nom){
+  if(!confirm('Eliminar "'+nom+'" de la lista?'))return;
+  productosExtra=productosExtra.filter(p=>p!==nom);
+  localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+  await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]).catch(()=>{});
+  PRODS=getProds(); initSelects(); renderProdsExtra(); renderPVPLista();
 }
 
 // ─── CONFIG ──────────────────────────────────────────────────
@@ -2045,7 +2049,7 @@ function renderPVPLista(){
         <div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">
           <select id="pvp-ing-sel-${pi}" style="flex:1;min-width:120px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 6px;font-size:11px">
             <option value="">Ingrediente o preparado...</option>
-            ${PRODS.map(x=>`<option value="ing:${x}">${x} (ing)</option>`).join('')}
+            ${getProds().map(x=>`<option value="ing:${x}">${x} (ing)</option>`).join('')}
             ${preps.map(x=>`<option value="prep:${x.nom}">${x.nom} (prep)</option>`).join('')}
           </select>
           <input type="number" id="pvp-ing-cant-${pi}" placeholder="cant/g" value="1" style="width:65px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 6px;font-size:11px;text-align:center"/>
