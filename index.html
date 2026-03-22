@@ -1755,7 +1755,7 @@ async function fetchBCV(){
         try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
   try{ renderCombos(); }catch(e){}
-  // Merge localStorage productosExtra with Supabase on every load
+  // One-time merge: if localStorage has items Supabase doesn't, push them up
   try{
     const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
     if(local.length>0){
@@ -1763,12 +1763,11 @@ async function fetchBCV(){
       if(merged.length>productosExtra.length){
         productosExtra=merged;
         await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]);
-        localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
-        console.log('Merged productosExtra:',productosExtra);
       }
     }
+    localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
     renderProdsExtra();
-  }catch(e){}
+  }catch(e){ renderProdsExtra(); }
         return;
       }
     }catch(e){continue;}
@@ -1913,25 +1912,19 @@ async function agregarProducto(){
 
 function renderProdsExtra(){
   const el=document.getElementById('prods-extra-lista');if(!el)return;
-
-  // Always merge localStorage into productosExtra (catches pre-sync data)
-  const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
-  const merged=[...new Set([...productosExtra,...local])].filter(Boolean).sort((a,b)=>a.localeCompare(b,'es'));
-  productosExtra=merged;
-  localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
-  // Silently push to Supabase
-  sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]).catch(()=>{});
-
   if(!productosExtra.length){
     el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin productos personalizados aún.</div>';
     return;
   }
-  el.innerHTML=productosExtra.map((p,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px;background:var(--gris-mid);border-radius:6px;padding:5px 8px">
+  const sorted=[...productosExtra].sort((a,b)=>a.localeCompare(b,'es'));
+  el.innerHTML=sorted.map(p=>{
+    const i=productosExtra.indexOf(p);
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px;background:var(--gris-mid);border-radius:6px;padding:5px 8px">
       <span style="flex:1">${p}</span>
       <span class="badge bi">personalizado</span>
       <button class="db" onclick="delProducto(${i})">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function delProducto(i){
@@ -3433,7 +3426,7 @@ async function init(){
   try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
   try{ renderCombos(); }catch(e){}
-  // Merge localStorage productosExtra with Supabase on every load
+  // One-time merge: if localStorage has items Supabase doesn't, push them up
   try{
     const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
     if(local.length>0){
@@ -3441,12 +3434,11 @@ async function init(){
       if(merged.length>productosExtra.length){
         productosExtra=merged;
         await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]);
-        localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
-        console.log('Merged productosExtra:',productosExtra);
       }
     }
+    localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
     renderProdsExtra();
-  }catch(e){}
+  }catch(e){ renderProdsExtra(); }
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
   fetchBCV();
