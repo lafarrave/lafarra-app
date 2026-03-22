@@ -1920,10 +1920,24 @@ function agregarProducto(){
 
 function renderProdsExtra(){
   const el=document.getElementById('prods-extra-lista');if(!el)return;
+
+  // Merge Supabase + localStorage to catch any stranded data
+  const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
+  const merged=[...new Set([...productosExtra,...local])].filter(Boolean);
+  if(merged.length!==productosExtra.length){
+    productosExtra=merged;
+    // Auto-sync merged list to Supabase
+    sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]).catch(()=>{});
+    localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+  }
+
   if(!productosExtra.length){el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin productos personalizados aún.</div>';return;}
-  el.innerHTML=productosExtra.sort((a,b)=>a.localeCompare(b,'es')).map((p)=>{
-    const i=productosExtra.indexOf(p);
-    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px"><span style="flex:1">${p}</span><span class="badge bi">personalizado</span><button class="db" onclick="delProducto(${i})">✕</button></div>`;
+  el.innerHTML=productosExtra.sort((a,b)=>a.localeCompare(b,'es')).map((p,i)=>{
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px">
+      <span style="flex:1">${p}</span>
+      <span class="badge bi">personalizado</span>
+      <button class="db" onclick="delProducto(${productosExtra.indexOf(p)})">✕</button>
+    </div>`;
   }).join('');
 }
 
