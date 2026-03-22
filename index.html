@@ -233,6 +233,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div class="tab" onclick="showTab('vidriera',this)">👁 Vidriera</div>
     <div class="tab" onclick="showTab('preparados',this)">🍳 Preparados</div>
     <div class="tab" onclick="showTab('menu',this)">🍔 Menú</div>
+    <div class="tab" onclick="showTab('combos',this)">🍿 Combos</div>
     <div class="tab" onclick="showTab('pos',this)">🧾 Ventas</div>
     <div class="tab" onclick="showTab('envios',this)">🚴 Envíos</div>
     <div class="tab" onclick="showTab('stats',this)">📊 Estadísticas</div>
@@ -723,6 +724,20 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           </div>
         </div>
       </div>
+    </div>
+
+
+    <!-- COMBOS -->
+    <div id="tab-combos" class="section">
+      <div class="card">
+        <div class="card-title">Crear combo</div>
+        <div class="fgrid">
+          <div class="fg"><label>Nombre del combo</label><input type="text" id="combo-nom" placeholder="ej: Combo Farra Lunes"/></div>
+          <div class="fg"><label>Precio de venta ($)</label><input type="number" id="combo-pv" placeholder="ej: 12.00"/></div>
+        </div>
+        <button class="btn" onclick="crearCombo()">Crear combo</button>
+      </div>
+      <div id="lista-combos"></div>
     </div>
 
     <!-- ESTADÍSTICAS -->
@@ -1297,6 +1312,178 @@ function renderBotes(){
 
 async function delBote(i){ if(!confirm('Eliminar?'))return; botes.splice(i,1); await saveConfig_db(); renderBotes(); }
 
+
+// ─── COMBOS ──────────────────────────────────────────────────
+
+function getCostoCombo(combo){
+  let costo=0;
+  // Hamburguesas del menú
+  (combo.burgers||[]).forEach(b=>{
+    const mi=menuItems.find(m=>m.nom===b.nom);
+    if(mi) costo+=calcCM(mi)*b.qty;
+  });
+  // Papas personalizadas
+  if(combo.papas&&combo.papas.prep&&combo.papas.gramos>0){
+    const p=preps.find(x=>x.nom===combo.papas.prep);
+    if(p) costo+=combo.papas.gramos*getCPGP(p);
+  }
+  // Ingredientes sueltos
+  (combo.ings||[]).forEach(ing=>{
+    costo+=ing.cant*(ing.pg||getPG(ing.nom)||0);
+  });
+  // Botes de salsa personalizados
+  (combo.botesList||[]).forEach(b=>{
+    const costoB=b.cantBote*(getPG(b.ingNom)||0);
+    let costoPrep=0;
+    if(b.prepNom&&b.prepCant>0){const p=preps.find(x=>x.nom===b.prepNom);if(p)costoPrep=b.prepCant*getCPGP(p);}
+    costo+=costoB+costoPrep;
+  });
+  // Empaque personalizado
+  (combo.empaque||[]).forEach(e=>{
+    costo+=e.cant*(e.pg||getPG(e.prod)||0);
+  });
+  return costo;
+}
+
+function buildComboCard(combo, ci){
+  const cT=getCostoCombo(combo);
+  const pv=combo.pv||0;
+  const ganPct=pv>0?((pv-cT)/pv*100):0;
+  const ganColor=ganPct>=40?'var(--verde)':ganPct>=25?'var(--amarillo)':'var(--rojo)';
+  const activoBadge=combo.activo!==false
+    ?'<span class="badge bm" style="font-size:10px">✓ En POS</span>'
+    :'<span class="badge bi" style="font-size:10px">Inactivo</span>';
+
+  return`<div class="xcard">
+    <div class="xhead" onclick="tog('cb${combo.id}')">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${combo.nom}</span>
+        ${activoBadge}
+      </div>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center">
+        <span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span>
+        <span style="color:${ganColor};font-weight:600">Ganancia: ${ganPct.toFixed(1)}% <span style="opacity:.8">($${(pv-cT).toFixed(2)})</span></span>
+        <span>Venta: <strong class="green">$${pv.toFixed(2)}</strong></span>
+        <button class="btns" style="font-size:10px;padding:2px 8px" onclick="event.stopPropagation();toggleCombo(${ci})">${combo.activo!==false?'Desactivar':'Activar'}</button>
+        <button class="db" onclick="event.stopPropagation();delCombo(${ci})">✕</button>
+      </div>
+    </div>
+    <div class="xbody" id="cb${combo.id}">
+      <!-- Precio venta -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;border-bottom:1px solid var(--gris-mid);padding-bottom:.6rem">
+        <span style="font-weight:600;font-size:12px">Precio de venta</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" value="${pv.toFixed(2)}" onchange="actualizarPVCombo(${ci},this.value)" style="width:80px;background:var(--gris-mid);border:1px solid var(--naranja);color:var(--texto);border-radius:4px;padding:4px 7px;font-size:12px;text-align:right"/>
+          <span style="font-size:11px;color:${ganColor};font-weight:600">${ganPct.toFixed(1)}% = $${(pv-cT).toFixed(2)}</span>
+        </div>
+      </div>
+
+      <!-- Burgers -->
+      <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:4px">🍔 Hamburguesas</div>
+      ${(combo.burgers||[]).map((b,bi)=>`<div class="irow"><span>${b.nom}</span><div style="display:flex;gap:4px;align-items:center"><input type="number" value="${b.qty}" min="1" style="width:45px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:2px 5px;font-size:11px;text-align:right" onchange="editComboBurger(${ci},${bi},this.value)"/> ud</div><span class="hl">$${(calcCM(menuItems.find(m=>m.nom===b.nom)||{comps:[]})*b.qty).toFixed(3)}</span><button class="db" onclick="delComboBurger(${ci},${bi})">✕</button></div>`).join('')}
+      <div style="display:flex;gap:6px;margin-bottom:.6rem;margin-top:4px">
+        <select id="cb-burger-sel-${ci}" style="flex:1;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px 6px;font-size:12px">
+          <option value="">Seleccionar burger...</option>
+          ${menuItems.filter(m=>m.cat!=='papas').map(m=>`<option value="${m.nom}">${m.nom}</option>`).join('')}
+        </select>
+        <input type="number" id="cb-burger-qty-${ci}" value="1" min="1" style="width:50px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px;font-size:12px;text-align:center"/>
+        <button class="btn" style="padding:4px 10px;font-size:11px" onclick="addComboBurger(${ci})">+</button>
+      </div>
+
+      <!-- Papas -->
+      <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:4px">🍟 Papas</div>
+      <div style="display:flex;gap:6px;margin-bottom:.6rem;align-items:center;font-size:12px">
+        <select id="cb-papas-prep-${ci}" style="flex:1;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px 6px;font-size:12px">
+          <option value="">Sin papas</option>
+          ${preps.map(p=>`<option value="${p.nom}" ${combo.papas&&combo.papas.prep===p.nom?'selected':''}>${p.nom}</option>`).join('')}
+        </select>
+        <input type="number" id="cb-papas-gr-${ci}" value="${combo.papas?combo.papas.gramos:0}" placeholder="gramos" style="width:70px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px;font-size:12px;text-align:center"/>
+        <span style="color:var(--texto-dim)">g</span>
+        <button class="btn" style="padding:4px 10px;font-size:11px" onclick="editComboPapas(${ci})">✓</button>
+      </div>
+
+      <!-- Ingredientes sueltos -->
+      <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:4px">🥤 Ingredientes / Extras</div>
+      ${(combo.ings||[]).map((ing,ii)=>`<div class="irow"><span>${ing.nom}</span><span>${ing.cant}ud</span><span class="hl">$${(ing.cant*(ing.pg||getPG(ing.nom)||0)).toFixed(4)}</span><button class="db" onclick="delComboIng(${ci},${ii})">✕</button></div>`).join('')}
+      <div style="display:flex;gap:6px;margin-bottom:.6rem;margin-top:4px">
+        <select id="cb-ing-sel-${ci}" style="flex:1;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px 6px;font-size:12px">
+          <option value="">Seleccionar...</option>
+          ${PRODS.map(p=>`<option value="${p}">${p}</option>`).join('')}
+          ${pvProds.map(p=>`<option value="${p.nom}">${p.nom}</option>`).join('')}
+        </select>
+        <input type="number" id="cb-ing-cant-${ci}" value="1" min="1" style="width:50px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px;font-size:12px;text-align:center"/>
+        <button class="btn" style="padding:4px 10px;font-size:11px" onclick="addComboIng(${ci})">+</button>
+      </div>
+
+      <!-- Botes de salsa -->
+      <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:4px">🫙 Botes de salsa</div>
+      ${(combo.botesList||[]).map((b,bi)=>`<div class="irow"><span>${b.cantBote}× ${b.ingNom}${b.prepNom?' + '+b.prepCant+'g '+b.prepNom:''}</span><span class="hl">$${(b.cantBote*(getPG(b.ingNom)||0)+(b.prepNom&&b.prepCant>0?(()=>{const p=preps.find(x=>x.nom===b.prepNom);return p?b.prepCant*getCPGP(p):0;})():0)).toFixed(4)}</span><button class="db" onclick="delComboBote(${ci},${bi})">✕</button></div>`).join('')}
+      <div style="display:grid;grid-template-columns:1fr 40px 1fr 60px;gap:4px;margin-bottom:.6rem;margin-top:4px;font-size:12px">
+        <select id="cb-bote-ing-${ci}" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 5px">
+          <option value="">Bote (ing)...</option>${PRODS.map(p=>`<option value="${p}">${p}</option>`).join('')}
+        </select>
+        <input type="number" id="cb-bote-cant-${ci}" value="1" min="1" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px;text-align:center"/>
+        <select id="cb-bote-prep-${ci}" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 5px">
+          <option value="">Salsa (prep)...</option>${preps.map(p=>`<option value="${p.nom}">${p.nom}</option>`).join('')}
+        </select>
+        <input type="number" id="cb-bote-pg-${ci}" value="30" placeholder="g" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px;text-align:center"/>
+      </div>
+      <button class="btn" style="padding:4px 10px;font-size:11px;margin-bottom:.6rem" onclick="addComboBote(${ci})">+ Agregar bote</button>
+
+      <!-- Empaque personalizado -->
+      <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:4px">📦 Empaque</div>
+      ${(combo.empaque||[]).map((e,ei)=>`<div class="irow"><span>${e.prod}</span><span>${e.cant}ud</span><span class="hl">$${(e.cant*(e.pg||getPG(e.prod)||0)).toFixed(4)}</span><button class="db" onclick="delComboEmp(${ci},${ei})">✕</button></div>`).join('')}
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <select id="cb-emp-sel-${ci}" style="flex:1;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px 6px;font-size:12px">
+          <option value="">Seleccionar producto...</option>${PRODS.map(p=>`<option value="${p}">${p}</option>`).join('')}
+        </select>
+        <input type="number" id="cb-emp-cant-${ci}" value="1" min="1" style="width:50px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px;font-size:12px;text-align:center"/>
+        <button class="btn" style="padding:4px 10px;font-size:11px" onclick="addComboEmp(${ci})">+</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCombos(){
+  const cont=document.getElementById('lista-combos');if(!cont)return;
+  if(!combos.length){cont.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--texto-dim);font-size:12px">Sin combos. Crea uno arriba.</div>';return;}
+  cont.innerHTML=combos.map((combo,ci)=>buildComboCard(combo,ci)).join('');
+}
+
+async function crearCombo(){
+  const nom=document.getElementById('combo-nom').value.trim();
+  const pv=parseFloat(document.getElementById('combo-pv').value)||0;
+  if(!nom)return alert('Escribe el nombre del combo');
+  combos.push({id:Date.now(),nom,pv,activo:true,burgers:[],papas:null,ings:[],botesList:[],empaque:[]});
+  await saveInv_db();renderCombos();renderPOSCats();
+  document.getElementById('combo-nom').value='';document.getElementById('combo-pv').value='';
+}
+
+async function toggleCombo(ci){combos[ci].activo=combos[ci].activo===false?true:false;await saveInv_db();renderCombos();renderPOSCats();}
+async function delCombo(ci){if(!confirm('Eliminar combo?'))return;combos.splice(ci,1);await saveInv_db();renderCombos();renderPOSCats();}
+
+async function actualizarPVCombo(ci,val){const pv=parseFloat(val);if(isNaN(pv)||pv<0)return;combos[ci].pv=pv;await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+
+// Burgers
+async function addComboBurger(ci){const nom=document.getElementById(`cb-burger-sel-${ci}`).value,qty=parseInt(document.getElementById(`cb-burger-qty-${ci}`).value)||1;if(!nom)return;if(!combos[ci].burgers)combos[ci].burgers=[];combos[ci].burgers.push({nom,qty});await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+async function delComboBurger(ci,bi){combos[ci].burgers.splice(bi,1);await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+async function editComboBurger(ci,bi,val){combos[ci].burgers[bi].qty=parseInt(val)||1;await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+
+// Papas
+async function editComboPapas(ci){const prep=document.getElementById(`cb-papas-prep-${ci}`).value,gramos=parseFloat(document.getElementById(`cb-papas-gr-${ci}`).value)||0;combos[ci].papas=prep&&gramos>0?{prep,gramos}:null;await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+
+// Ingredientes
+async function addComboIng(ci){const nom=document.getElementById(`cb-ing-sel-${ci}`).value,cant=parseFloat(document.getElementById(`cb-ing-cant-${ci}`).value)||1;if(!nom)return;if(!combos[ci].ings)combos[ci].ings=[];const pg=getPG(nom)||pvProds.find(p=>p.nom===nom)?.costo||0;combos[ci].ings.push({nom,cant,pg});await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+async function delComboIng(ci,ii){combos[ci].ings.splice(ii,1);await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+
+// Botes
+async function addComboBote(ci){const ingNom=document.getElementById(`cb-bote-ing-${ci}`).value,cantBote=parseInt(document.getElementById(`cb-bote-cant-${ci}`).value)||1,prepNom=document.getElementById(`cb-bote-prep-${ci}`).value,prepCant=parseFloat(document.getElementById(`cb-bote-pg-${ci}`).value)||0;if(!ingNom)return;if(!combos[ci].botesList)combos[ci].botesList=[];combos[ci].botesList.push({ingNom,cantBote,prepNom,prepCant});await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+async function delComboBote(ci,bi){combos[ci].botesList.splice(bi,1);await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+
+// Empaque
+async function addComboEmp(ci){const prod=document.getElementById(`cb-emp-sel-${ci}`).value,cant=parseFloat(document.getElementById(`cb-emp-cant-${ci}`).value)||1;if(!prod)return;if(!combos[ci].empaque)combos[ci].empaque=[];combos[ci].empaque.push({prod,cant,pg:getPG(prod)||null});await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+async function delComboEmp(ci,ei){combos[ci].empaque.splice(ei,1);await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+
 // ─── SUPABASE ───────────────────────────────────────────────
 const SUPA_URL = 'https://ljgjpmlvjnqfpstltjmy.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqZ2pwbWx2am5xZnBzdGx0am15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTM5NDYsImV4cCI6MjA4OTA2OTk0Nn0.rGaBuq2DxLi_uhYh8ynpItGxO249Ng7PyK9S_XQ07Oc';
@@ -1307,7 +1494,7 @@ const PRODS_BASE=["Aceite","Aceituna M","Ajo","Ajo Polvo","Ajonjoli","Azucar","B
 let productosExtra=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
 function getProds(){return[...PRODS_BASE,...productosExtra].sort((a,b)=>a.localeCompare(b,'es'));}
 let PRODS=getProds();
-const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'},{key:'bebida',label:'🥤 Bebidas'},{key:'extra',label:'➕ Extras'},{key:'otro',label:'📦 Otros'}];
+const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'},{key:'bebida',label:'🥤 Bebidas'},{key:'extra',label:'➕ Extras'},{key:'otro',label:'📦 Otros'},{key:'combo',label:'🍿 Combos'}];
 
 let cfg={gan:50,papas:'',gp:150,gp2:250,tel:'',ci:'',bancopm:''};
 let empaque=[], empaquePapas=[], pvProds=[], porciones=[];
@@ -1318,7 +1505,7 @@ function getSeccion(prod){return prodSecciones[prod]||'';}
 let saldo=0, saldoBs=0, movs=[], ganT=0;
 // saldoBs es la base real en bolívares. saldo en $ se calcula como saldoBs/tasa
 let vidriera=[], compras=[], stockInicial=[], umbrales={};
-let preps=[], menuItems=[], ventas=[], envios=[];
+let preps=[], menuItems=[], combos=[], ventas=[], envios=[];
 let catPreps=JSON.parse(localStorage.getItem('lf_cat_preps')||'["Salsas","Proteínas","Bases","Masas"]');
 function saveCatPreps(){localStorage.setItem('lf_cat_preps',JSON.stringify(catPreps));}
 let tasa=0, carrito=[];
@@ -1442,6 +1629,7 @@ async function loadAll(){
         if(row.id==='stock_inicial') stockInicial=row.data;
         if(row.id==='preparados') preps=row.data;
         if(row.id==='menu') menuItems=row.data;
+        if(row.id==='combos') combos=row.data||[];
         if(row.id==='envios') envios=row.data;
         if(row.id==='vidriera') vidriera=row.data;
       });
@@ -1489,6 +1677,7 @@ async function saveInv_db(){
       {id:'stock_inicial',data:stockInicial,updated_at:new Date()},
       {id:'preparados',data:preps,updated_at:new Date()},
       {id:'menu',data:menuItems,updated_at:new Date()},
+      {id:'combos',data:combos,updated_at:new Date()},
       {id:'envios',data:envios,updated_at:new Date()},
       {id:'vidriera',data:vidriera,updated_at:new Date()},
     ]);
@@ -1562,6 +1751,7 @@ async function fetchBCV(){
         renderSaldoResumen();
         try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
+  try{ renderCombos(); }catch(e){}
         return;
       }
     }catch(e){continue;}
@@ -1631,6 +1821,7 @@ function showTab(n,el){
   document.getElementById('tab-'+n).classList.add('visible');
   el.classList.add('active');
   if(n==='vidriera')renderVidriera();
+  if(n==='combos')renderCombos();
   if(n==='preparados')renderPreps();
   if(n==='menu')renderMenuItems();
   if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();}
@@ -2802,6 +2993,8 @@ async function marcarCobrado(vid){
 function getAllPOSProds(){
   const all=[];
   menuItems.forEach(item=>{const pv=parseFloat(getPVM(item).toFixed(2));all.push({nom:item.nom,precio:pv,costo:getCMTotal(item),cat:item.cat||'burger'});});
+  // Combos activos
+  combos.filter(cb=>cb.activo!==false).forEach(cb=>{all.push({nom:cb.nom,precio:cb.pv||0,costo:getCostoCombo(cb),cat:'combo'});});
   pvProds.forEach(p=>all.push({nom:p.nom,precio:p.precio,costo:p.costo,cat:p.cat||'extra'}));
   return all;
 }
@@ -3065,6 +3258,7 @@ async function init(){
   // Re-render POS after all data loaded so costs calculate correctly
   try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
+  try{ renderCombos(); }catch(e){}
   updateOfflineBadge();
   if(isOnline()) syncOfflineQueue();
   fetchBCV();
