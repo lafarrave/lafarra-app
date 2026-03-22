@@ -1,8 +1,9 @@
 {
   "name": "La Farra App",
   "short_name": "La Farra",
-  "description": "Gestión de dark kitchen La Farra",
+  "description": "Gesti\u00f3n de dark kitchen La Farra",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#E8621A",
@@ -12,13 +13,25 @@
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
