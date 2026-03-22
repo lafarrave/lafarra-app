@@ -664,12 +664,11 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
             <hr class="divider"/>
             <div style="background:var(--gris-mid);border-radius:6px;padding:6px 8px;margin-bottom:.4rem;font-size:12px">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px">
-                <button id="banco-bancaribe-btn" onclick="setBanco('bancaribe')" style="padding:8px 10px;border-radius:6px;border:2px solid var(--naranja);background:rgba(232,98,26,.15);cursor:pointer;width:100%;text-align:center;line-height:1.2">
-                  <span style="font-family:Arial,sans-serif;font-style:italic;color:#fff;font-size:14px;letter-spacing:.5px">BAN<strong style="font-weight:900">CARIBE</strong></span>
-                  <span style="display:inline-block;margin-left:4px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:7px solid #36CABC;transform:rotate(-15deg);vertical-align:middle"></span>
+                <button id="banco-bancaribe-btn" onclick="setBanco('bancaribe')" style="padding:8px 10px;border-radius:6px;border:2px solid var(--naranja);background:rgba(232,98,26,.15);cursor:pointer;width:100%;text-align:center">
+                  <span style="font-family:Arial,sans-serif;font-style:italic;color:#fff;font-size:15px;letter-spacing:.3px">BAN<strong style="font-weight:900">CARIBE</strong></span>
                 </button>
-                <button id="banco-provincial-btn" onclick="setBanco('provincial')" style="padding:8px 10px;border-radius:6px;border:1px solid var(--gris-light);background:var(--gris-dark);cursor:pointer;width:100%;text-align:center;line-height:1.2">
-                  <span style="font-family:Arial,sans-serif;color:#fff;font-size:14px"><strong style="font-weight:900;color:#1a8fe3">BBVA</strong> Provincial</span>
+                <button id="banco-provincial-btn" onclick="setBanco('provincial')" style="padding:8px 10px;border-radius:6px;border:1px solid var(--gris-light);background:var(--gris-dark);cursor:pointer;width:100%;text-align:center">
+                  <span style="font-family:Arial,sans-serif;color:#fff;font-size:15px"><strong style="font-weight:900;color:#1a8fe3">BBVA</strong> Provincial</span>
                 </button>
               </div>
               <div id="pagomovil-info" style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
@@ -3182,10 +3181,7 @@ function renderPOSCats(){
   const prods=getAllPOSProds();
   if(!prods.length){cont.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Crea ítems en Menú y Config primero.</div>';return;}
   let html='';
-  CATS.forEach(cat=>{const items=prods.filter(p=>p.cat===cat.key);if(!items.length)return;html+=`<div class="cat-label">${cat.label}</div><div class="prod-grid">`;items.forEach(p=>{
-  const imgSrc=BURGER_IMGS[p.nom]||''; const img=imgSrc?`<img src="${imgSrc}" style="width:100%;height:60px;object-fit:contain;margin-bottom:2px"/>`:'_NOIMG_';
-  html+=`<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio},${p.costo})" style="${BURGER_IMGS[p.nom]?'padding:5px 4px 4px;':''}"><div class="pbtn-img">${img}</div><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`;
-});html+=`</div>`;});
+  CATS.forEach(cat=>{const items=prods.filter(p=>p.cat===cat.key);if(!items.length)return;html+=`<div class="cat-label">${cat.label}</div><div class="prod-grid">`;items.forEach(p=>{html+=`<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio},${p.costo})"><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`;});html+=`</div>`;});
   cont.innerHTML=html;
 }
 function addToCart(nom,precio,costo){const ex=carrito.find(c=>c.nom===nom);if(ex)ex.qty++;else carrito.push({nom,precio,costo,qty:1});renderCart();}
