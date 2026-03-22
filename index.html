@@ -1125,9 +1125,11 @@ function renderStats(){
 
 
 // ─── GASTOS OPERATIVOS ────────────────────────────────────────
-let gastosOp = JSON.parse(localStorage.getItem('lf_gastos_op')||'[]');
-
-function saveGastosOp(){ localStorage.setItem('lf_gastos_op', JSON.stringify(gastosOp)); }
+let gastosOp = [];
+async function saveGastosOp(){
+  localStorage.setItem('lf_gastos_op', JSON.stringify(gastosOp));
+  await sb.from('config').upsert([{id:'gastos_op',data:gastosOp,updated_at:new Date()}]).catch(()=>{});
+}
 
 function addGastoOp(){
   const desc = document.getElementById('gop-desc').value.trim();
@@ -1491,23 +1493,32 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 // ─── STATE ──────────────────────────────────────────────────
 const PRODS_BASE=["Aceite","Aceituna M","Ajo","Ajo Polvo","Ajonjoli","Azucar","BBQ","Bolsa Kraft 3kg","Bolsa Papa Marron","Botes Salsa","Carne 1ra","Cebolla","Cebolla Morada","Cebolla Polvo","Cheddar","Chorizo","Cilantro","Conos Papas","Facilistas","Glup 1L","Glup 400ml","Ketchup","Lechuga Criolla","Limon","Maizena","Mantequilla","Mayonesa","Miel","Mostaza","Pan Brioche","Papada Ahuma","Papel Alum 43x35","Papas Fritas","Paprika","Pechuga Pollo","Pepinillo","Perejil Fresco","Perejil Polvo","Pimenton","Pimenton hojuela","Pre Mayonesa","Sal","Salsa Inglesa","Servilletas","Stickers","Teriyaki","Tocineta Ahuma","Tomate","Vinagre Manz"];
-let productosExtra=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
+let productosExtra=[];
 function getProds(){return[...PRODS_BASE,...productosExtra].sort((a,b)=>a.localeCompare(b,'es'));}
 let PRODS=getProds();
 const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'},{key:'bebida',label:'🥤 Bebidas'},{key:'extra',label:'➕ Extras'},{key:'otro',label:'📦 Otros'},{key:'combo',label:'🍿 Combos'}];
 
 let cfg={gan:50,papas:'',gp:150,gp2:250,tel:'',ci:'',bancopm:''};
 let empaque=[], empaquePapas=[], pvProds=[], porciones=[];
-let seccionesInv=JSON.parse(localStorage.getItem('lf_secciones')||'["Proteínas","Salsas","Vegetales","Descartables","Otros"]');
-let prodSecciones=JSON.parse(localStorage.getItem('lf_prod_secciones')||'{}');
-function saveSecciones(){localStorage.setItem('lf_secciones',JSON.stringify(seccionesInv));localStorage.setItem('lf_prod_secciones',JSON.stringify(prodSecciones));}
+let seccionesInv=['Proteínas','Salsas','Vegetales','Descartables','Otros'];
+let prodSecciones={};
+async function saveSecciones(){
+  localStorage.setItem('lf_secciones',JSON.stringify(seccionesInv));
+  localStorage.setItem('lf_prod_secciones',JSON.stringify(prodSecciones));
+  await sb.from('config').upsert([
+    {id:'secciones',data:{secciones:seccionesInv,asignaciones:prodSecciones},updated_at:new Date()}
+  ]).catch(()=>{});
+}
 function getSeccion(prod){return prodSecciones[prod]||'';}
 let saldo=0, saldoBs=0, movs=[], ganT=0;
 // saldoBs es la base real en bolívares. saldo en $ se calcula como saldoBs/tasa
 let vidriera=[], compras=[], stockInicial=[], umbrales={};
 let preps=[], menuItems=[], combos=[], ventas=[], envios=[];
-let catPreps=JSON.parse(localStorage.getItem('lf_cat_preps')||'["Salsas","Proteínas","Bases","Masas"]');
-function saveCatPreps(){localStorage.setItem('lf_cat_preps',JSON.stringify(catPreps));}
+let catPreps=['Salsas','Proteínas','Bases','Masas'];
+async function saveCatPreps(){
+  localStorage.setItem('lf_cat_preps',JSON.stringify(catPreps));
+  await sb.from('config').upsert([{id:'cat_preps',data:catPreps,updated_at:new Date()}]).catch(()=>{});
+}
 let tasa=0, carrito=[];
 let syncTimeout=null;
 
@@ -1612,7 +1623,11 @@ async function loadAll(){
         if(row.id==='botes') botes=row.data||[];
         if(row.id==='porciones') porciones=row.data||[];
         if(row.id==='pvprods') pvProds=row.data;
-        if(row.id==='saldo'){ saldo=row.data.saldo||0; saldoBs=row.data.saldoBs||0; movs=row.data.movs||[]; ganT=row.data.ganT||0; }
+        if(row.id==='saldo'){
+          saldo=row.data.saldo||0; saldoBs=row.data.saldoBs||0;
+          movs=row.data.movs||[]; ganT=row.data.ganT||0;
+          if(row.data.saldoProvincial!=null){ saldoProvincial=row.data.saldoProvincial; saldoProvincialBs=row.data.saldoProvincialBs||0; localStorage.setItem('lf_saldo_provincial',saldoProvincial); localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs); }
+        }
         if(row.id==='umbrales') umbrales=row.data;
       });
     }
@@ -1657,7 +1672,7 @@ async function saveConfig_db(){
 async function saveSaldo_db(){
   setSyncStatus('syncing');
   try{
-    await sb.from('config').upsert([{id:'saldo',data:{saldo,saldoBs,movs,ganT},updated_at:new Date()}]);
+    await sb.from('config').upsert([{id:'saldo',data:{saldo,saldoBs,movs,ganT,saldoProvincial,saldoProvincialBs},updated_at:new Date()}]);
     setSyncStatus('ok');
   }catch(e){setSyncStatus('error');}
 }
