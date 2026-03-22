@@ -322,17 +322,16 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       </div>
       <div class="card">
         <div class="card-title">Productos extra del POS</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Refrescos, extras y cualquier producto con precio fijo.</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Refrescos, extras y cualquier producto. El costo se calcula automático desde los ingredientes.</div>
         <div id="pvp-lista"></div>
         <div class="fgrid" style="margin-top:.5rem">
-          <div class="fg"><label>Nombre</label><input type="text" id="pvp-nom" placeholder="ej: Refresco Peq."/></div>
+          <div class="fg"><label>Nombre</label><input type="text" id="pvp-nom" placeholder="ej: E - Tocineta"/></div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" id="pvp-precio" placeholder="1.00"/></div>
-          <div class="fg"><label>Costo ($)</label><input type="number" id="pvp-costo" placeholder="0.37"/></div>
           <div class="fg"><label>Categoría</label>
             <select id="pvp-cat">
-              <option value="papas">Papas</option>
               <option value="extra">Extras</option>
               <option value="bebida">Bebidas</option>
+              <option value="papas">Papas</option>
               <option value="otro">Otro</option>
             </select>
           </div>
@@ -1814,6 +1813,21 @@ function getCPGP(prep){
   return prep.g>0?(costoIngs+costoAceite)/prep.g:0;
 }
 function getCE(){return empaque.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)),0);}
+
+function getCostoPVP(p){
+  // If has ingredients list, calculate from them
+  if(p.ings&&p.ings.length>0){
+    return p.ings.reduce((a,ing)=>{
+      // Check if it's a preparado
+      const prep=preps.find(x=>x.nom===ing.nom);
+      if(prep) return a+ing.cant*getCPGP(prep);
+      // Otherwise it's a raw ingredient
+      return a+ing.cant*(ing.pg||getPG(ing.nom)||0);
+    },0);
+  }
+  // Fallback to stored costo
+  return p.costo||0;
+}
 function getCEPapas(){return empaquePapas.reduce((a,e)=>a+(e.cant*(e.pg||getPG(e.prod)||0)),0);}
 function isItemPapas(nom){
   const pvp=pvProds.find(p=>p.nom===nom);
@@ -1975,17 +1989,104 @@ async function delEmp(i){if(!confirm('Eliminar?'))return;empaque.splice(i,1);awa
 async function delEmpPapas(i){if(!confirm('Eliminar?'))return;empaquePapas.splice(i,1);await saveConfig_db();renderEmp();}
 
 function addPVP(){
-  const nom=document.getElementById('pvp-nom').value.trim(),precio=parseFloat(document.getElementById('pvp-precio').value),costo=parseFloat(document.getElementById('pvp-costo').value)||0,cat=document.getElementById('pvp-cat').value;
+  const nom=document.getElementById('pvp-nom').value.trim(),precio=parseFloat(document.getElementById('pvp-precio').value),cat=document.getElementById('pvp-cat').value;
   if(!nom||isNaN(precio))return alert('Completa nombre y precio');
-  pvProds.push({nom,precio,costo,cat});saveConfig_db();renderPVPLista();
-  document.getElementById('pvp-nom').value='';document.getElementById('pvp-precio').value='';document.getElementById('pvp-costo').value='';
+  pvProds.push({nom,precio,costo:0,cat,ings:[]});saveConfig_db();renderPVPLista();
+  document.getElementById('pvp-nom').value='';document.getElementById('pvp-precio').value='';
 }
 function renderPVPLista(){
   const el=document.getElementById('pvp-lista');if(!el)return;
   if(!pvProds.length){el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin productos extra.</div>';return;}
-  el.innerHTML=pvProds.map((p,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;font-size:12px"><span style="flex:1">${p.nom}</span><span class="hl">$${p.precio.toFixed(2)}</span><span style="color:var(--texto-dim)">costo $${p.costo.toFixed(2)}</span><span class="badge bi">${p.cat||'extra'}</span><button class="db" onclick="delPVP(${i})">✕</button></div>`).join('');
+  el.innerHTML=pvProds.map((p,pi)=>{
+    const costo=getCostoPVP(p);
+    const gan=p.precio>0?((p.precio-costo)/p.precio*100):0;
+    const ganColor=gan>=40?'var(--verde)':gan>=25?'var(--amarillo)':'var(--rojo)';
+    const ingsRows=(p.ings||[]).map((ing,ii)=>{
+      const prep=preps.find(x=>x.nom===ing.nom);
+      const pgUnit=prep?getCPGP(prep):(ing.pg||getPG(ing.nom)||0);
+      const costoIng=ing.cant*pgUnit;
+      return`<div class="irow" style="font-size:11px">
+        <span>${ing.nom}</span>
+        <span>${ing.cant}${prep?'g':'ud'}</span>
+        <span class="hl">$${costoIng.toFixed(4)}</span>
+        <button class="db" onclick="delPVPIng(${pi},${ii})">✕</button>
+      </div>`;
+    }).join('');
+    return`<div class="xcard" style="margin-bottom:.5rem">
+      <div class="xhead" onclick="tog('pvp-body-${pi}')">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${p.nom}</span>
+          <span class="badge bi" style="font-size:10px">${p.cat||'extra'}</span>
+        </div>
+        <div style="display:flex;gap:10px;font-size:11px;align-items:center;flex-wrap:wrap">
+          <span>Costo: <strong class="hl">$${costo.toFixed(3)}</strong></span>
+          <span style="color:${ganColor};font-weight:600">${gan.toFixed(1)}% = $${(p.precio-costo).toFixed(2)}</span>
+          <span>PVP: <strong class="green">$${p.precio.toFixed(2)}</strong></span>
+          <button class="db" onclick="event.stopPropagation();delPVP(${pi})">✕</button>
+        </div>
+      </div>
+      <div class="xbody" id="pvp-body-${pi}">
+        <!-- PVP editor -->
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:.5rem;font-size:12px">
+          <span style="color:var(--texto-dim)">Precio venta:</span>
+          <input type="number" value="${p.precio.toFixed(2)}" style="width:80px;background:var(--gris-mid);border:1px solid var(--naranja);color:var(--texto);border-radius:4px;padding:3px 6px;font-size:12px;text-align:right" onchange="editPVPPrecio(${pi},this.value)"/>
+          <span style="color:var(--texto-dim)">Categoría:</span>
+          <select onchange="editPVPCat(${pi},this.value)" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 6px;font-size:12px">
+            <option value="extra" ${(p.cat||'extra')==='extra'?'selected':''}>Extras</option>
+            <option value="bebida" ${p.cat==='bebida'?'selected':''}>Bebidas</option>
+            <option value="papas" ${p.cat==='papas'?'selected':''}>Papas</option>
+            <option value="otro" ${p.cat==='otro'?'selected':''}>Otro</option>
+          </select>
+        </div>
+        <!-- Ingredients -->
+        <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:4px">Ingredientes / Preparados</div>
+        ${ingsRows||'<div style="font-size:11px;color:var(--texto-dim);margin-bottom:4px">Sin ingredientes — costo manual: $'+p.costo.toFixed(3)+'</div>'}
+        <div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">
+          <select id="pvp-ing-sel-${pi}" style="flex:1;min-width:120px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 6px;font-size:11px">
+            <option value="">Ingrediente o preparado...</option>
+            ${PRODS.map(x=>`<option value="ing:${x}">${x} (ing)</option>`).join('')}
+            ${preps.map(x=>`<option value="prep:${x.nom}">${x.nom} (prep)</option>`).join('')}
+          </select>
+          <input type="number" id="pvp-ing-cant-${pi}" placeholder="cant/g" value="1" style="width:65px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 6px;font-size:11px;text-align:center"/>
+          <button class="btn" style="padding:3px 10px;font-size:11px" onclick="addPVPIng(${pi})">+</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 async function delPVP(i){if(!confirm('Eliminar?'))return;pvProds.splice(i,1);await saveConfig_db();renderPVPLista();}
+
+async function addPVPIng(pi){
+  const sel=document.getElementById(`pvp-ing-sel-${pi}`);
+  const cant=parseFloat(document.getElementById(`pvp-ing-cant-${pi}`).value)||1;
+  if(!sel||!sel.value)return;
+  const [tipo,nom]=sel.value.split(':');
+  if(!pvProds[pi].ings) pvProds[pi].ings=[];
+  const pg=tipo==='ing'?getPG(nom)||null:null;
+  pvProds[pi].ings.push({nom,cant,tipo,pg});
+  await saveConfig_db();renderPVPLista();
+  setTimeout(()=>{const el=document.getElementById(`pvp-body-${pi}`);if(el)el.classList.add('open');},50);
+}
+
+async function delPVPIng(pi,ii){
+  pvProds[pi].ings.splice(ii,1);
+  await saveConfig_db();renderPVPLista();
+  setTimeout(()=>{const el=document.getElementById(`pvp-body-${pi}`);if(el)el.classList.add('open');},50);
+}
+
+async function editPVPPrecio(pi,val){
+  const precio=parseFloat(val);
+  if(isNaN(precio)||precio<0)return;
+  pvProds[pi].precio=precio;
+  await saveConfig_db();renderPVPLista();
+  setTimeout(()=>{const el=document.getElementById(`pvp-body-${pi}`);if(el)el.classList.add('open');},50);
+}
+
+async function editPVPCat(pi,cat){
+  pvProds[pi].cat=cat;
+  await saveConfig_db();renderPVPLista();
+  setTimeout(()=>{const el=document.getElementById(`pvp-body-${pi}`);if(el)el.classList.add('open');},50);
+}
 
 // ─── SALDO ───────────────────────────────────────────────────
 function getSaldoUSD(bs){ return tasa>0?bs/tasa:0; }
@@ -3020,7 +3121,7 @@ function getAllPOSProds(){
   menuItems.forEach(item=>{const pv=parseFloat(getPVM(item).toFixed(2));all.push({nom:item.nom,precio:pv,costo:getCMTotal(item),cat:item.cat||'burger'});});
   // Combos activos
   combos.filter(cb=>cb.activo!==false).forEach(cb=>{all.push({nom:cb.nom,precio:cb.pv||0,costo:getCostoCombo(cb),cat:'combo'});});
-  pvProds.forEach(p=>all.push({nom:p.nom,precio:p.precio,costo:p.costo,cat:p.cat||'extra'}));
+  pvProds.forEach(p=>all.push({nom:p.nom,precio:p.precio,costo:getCostoPVP(p),cat:p.cat||'extra'}));
   return all;
 }
 function renderPOSCats(){
