@@ -1936,10 +1936,12 @@ async function delProducto(i){
 
 async function delProductoNom(nom){
   if(!confirm('Eliminar "'+nom+'" de la lista?'))return;
-  productosExtra=productosExtra.filter(p=>p!==nom);
+  const nomClean=nom.trim().toLowerCase();
+  productosExtra=productosExtra.filter(p=>p.trim().toLowerCase()!==nomClean);
   localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
-  await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]).catch(()=>{});
+  await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]);
   PRODS=getProds(); initSelects(); renderProdsExtra(); renderPVPLista();
+  alert('✓ Eliminado');
 }
 
 // ─── CONFIG ──────────────────────────────────────────────────
