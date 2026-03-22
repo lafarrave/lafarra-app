@@ -1935,24 +1935,24 @@ function agregarProducto(){
 function renderProdsExtra(){
   const el=document.getElementById('prods-extra-lista');if(!el)return;
 
-  // Merge Supabase + localStorage to catch any stranded data
+  // Always merge localStorage into productosExtra (catches pre-sync data)
   const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
-  const merged=[...new Set([...productosExtra,...local])].filter(Boolean);
-  if(merged.length!==productosExtra.length){
-    productosExtra=merged;
-    // Auto-sync merged list to Supabase
-    sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]).catch(()=>{});
-    localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
-  }
+  const merged=[...new Set([...productosExtra,...local])].filter(Boolean).sort((a,b)=>a.localeCompare(b,'es'));
+  productosExtra=merged;
+  localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+  // Silently push to Supabase
+  sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]).catch(()=>{});
 
-  if(!productosExtra.length){el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin productos personalizados aún.</div>';return;}
-  el.innerHTML=productosExtra.sort((a,b)=>a.localeCompare(b,'es')).map((p,i)=>{
-    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px">
+  if(!productosExtra.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--texto-dim);margin-bottom:.5rem">Sin productos personalizados aún.</div>';
+    return;
+  }
+  el.innerHTML=productosExtra.map((p,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px;background:var(--gris-mid);border-radius:6px;padding:5px 8px">
       <span style="flex:1">${p}</span>
       <span class="badge bi">personalizado</span>
-      <button class="db" onclick="delProducto(${productosExtra.indexOf(p)})">✕</button>
-    </div>`;
-  }).join('');
+      <button class="db" onclick="delProducto(${i})">✕</button>
+    </div>`).join('');
 }
 
 async function delProducto(i){
@@ -2637,6 +2637,28 @@ function renderInvHist(){
   tb.innerHTML=todos.map((m,i)=>{const esI=m.tipo==='Stock inicial';return`<tr><td>${m.fecha}</td><td style="font-weight:500">${m.prod}</td><td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;${esI?'background:#1a3a5a;color:#60a0d0':'background:#1a2b1a;color:#60c060'}">${m.tipo}</span></td><td style="color:${esI?'var(--azul)':'var(--verde)'};font-weight:600">+${m.cant}</td><td style="color:var(--texto-dim)">${m.unit}</td><td>${m.precio>0?'$'+m.precio.toFixed(2):'—'}</td><td style="color:var(--texto-dim)">${m.pg?'$'+m.pg.toFixed(4):'—'}</td><td>${m.tienda||m.marca||'—'}</td><td>${esI?`<button class="db" onclick="delSIprod('${m.prod.replace(/'/g,"\\'")}')">✕</button>`:''}</td></tr>`;}).join('');
 }
 async function delSIprod(prod){if(!confirm('Eliminar stock inicial de '+prod+'?'))return;const i=stockInicial.findIndex(s=>s.prod===prod);if(i>=0){stockInicial.splice(i,1);await saveInv_db();renderSI();renderInventario();renderInvHist();}}
+
+async function eliminarProdInv(prod){
+  if(!confirm('Eliminar "'+prod+'" del inventario? Se borrarán su stock inicial, compras y sección asignada.'))return;
+  // Remove from stockInicial
+  stockInicial=stockInicial.filter(s=>s.prod!==prod);
+  // Remove from compras (local array — compras are in separate table)
+  // Remove section assignment
+  delete prodSecciones[prod];
+  // Remove from umbrales
+  delete umbrales[prod];
+  // Remove from productosExtra if it was a custom product
+  const idx=productosExtra.indexOf(prod);
+  if(idx>=0){
+    productosExtra.splice(idx,1);
+    localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+    await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]);
+  }
+  await saveInv_db();
+  await saveSecciones();
+  renderInventario();renderSI();renderInvHist();renderProdsExtra();
+  PRODS=getProds();initSelects();
+}
 
 let modalProd=null;
 function abrirModal(prod){
