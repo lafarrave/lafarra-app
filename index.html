@@ -2621,23 +2621,39 @@ async function delSIprod(prod){if(!confirm('Eliminar stock inicial de '+prod+'?'
 
 async function eliminarProdInv(prod){
   if(!confirm('Eliminar "'+prod+'" del inventario? Se borrarán su stock inicial, compras y sección asignada.'))return;
+
   // Remove from stockInicial
   stockInicial=stockInicial.filter(s=>s.prod!==prod);
-  // Remove from compras (local array — compras are in separate table)
-  // Remove section assignment
+
+  // Remove from compras LOCAL array
+  compras=compras.filter(c=>c.prod!==prod);
+
+  // Remove compras from Supabase
+  try{
+    const {data:rows}=await sb.from('compras').select('id,data');
+    if(rows){
+      const toDelete=rows.filter(r=>r.data&&r.data.prod===prod).map(r=>r.id);
+      if(toDelete.length>0){
+        await sb.from('compras').delete().in('id',toDelete);
+      }
+    }
+  }catch(e){ console.error('Error borrando compras:',e); }
+
+  // Remove section, umbrales
   delete prodSecciones[prod];
-  // Remove from umbrales
   delete umbrales[prod];
-  // Remove from productosExtra if it was a custom product
+
+  // Remove from productosExtra if custom
   const idx=productosExtra.indexOf(prod);
   if(idx>=0){
     productosExtra.splice(idx,1);
     localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
     await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]);
   }
+
   await saveInv_db();
   await saveSecciones();
-  renderInventario();renderSI();renderInvHist();renderProdsExtra();
+  renderInventario();renderInvHist();renderProdsExtra();
   PRODS=getProds();initSelects();
 }
 
