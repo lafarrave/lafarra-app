@@ -1897,13 +1897,14 @@ function setToday(){
   ['v-fecha','c-fecha','gasto-fecha','env-fecha','pos-fecha','transfer-fecha'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
 }
 
-function agregarProducto(){
+async function agregarProducto(){
   const nom=document.getElementById('nuevo-prod-nom').value.trim();
   if(!nom)return alert('Escribe el nombre del producto');
   if(PRODS_BASE.map(p=>p.toLowerCase()).includes(nom.toLowerCase()))return alert('Ese producto ya existe en la lista base');
   if(productosExtra.map(p=>p.toLowerCase()).includes(nom.toLowerCase()))return alert('Ese producto ya fue agregado');
   productosExtra.push(nom);
   localStorage.setItem('lf_prods_extra',JSON.stringify(productosExtra));
+  await sb.from('config').upsert([{id:'prods_extra',data:productosExtra,updated_at:new Date()}]);
   PRODS=getProds();
   initSelects();
   renderProdsExtra();
