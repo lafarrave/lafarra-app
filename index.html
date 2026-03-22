@@ -1131,13 +1131,13 @@ async function saveGastosOp(){
   await sb.from('config').upsert([{id:'gastos_op',data:gastosOp,updated_at:new Date()}]).catch(()=>{});
 }
 
-function addGastoOp(){
+async function addGastoOp(){
   const desc = document.getElementById('gop-desc').value.trim();
   const monto = parseFloat(document.getElementById('gop-monto').value);
   const incluir = document.getElementById('gop-incluir').value;
   if(!desc||isNaN(monto)||monto<=0) return alert('Completa descripción y monto');
   gastosOp.push({desc, monto, incluir});
-  saveGastosOp();
+  await saveGastosOp();
   renderGastosOp();
   document.getElementById('gop-desc').value='';
   document.getElementById('gop-monto').value='';
@@ -1164,10 +1164,10 @@ function renderGastosOp(){
     </div>`;
 }
 
-function delGastoOp(i){
+async function delGastoOp(i){
   if(!confirm('Eliminar?'))return;
   gastosOp.splice(i,1);
-  saveGastosOp();
+  await saveGastosOp();
   renderGastosOp();
 }
 
@@ -2409,32 +2409,32 @@ function renderSeccionesUI(){
   }
 }
 
-function agregarSeccion(){
+async function agregarSeccion(){
   const inp = document.getElementById('nueva-seccion-inp');
   const nom = inp?.value.trim();
   if(!nom) return alert('Escribe el nombre de la sección');
   if(seccionesInv.includes(nom)) return alert('Esa sección ya existe');
   seccionesInv.push(nom);
-  saveSecciones();
+  await saveSecciones();
   renderSeccionesUI();
   renderInventario();
   if(inp) inp.value = '';
 }
 
-function eliminarSeccion(i){
+async function eliminarSeccion(i){
   const nom = seccionesInv[i];
   if(!confirm('Eliminar sección "'+nom+'"? Los productos asignados quedarán sin sección.')) return;
   seccionesInv.splice(i, 1);
   Object.keys(prodSecciones).forEach(p=>{ if(prodSecciones[p]===nom) delete prodSecciones[p]; });
-  saveSecciones();
+  await saveSecciones();
   renderSeccionesUI();
   renderInventario();
 }
 
-function setProdSeccion(prod, seccion){
+async function setProdSeccion(prod, seccion){
   if(seccion) prodSecciones[prod] = seccion;
   else delete prodSecciones[prod];
-  saveSecciones();
+  await saveSecciones();
 }
 
 function renderInventario(){
@@ -2799,12 +2799,12 @@ function renderVidDetalle(){
 async function delV(i){if(!confirm('Eliminar?'))return;vidriera.splice(i,1);await saveInv_db();renderVidriera();}
 
 // ─── PREPARADOS ──────────────────────────────────────────────
-function agregarCatPrep(){
+async function agregarCatPrep(){
   const inp=document.getElementById('prep-cat-nueva');
   const nom=inp?.value.trim();
   if(!nom)return;
   if(!catPreps.includes(nom))catPreps.push(nom);
-  saveCatPreps();renderCatPrepSel();
+  await saveCatPreps();renderCatPrepSel();
   if(inp)inp.value='';
   document.getElementById('prep-cat').value=nom;
 }
