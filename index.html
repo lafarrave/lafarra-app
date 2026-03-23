@@ -249,7 +249,10 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <div class="fgrid">
           <div class="fg"><label>📞 Teléfono</label><input type="text" id="cfg-tel" placeholder="ej: 0424-1234567"/></div>
           <div class="fg"><label>🪪 Cédula</label><input type="text" id="cfg-ci" placeholder="ej: V-12345678"/></div>
+          <div class="fg"><label>💸 Comisión Bancaribe (%)</label><input type="number" id="cfg-com-bc" placeholder="ej: 0.30" step="0.01" min="0"/></div>
+          <div class="fg"><label>💸 Comisión Provincial (%)</label><input type="number" id="cfg-com-pv" placeholder="ej: 0.25" step="0.01" min="0"/></div>
         </div>
+        <div style="font-size:11px;color:var(--texto-dim);margin-bottom:.6rem">La comisión se descuenta del banco origen al registrar una transferencia.</div>
         <button class="btn" onclick="savePagoMovil()">Guardar</button>
       </div>
       <div class="card">
@@ -420,8 +423,8 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <button class="btns" style="font-size:11px;padding:4px 10px" onclick="resetearContadores()" title="Marcar todo como transferido — empieza desde hoy">🔄 Resetear contadores</button>
         </div>
         <div style="margin-bottom:.8rem;font-size:12px;display:flex;flex-direction:column;gap:4px">
-          <div style="color:var(--texto-dim)">🏦 Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" class="green">$0.00 / Bs.—</strong></div>
-          <div style="color:var(--texto-dim)">🏦 Provincial → Bancaribe (insumos): <strong id="gan-inline-pv" style="color:#4caf7d">$0.00 / Bs.—</strong></div>
+          <div style="color:var(--texto-dim)">🏦 Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" class="green">Bs.— / $—</strong>${(cfg.comBC||0)>0?` <span style="font-size:10px;color:var(--amarillo)">-${cfg.comBC}% comisión BC</span>`:''}</div>
+          <div style="color:var(--texto-dim)">🏦 Provincial → Bancaribe (insumos): <strong id="gan-inline-pv" style="color:#4caf7d">Bs.— / $—</strong>${(cfg.comPV||0)>0?` <span style="font-size:10px;color:var(--amarillo)">-${cfg.comPV}% comisión PV</span>`:''}</div>
         </div>
         <div id="gan-inline" style="display:none"></div>
         <div class="fgrid">
@@ -431,7 +434,8 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
               <option value="pv_to_bc">🏦 Provincial → Bancaribe (insumos)</option>
             </select>
           </div>
-          <div class="fg"><label>Monto ($)</label><input type="number" id="transfer-monto" placeholder="0.00"/></div>
+          <div class="fg"><label>Monto (Bs)</label><input type="number" id="transfer-monto-bs" placeholder="0.00" oninput="calcTransferUSD()"/></div>
+          <div class="fg"><label>Equivalente ($)</label><input type="text" id="transfer-monto" readonly style="background:var(--gris-light)" placeholder="auto"/></div>
           <div class="fg"><label>Fecha</label><input type="date" id="transfer-fecha"/></div>
         </div>
         <button class="btn-green" onclick="registrarTransferencia()">Registrar transferencia</button>
@@ -1486,7 +1490,7 @@ function getProds(){return[...PRODS_BASE,...productosExtra].sort((a,b)=>a.locale
 let PRODS=getProds();
 const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'},{key:'bebida',label:'🥤 Bebidas'},{key:'extra',label:'➕ Extras'},{key:'otro',label:'📦 Otros'},{key:'combo',label:'🍿 Combos'}];
 
-let cfg={gan:50,papas:'',gp:150,gp2:250,tel:'',ci:'',bancopm:'',proteccion:0};
+let cfg={gan:50,papas:'',gp:150,gp2:250,tel:'',ci:'',bancopm:'',proteccion:0,comBC:0,comPV:0};
 let empaque=[], empaquePapas=[], pvProds=[], porciones=[];
 let seccionesInv=['Proteínas','Salsas','Vegetales','Descartables','Otros'];
 let prodSecciones={};
@@ -1904,6 +1908,8 @@ function refreshPapasSelect(){
   const prot=document.getElementById('cfg-proteccion');if(prot)prot.value=cfg.proteccion||0;
   renderPagoMovilInfo();
   const tel=document.getElementById('cfg-tel');if(tel)tel.value=cfg.tel||'';
+  const comBC=document.getElementById('cfg-com-bc');if(comBC)comBC.value=cfg.comBC||0;
+  const comPV=document.getElementById('cfg-com-pv');if(comPV)comPV.value=cfg.comPV||0;
   const ci=document.getElementById('cfg-ci');if(ci)ci.value=cfg.ci||'';
 
   const gp2=document.getElementById('cfg-gp2');if(gp2)gp2.value=cfg.gp2||'';
@@ -1972,6 +1978,8 @@ async function savePagoMovil(){
   cfg.tel=document.getElementById('cfg-tel')?.value.trim()||'';
   cfg.ci=document.getElementById('cfg-ci')?.value.trim()||'';
   cfg.proteccion=parseFloat(document.getElementById('cfg-proteccion')?.value)||0;
+  cfg.comBC=parseFloat(document.getElementById('cfg-com-bc')?.value)||0;
+  cfg.comPV=parseFloat(document.getElementById('cfg-com-pv')?.value)||0;
   await saveConfig_db();
   renderPagoMovilInfo();
   alert('✓ Datos de pago guardados');
@@ -2214,9 +2222,9 @@ function renderSaldoResumen(){
   // GANANCIA — two info lines in transfer card
   const gpBs=tasa>0?gp*tasa:0;
   const giBC=document.getElementById('gan-inline-bc');
-  if(giBC) giBC.textContent='$'+pendAProvincial.toFixed(2)+' / '+fBsFixed(pendAProvincialBs);
+  if(giBC) giBC.textContent=fBsFixed(pendAProvincialBs)+' / $'+pendAProvincial.toFixed(2);
   const giPV=document.getElementById('gan-inline-pv');
-  if(giPV) giPV.textContent='$'+costosPend.toFixed(2)+' / '+fBsFixed(costosPendBs);
+  if(giPV) giPV.textContent=fBsFixed(costosPendBs)+' / $'+costosPend.toFixed(2);
 
   // Ventas y ganancia del mes
   try{
@@ -2265,6 +2273,13 @@ async function registrarGasto(){
   await saveSaldo_db();renderSaldoResumen();renderMovs();
   document.getElementById('gasto-desc').value='';document.getElementById('gasto-monto').value='';
 }
+function calcTransferUSD(){
+  const bs=parseFloat(document.getElementById('transfer-monto-bs').value)||0;
+  const usd=tasa>0?bs/tasa:0;
+  const el=document.getElementById('transfer-monto');
+  if(el) el.value=usd>0?usd.toFixed(4):'';
+}
+
 async function resetearContadores(){
   if(!confirm('¿Marcar todo como transferido? Los contadores empezarán desde hoy.')) return;
   const hoy = getVEDate();
@@ -2277,18 +2292,22 @@ async function resetearContadores(){
 }
 
 async function registrarTransferencia(){
-  const monto=parseFloat(document.getElementById('transfer-monto').value);
+  const montoBs=parseFloat(document.getElementById('transfer-monto-bs').value);
+  const monto=tasa>0?montoBs/tasa:0;
   const fecha=document.getElementById('transfer-fecha').value;
   const dir=document.getElementById('transfer-dir').value;
-  if(isNaN(monto)||monto<=0)return alert('Ingresa el monto');
+  if(isNaN(montoBs)||montoBs<=0)return alert('Ingresa el monto en Bs');
   if(!fecha)return alert('Indica la fecha');
-  const montoBs=tasa>0?monto*tasa:0;
   if(dir==='bc_to_pv'){
     // Bancaribe → Provincial (sacar ganancia)
     const gp=getGanPend();
     if(monto>gp+0.01)return alert('Ganancia disponible: $'+gp.toFixed(2));
+    // Commission from Bancaribe
+    const comPctBC=(cfg.comBC||0)/100;
+    const comBC=monto*comPctBC;
+    const comBCBs=tasa>0?comBC*tasa:0;
     ganT+=monto;
-    saldo-=monto; saldoBs-=montoBs;
+    saldo-=(monto+comBC); saldoBs-=(montoBs+comBCBs);
     saldoProvincial+=monto; saldoProvincialBs+=montoBs;
     localStorage.setItem('lf_saldo_provincial',saldoProvincial);
     localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
@@ -2306,7 +2325,11 @@ async function registrarTransferencia(){
   } else {
     // Provincial → Bancaribe (transferir insumos)
     if(monto>saldoProvincial+0.01)return alert('Saldo Provincial insuficiente: $'+saldoProvincial.toFixed(2));
-    saldoProvincial-=monto; saldoProvincialBs-=montoBs;
+    // Commission from Provincial
+    const comPctPV=(cfg.comPV||0)/100;
+    const comPV=monto*comPctPV;
+    const comPVBs=tasa>0?comPV*tasa:0;
+    saldoProvincial-=(monto+comPV); saldoProvincialBs-=(montoBs+comPVBs);
     saldo+=monto; saldoBs+=montoBs;
     localStorage.setItem('lf_saldo_provincial',saldoProvincial);
     localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
@@ -2322,6 +2345,7 @@ async function registrarTransferencia(){
     movs.unshift({fecha,desc:'Transferencia Provincial → Bancaribe',tipo:'transferencia',monto,montoBs,sd:saldo,tasa,esTransferencia:true,dir:'pv_to_bc'});
   }
   await saveSaldo_db();renderSaldoResumen();renderMovs();
+  document.getElementById('transfer-monto-bs').value='';
   document.getElementById('transfer-monto').value='';
 }
 function renderMovs(){
