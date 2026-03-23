@@ -1386,7 +1386,11 @@ function getCostoCombo(combo){
 function buildComboCard(combo, ci){
   const cT=getCostoCombo(combo);
   const pv=combo.pv||0;
-  const ganPct=pv>0?((pv-cT)/pv*100):0;
+  const prot=cfg.proteccion||0;
+  const cProt=cT*(prot/100);
+  const cBase=cT+cProt;
+  const ganPct=pv>0?((pv-cBase)/pv*100):0;
+  const ganReal=pv>0?((pv-cT)/pv*100):0;
   const ganColor=ganPct>=40?'var(--verde)':ganPct>=25?'var(--amarillo)':'var(--rojo)';
   const activoBadge=combo.activo!==false
     ?'<span class="badge bm" style="font-size:10px">✓ En POS</span>'
@@ -1400,7 +1404,8 @@ function buildComboCard(combo, ci){
       </div>
       <div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center">
         <span>Costo: <strong class="hl">$${cT.toFixed(3)}</strong></span>
-        <span style="color:${ganColor};font-weight:600">Ganancia: ${ganPct.toFixed(1)}% <span style="opacity:.8">($${(pv-cT).toFixed(2)})</span></span>
+        ${prot>0?`<span style="color:var(--amarillo);font-size:10px">+${prot}% → $${cBase.toFixed(3)}</span>`:''}
+        <span style="color:${ganColor};font-weight:600">Gan: ${ganPct.toFixed(1)}% ($${(pv-cBase).toFixed(2)})</span>
         <span>Venta: <strong class="green">$${pv.toFixed(2)}</strong></span>
         <button class="btns" style="font-size:10px;padding:2px 8px" onclick="event.stopPropagation();toggleCombo(${ci})">${combo.activo!==false?'Desactivar':'Activar'}</button>
         <button class="db" onclick="event.stopPropagation();delCombo(${ci})">✕</button>
