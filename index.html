@@ -2297,6 +2297,27 @@ function renderSaldoResumen(){
         <div class="sval-bs" style="font-size:20px;color:var(--verde)">${fBsFixed(ganMesBs)}</div>
         <div class="sval-usd" style="color:#4caf7d">$${ganMes.toFixed(2)}</div>
       </div>`;
+
+    // Mermas del mes — cuadro rojo
+    const mermaMes=(mermas||[]).filter(m=>m.fecha&&m.fecha.startsWith(mes));
+    const totalMermaUSD=mermaMes.reduce((a,m)=>a+(m.costo||0),0);
+    const totalMermaBs=mermaMes.reduce((a,m)=>{
+      const bs=m.costoBs||(m.costo*(m.tasa||tasa));
+      return a+bs;
+    },0);
+    const elMerma=document.getElementById('saldo-merma-mes');
+    if(elMerma){
+      if(mermaMes.length>0){
+        elMerma.style.display='block';
+        elMerma.innerHTML=`<div class="sbox" style="border-color:#8b2020;background:#1a0a0a">
+          <div class="slbl" style="color:var(--rojo)">🗑 Mermas del mes</div>
+          <div class="sval-bs" style="font-size:20px;color:var(--rojo)">${fBsFixed(totalMermaBs)}</div>
+          <div class="sval-usd" style="color:#c04040">$${totalMermaUSD.toFixed(2)} · ${mermaMes.length} registro${mermaMes.length!==1?'s':''}</div>
+        </div>`;
+      } else {
+        elMerma.style.display='none';
+      }
+    }
   }catch(e){}
 }
 async function actualizarSaldo(banco='bancaribe'){
