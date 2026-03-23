@@ -1852,7 +1852,18 @@ function getCMTotal(item){
   if(item.usaEmpaquePapas!==false && item.cat==='papas') costo += getCEPapas();
   return costo;
 }
-function getGanPend(){return Math.max(0,ventas.reduce((a,v)=>a+(v.gan||0),0)-ganT);}
+function getGanPend(){
+  // Same logic as the green transfer box
+  const ultimaTransfBC=movs.filter(m=>m.dir==='bc_to_pv').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
+  const fechaCorteBC=ultimaTransfBC?.fecha||'2000-01-01';
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>=fechaCorteBC);
+  const ganVentasBC=ventasBC.reduce((a,v)=>{
+    if((v.gan||0)>0) return a+(v.gan||0);
+    return a+Math.max(0,(v.total||0)-(v.costo||0));
+  },0);
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
+  return Math.max(0,ganVentasBC-totalTransfBCtoPC);
+}
 function tog(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
 
 function showTab(n,el){
@@ -1969,7 +1980,7 @@ async function savePagoMovil(){
 async function saveConfig(){
   cfg.papas=document.getElementById('cfg-papas').value;
   cfg.gp=parseFloat(document.getElementById('cfg-gp').value)||150;
-  cfg.gp2=parseFloat(document.getElementById('cfg-gp2').value)||250;
+  cfg.gp2=parseFloat(document.getElementById('cfg-gp2')?.value)||250;
   cfg.tel=document.getElementById('cfg-tel')?.value.trim()||'';
   cfg.ci=document.getElementById('cfg-ci')?.value.trim()||'';
   cfg.proteccion=parseFloat(document.getElementById('cfg-proteccion')?.value)||0;
@@ -2257,12 +2268,12 @@ async function registrarGasto(){
 async function resetearContadores(){
   if(!confirm('¿Marcar todo como transferido? Los contadores empezarán desde hoy.')) return;
   const hoy = getVEDate();
-  // Register a $0 transfer in both directions with today's date as marker
   movs.unshift({fecha:hoy, desc:'Reseteo de contadores', tipo:'transferencia', monto:0, montoBs:0, sd:saldo, tasa, esTransferencia:true, dir:'bc_to_pv'});
   movs.unshift({fecha:hoy, desc:'Reseteo de contadores', tipo:'transferencia', monto:0, montoBs:0, sd:saldo, tasa, esTransferencia:true, dir:'pv_to_bc'});
   await saveSaldo_db();
   renderSaldoResumen();
   renderMovs();
+  alert('✓ Contadores reseteados');
 }
 
 async function registrarTransferencia(){
