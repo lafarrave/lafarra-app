@@ -454,6 +454,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       <div class="tabs-local">
         <div class="tl active" onclick="showPanel('inv-tabla',this)">📦 Stock</div>
         <div class="tl" onclick="showPanel('inv-compra',this)">🛒 Nueva compra</div>
+        <div class="tl" onclick="showPanel('inv-merma',this)">🗑 Merma</div>
         <div class="tl" onclick="showPanel('inv-historial',this)">📋 Historial</div>
       </div>
 
@@ -514,6 +515,48 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           </div>
           <label style="display:flex;gap:6px;align-items:center;font-size:12px;cursor:pointer;margin-bottom:.7rem;color:var(--texto-dim)"><input type="checkbox" id="c-desc" checked/> Descontar del saldo</label>
           <button class="btn" onclick="registrarCompra()">Registrar compra</button>
+        </div>
+      </div>
+
+      <div id="panel-inv-merma" class="panel">
+        <div class="card">
+          <div class="card-title">🗑 Registrar merma / desperdicio</div>
+          <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.7rem">Registra ingredientes dañados, vencidos o derramados. Se descontarán del inventario y el costo se marcará como pérdida.</div>
+          <div class="fgrid">
+            <div class="fg"><label>Producto</label><select id="merma-prod"><option value="">Seleccionar...</option></select></div>
+            <div class="fg"><label>Cantidad</label><input type="number" id="merma-cant" placeholder="ej: 150"/></div>
+            <div class="fg"><label>Unidad</label>
+              <select id="merma-unit">
+                <option value="g">Gramos (g)</option>
+                <option value="ud">Unidades (ud)</option>
+                <option value="ml">ml</option>
+                <option value="kg">kg</option>
+              </select>
+            </div>
+            <div class="fg"><label>Motivo</label>
+              <select id="merma-motivo">
+                <option value="dañado">Se dañó</option>
+                <option value="vencido">Venció</option>
+                <option value="derramado">Se derramó</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="fg"><label>Fecha</label><input type="date" id="merma-fecha"/></div>
+            <div class="fg"><label>Nota (opcional)</label><input type="text" id="merma-nota" placeholder="ej: salsa de tomate descompuesta"/></div>
+          </div>
+          <div id="merma-costo-preview" style="background:var(--gris-mid);border-radius:6px;padding:.5rem .7rem;margin-bottom:.7rem;font-size:12px;display:none">
+            <span style="color:var(--texto-dim)">Costo estimado de pérdida: </span>
+            <strong id="merma-costo-val" style="color:var(--rojo)">$0.00</strong>
+            <span id="merma-costo-bs" style="color:var(--texto-dim);margin-left:6px"></span>
+          </div>
+          <button class="btn" style="background:var(--rojo);border-color:var(--rojo)" onclick="registrarMerma()">🗑 Registrar merma</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Historial de mermas</div>
+          <div class="tw"><table>
+            <thead><tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Motivo</th><th>Pérdida $</th><th>Pérdida Bs</th><th>Nota</th><th></th></tr></thead>
+            <tbody id="tabla-mermas"></tbody>
+          </table></div>
         </div>
       </div>
 
@@ -1507,7 +1550,7 @@ function getSeccion(prod){return prodSecciones[prod]||'';}
 let saldo=0, saldoBs=0, movs=[], ganT=0;
 // saldoBs es la base real en bolívares. saldo en $ se calcula como saldoBs/tasa
 let vidriera=[], compras=[], stockInicial=[], umbrales={};
-let preps=[], menuItems=[], combos=[], ventas=[], envios=[];
+let preps=[], menuItems=[], combos=[], ventas=[], envios=[], mermas=[];
 let catPreps=['Salsas','Proteínas','Bases','Masas'];
 async function saveCatPreps(){
   localStorage.setItem('lf_cat_preps',JSON.stringify(catPreps));
@@ -1648,6 +1691,7 @@ async function loadAll(){
         if(row.id==='preparados') preps=row.data;
         if(row.id==='menu') menuItems=row.data;
         if(row.id==='combos') combos=row.data||[];
+        if(row.id==='mermas') mermas=row.data||[];
         if(row.id==='envios') envios=row.data;
         if(row.id==='vidriera') vidriera=row.data;
       });
@@ -1696,6 +1740,7 @@ async function saveInv_db(){
       {id:'preparados',data:preps,updated_at:new Date()},
       {id:'menu',data:menuItems,updated_at:new Date()},
       {id:'combos',data:combos,updated_at:new Date()},
+      {id:'mermas',data:mermas,updated_at:new Date()},
       {id:'envios',data:envios,updated_at:new Date()},
       {id:'vidriera',data:vidriera,updated_at:new Date()},
     ]);
@@ -1770,6 +1815,7 @@ async function fetchBCV(){
         try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
   try{ renderCombos(); }catch(e){}
+  try{ initMermaSelects();renderMermas(); }catch(e){}
   // One-time merge: if localStorage has items Supabase doesn't, push them up
   try{
     const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
@@ -1885,6 +1931,7 @@ function showTab(n,el){
   if(n==='stats')renderStats();
   if(n==='saldo'){renderSaldoResumen();renderMovs();}
   if(n==='inventario'){renderInventario();renderSI();renderInvHist();}
+  if(n==='inv-merma'||n==='inventario'){initMermaSelects();renderMermas();}
 }
 
 function showPanel(name,el){
@@ -1922,7 +1969,7 @@ function getVEDate(){
 }
 function setToday(){
   const t=getVEDate();
-  ['v-fecha','c-fecha','gasto-fecha','env-fecha','pos-fecha','transfer-fecha'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  ['v-fecha','c-fecha','gasto-fecha','env-fecha','pos-fecha','transfer-fecha','merma-fecha'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
 }
 
 async function agregarProducto(){
@@ -2391,6 +2438,87 @@ async function delMov(i){
   }
   if(movs.length>0) saldo=movs[0].sd;
   await saveSaldo_db();renderMovs();renderSaldoResumen();
+}
+
+// ─── MERMA ───────────────────────────────────────────────────
+function getMermaCostoProd(prod, cant, unit){
+  const pg = getPG(prod)||0;
+  // Convert to grams if needed
+  let cantG = cant;
+  if(unit==='kg') cantG = cant*1000;
+  else if(unit==='ud') cantG = cant; // units use pg directly
+  return cantG * pg;
+}
+
+function initMermaSelects(){
+  const sel=document.getElementById('merma-prod');if(!sel)return;
+  const todos=[...getProds(),...preps.map(p=>p.nom),...pvProds.map(p=>p.nom)];
+  const uniq=[...new Set(todos)].sort((a,b)=>a.localeCompare(b,'es'));
+  sel.innerHTML='<option value="">Seleccionar...</option>'+uniq.map(p=>`<option value="${p}">${p}</option>`).join('');
+  sel.onchange=()=>{
+    const prod=sel.value;
+    const cant=parseFloat(document.getElementById('merma-cant')?.value)||0;
+    const unit=document.getElementById('merma-unit')?.value||'g';
+    const costo=getMermaCostoProd(prod,cant,unit);
+    const prev=document.getElementById('merma-costo-preview');
+    const val=document.getElementById('merma-costo-val');
+    const bs=document.getElementById('merma-costo-bs');
+    if(prev) prev.style.display=prod?'block':'none';
+    if(val) val.textContent='$'+costo.toFixed(4);
+    if(bs) bs.textContent=tasa>0?'/ '+fBsFixed(costo*tasa):'';
+  };
+  document.getElementById('merma-cant')?.addEventListener('input',()=>sel.onchange());
+}
+
+async function registrarMerma(){
+  const prod=document.getElementById('merma-prod').value;
+  const cant=parseFloat(document.getElementById('merma-cant').value);
+  const unit=document.getElementById('merma-unit').value;
+  const motivo=document.getElementById('merma-motivo').value;
+  const fecha=document.getElementById('merma-fecha').value;
+  const nota=document.getElementById('merma-nota').value.trim();
+  if(!prod)return alert('Selecciona el producto');
+  if(isNaN(cant)||cant<=0)return alert('Ingresa la cantidad');
+  if(!fecha)return alert('Indica la fecha');
+  const costo=getMermaCostoProd(prod,cant,unit);
+  const costoBs=tasa>0?costo*tasa:0;
+  const merma={id:Date.now(),fecha,prod,cant,unit,motivo,nota,costo,costoBs,tasa};
+  mermas.unshift(merma);
+  await saveInv_db();
+  renderMermas();renderInventario();
+  // Reset form
+  document.getElementById('merma-prod').value='';
+  document.getElementById('merma-cant').value='';
+  document.getElementById('merma-nota').value='';
+  document.getElementById('merma-costo-preview').style.display='none';
+  alert(`✓ Merma registrada — Pérdida: $${costo.toFixed(4)} / ${fBsFixed(costoBs)}`);
+}
+
+function renderMermas(){
+  const tb=document.getElementById('tabla-mermas');if(!tb)return;
+  if(!mermas.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:1rem;color:var(--texto-dim)">Sin mermas registradas.</td></tr>';return;}
+  const totalPerd=mermas.reduce((a,m)=>a+(m.costo||0),0);
+  tb.innerHTML=mermas.map((m,i)=>`<tr>
+    <td>${m.fecha}</td>
+    <td style="font-weight:500">${m.prod}</td>
+    <td>${m.cant} ${m.unit}</td>
+    <td><span style="background:var(--gris-mid);border-radius:3px;padding:1px 5px;font-size:10px">${m.motivo}</span></td>
+    <td style="color:var(--rojo);font-weight:600">$${(m.costo||0).toFixed(4)}</td>
+    <td style="color:var(--texto-dim)">${m.costoBs?fBsFixed(m.costoBs):'—'}</td>
+    <td style="color:var(--texto-dim)">${m.nota||'—'}</td>
+    <td><button class="db" onclick="delMerma(${i})">✕</button></td>
+  </tr>`).join('')+`<tr style="border-top:2px solid var(--gris-light)">
+    <td colspan="4" style="font-weight:700;font-size:12px;padding-top:6px">Total pérdidas</td>
+    <td style="color:var(--rojo);font-weight:700">$${totalPerd.toFixed(4)}</td>
+    <td style="color:var(--texto-dim)">${tasa>0?fBsFixed(totalPerd*tasa):'—'}</td>
+    <td colspan="2"></td>
+  </tr>`;
+}
+
+async function delMerma(i){
+  if(!confirm('Eliminar registro de merma?'))return;
+  mermas.splice(i,1);
+  await saveInv_db();renderMermas();renderInventario();
 }
 
 // ─── INVENTARIO ───────────────────────────────────────────────
@@ -3492,6 +3620,7 @@ async function init(){
   try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
   try{ renderCombos(); }catch(e){}
+  try{ initMermaSelects();renderMermas(); }catch(e){}
   // One-time merge: if localStorage has items Supabase doesn't, push them up
   try{
     const local=JSON.parse(localStorage.getItem('lf_prods_extra')||'[]');
