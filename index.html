@@ -259,6 +259,13 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <div class="fg"><label>Preparado de papas</label><select id="cfg-papas"><option value="">Sin papas</option></select></div>
           <div class="fg"><label>Gramos papas incluidas</label><input type="number" id="cfg-gp" placeholder="150"/></div>
         </div>
+        <div class="fg" style="margin-top:.6rem">
+          <label>🛡 Protección de inflación (%)</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" id="cfg-proteccion" placeholder="ej: 15" min="0" max="100" step="1" style="width:100px"/>
+            <span style="font-size:11px;color:var(--texto-dim)">Se suma al costo como colchón de reposición</span>
+          </div>
+        </div>
         <button class="btn" onclick="saveConfig()">Guardar</button>
       </div>
       <div class="card">
