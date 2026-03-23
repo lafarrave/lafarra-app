@@ -3671,7 +3671,120 @@ async function init(){
 
 init();
 </script>
+<!-- BUG/CHANGELOG PANEL -->
+<div id="debug-btn" onclick="toggleDebugPanel()" style="position:fixed;bottom:18px;right:18px;z-index:9999;width:38px;height:38px;border-radius:50%;background:var(--gris-mid);border:1px solid var(--gris-light);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4)" title="Bugs y versiones">🐛</div>
+<div id="debug-panel" style="display:none;position:fixed;bottom:65px;right:18px;z-index:9999;width:340px;max-height:70vh;background:var(--gris-dark);border:1px solid var(--gris-light);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.6);overflow:hidden;font-size:12px">
+  <div style="display:flex;border-bottom:1px solid var(--gris-mid)">
+    <button onclick="showDebugTab('bugs')" id="dtab-bugs" style="flex:1;padding:8px;background:var(--naranja);border:none;color:#fff;cursor:pointer;font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase">🐛 Bugs</button>
+    <button onclick="showDebugTab('changelog')" id="dtab-changelog" style="flex:1;padding:8px;background:var(--gris-mid);border:none;color:var(--texto-dim);cursor:pointer;font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase">📋 Cambios</button>
+  </div>
+  <!-- Bugs tab -->
+  <div id="dpanel-bugs" style="max-height:calc(70vh - 80px);overflow-y:auto;padding:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="color:var(--texto-dim);font-size:11px">Errores capturados automáticamente</span>
+      <button onclick="clearBugs()" style="background:none;border:1px solid var(--gris-light);color:var(--texto-dim);border-radius:4px;padding:2px 7px;cursor:pointer;font-size:10px">Limpiar</button>
+    </div>
+    <div id="bugs-lista"><div style="color:var(--texto-dim);text-align:center;padding:1rem">✅ Sin errores registrados</div></div>
+  </div>
+  <!-- Changelog tab -->
+  <div id="dpanel-changelog" style="display:none;max-height:calc(70vh - 80px);overflow-y:auto;padding:8px">
+    <div id="changelog-lista"></div>
+  </div>
+</div>
+
   <script>
+
+// ─── DEBUG PANEL ─────────────────────────────────────────────
+const CHANGELOG=[
+    {ver:"v2.1.0",fecha:"2026-03-24",items:["🗑 Módulo de Merma en Inventario","🛡 Protección de inflación en Menú y Combos","💸 Comisión bancaria en transferencias","🏦 Transferencias ahora en Bs","🔴 Cuadro de mermas del mes en Saldo","📦 Combos descuentan inventario correctamente","🐛 Fix: stock editado ya no suma al valor anterior","🐛 Fix: eliminación de productos del inventario"]},
+    {ver:"v2.0.5",fecha:"2026-03-23",items:["🍿 Módulo Combos con soporte completo","📱 PWA instalable en Android","🏦 Logos de banco en POS (BanCaribe / BBVA)","🔄 Sincronización PC ↔ teléfono mejorada","🐛 Fix: transferencias entre cuentas","🐛 Fix: resetear contadores de saldo"]},
+    {ver:"v2.0.0",fecha:"2026-03-22",items:["👁 Vidriera rediseñada por secciones","🏷 Categorías en Preparados","💰 Saldo base en Bs con lógica dual Bancaribe/Provincial","🌐 API BCV con 3 fuentes y fallback automático","📊 Productos Extra con ingredientes y costo automático"]}
+];
+let bugsList=JSON.parse(localStorage.getItem('lf_bugs')||'[]');
+let debugOpen=false;
+let debugTab='bugs';
+
+// Capture console errors automatically
+const _origError=console.error.bind(console);
+console.error=function(...args){
+  _origError(...args);
+  const msg=args.map(a=>typeof a==='object'?JSON.stringify(a):String(a)).join(' ');
+  const entry={t:new Date().toLocaleTimeString('es-VE'),msg:msg.slice(0,200)};
+  bugsList.unshift(entry);
+  if(bugsList.length>50) bugsList=bugsList.slice(0,50);
+  localStorage.setItem('lf_bugs',JSON.stringify(bugsList));
+  renderBugsList();
+  // Show red dot on button
+  const btn=document.getElementById('debug-btn');
+  if(btn) btn.style.background='rgba(200,50,50,.9)';
+};
+
+window.addEventListener('error',e=>{
+  console.error('[JS Error] '+e.message+' ('+e.filename?.split('/').pop()+':'+e.lineno+')');
+});
+
+window.addEventListener('unhandledrejection',e=>{
+  console.error('[Promise] '+(e.reason?.message||String(e.reason)));
+});
+
+function toggleDebugPanel(){
+  debugOpen=!debugOpen;
+  const p=document.getElementById('debug-panel');
+  if(p) p.style.display=debugOpen?'block':'none';
+  if(debugOpen){renderBugsList();renderChangelog();}
+  // Reset red dot
+  const btn=document.getElementById('debug-btn');
+  if(btn&&debugOpen) btn.style.background='var(--gris-mid)';
+}
+
+function showDebugTab(tab){
+  debugTab=tab;
+  document.getElementById('dpanel-bugs').style.display=tab==='bugs'?'block':'none';
+  document.getElementById('dpanel-changelog').style.display=tab==='changelog'?'block':'none';
+  document.getElementById('dtab-bugs').style.background=tab==='bugs'?'var(--naranja)':'var(--gris-mid)';
+  document.getElementById('dtab-bugs').style.color=tab==='bugs'?'#fff':'var(--texto-dim)';
+  document.getElementById('dtab-changelog').style.background=tab==='changelog'?'var(--naranja)':'var(--gris-mid)';
+  document.getElementById('dtab-changelog').style.color=tab==='changelog'?'#fff':'var(--texto-dim)';
+}
+
+function renderBugsList(){
+  const el=document.getElementById('bugs-lista');if(!el)return;
+  if(!bugsList.length){el.innerHTML='<div style="color:var(--texto-dim);text-align:center;padding:1rem">✅ Sin errores registrados</div>';return;}
+  el.innerHTML=bugsList.map(b=>`
+    <div style="background:rgba(200,50,50,.1);border:1px solid rgba(200,50,50,.3);border-radius:5px;padding:5px 7px;margin-bottom:4px">
+      <div style="color:var(--texto-dim);font-size:10px;margin-bottom:2px">${b.t}</div>
+      <div style="color:#ff8080;font-size:11px;word-break:break-all">${b.msg}</div>
+    </div>`).join('');
+}
+
+function clearBugs(){
+  bugsList=[];
+  localStorage.removeItem('lf_bugs');
+  renderBugsList();
+  const btn=document.getElementById('debug-btn');
+  if(btn) btn.style.background='var(--gris-mid)';
+}
+
+function renderChangelog(){
+  const el=document.getElementById('changelog-lista');if(!el)return;
+  el.innerHTML=CHANGELOG.map(v=>`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:var(--naranja)">${v.ver}</span>
+        <span style="font-size:10px;color:var(--texto-dim)">${v.fecha}</span>
+      </div>
+      ${v.items.map(i=>`<div style="color:var(--texto);padding:2px 0;font-size:11px;border-left:2px solid var(--gris-light);padding-left:6px;margin-bottom:2px">${i}</div>`).join('')}
+    </div>`).join('<hr style="border-color:var(--gris-mid);margin:8px 0"/>');
+}
+
+// Show red dot if there are existing bugs on load
+window.addEventListener('load',()=>{
+  if(bugsList.length>0){
+    const btn=document.getElementById('debug-btn');
+    if(btn) btn.style.background='rgba(200,50,50,.9)';
+  }
+});
+
     if('serviceWorker' in navigator){
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
