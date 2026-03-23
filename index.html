@@ -423,8 +423,8 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <button class="btns" style="font-size:11px;padding:4px 10px" onclick="resetearContadores()" title="Marcar todo como transferido — empieza desde hoy">🔄 Resetear contadores</button>
         </div>
         <div style="margin-bottom:.8rem;font-size:12px;display:flex;flex-direction:column;gap:4px">
-          <div style="color:var(--texto-dim)">🏦 Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" class="green">Bs.— / $—</strong>${(cfg.comBC||0)>0?` <span style="font-size:10px;color:var(--amarillo)">-${cfg.comBC}% comisión BC</span>`:''}</div>
-          <div style="color:var(--texto-dim)">🏦 Provincial → Bancaribe (insumos): <strong id="gan-inline-pv" style="color:#4caf7d">Bs.— / $—</strong>${(cfg.comPV||0)>0?` <span style="font-size:10px;color:var(--amarillo)">-${cfg.comPV}% comisión PV</span>`:''}</div>
+          <div style="color:var(--texto-dim)">🏦 Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" class="green">Bs.— / $—</strong> <span id="com-bc-badge"></span></div>
+          <div style="color:var(--texto-dim)">🏦 Provincial → Bancaribe (insumos): <strong id="gan-inline-pv" style="color:#4caf7d">Bs.— / $—</strong> <span id="com-pv-badge"></span></div>
         </div>
         <div id="gan-inline" style="display:none"></div>
         <div class="fgrid">
@@ -2225,6 +2225,10 @@ function renderSaldoResumen(){
   if(giBC) giBC.textContent=fBsFixed(pendAProvincialBs)+' / $'+pendAProvincial.toFixed(2);
   const giPV=document.getElementById('gan-inline-pv');
   if(giPV) giPV.textContent=fBsFixed(costosPendBs)+' / $'+costosPend.toFixed(2);
+  const badgeBC=document.getElementById('com-bc-badge');
+  if(badgeBC) badgeBC.innerHTML=(cfg.comBC||0)>0?`<span style="font-size:10px;color:var(--amarillo)">-${cfg.comBC}% comisión</span>`:'';
+  const badgePV=document.getElementById('com-pv-badge');
+  if(badgePV) badgePV.innerHTML=(cfg.comPV||0)>0?`<span style="font-size:10px;color:var(--amarillo)">-${cfg.comPV}% comisión</span>`:'';
 
   // Ventas y ganancia del mes
   try{
