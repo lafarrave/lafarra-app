@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -778,8 +779,12 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
 
     <!-- ESTADÍSTICAS -->
     <div id="tab-stats" class="section">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;justify-content:space-between">
         <select class="inline" id="stats-mes" onchange="renderStats()"><option value="">Todos los meses</option></select>
+        <div style="display:flex;gap:6px">
+          <button class="btn" style="font-size:12px;padding:5px 12px" onclick="generarPDF()">📄 Exportar PDF</button>
+          <button class="btns" style="font-size:12px;padding:5px 12px;background:rgba(200,50,50,.15);border-color:var(--rojo);color:var(--rojo)" onclick="cerrarMes()">🗓 Cerrar mes</button>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
         <div class="card">
@@ -1526,6 +1531,196 @@ async function delComboBote(ci,bi){combos[ci].botesList.splice(bi,1);await saveI
 // Empaque
 async function addComboEmp(ci){const prod=document.getElementById(`cb-emp-sel-${ci}`).value,cant=parseFloat(document.getElementById(`cb-emp-cant-${ci}`).value)||1;if(!prod)return;if(!combos[ci].empaque)combos[ci].empaque=[];combos[ci].empaque.push({prod,cant,pg:getPG(prod)||null});await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
 async function delComboEmp(ci,ei){combos[ci].empaque.splice(ei,1);await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+
+
+// ─── PDF REPORTE MENSUAL ──────────────────────────────────────
+async function generarPDF(){
+  if(typeof window.jspdf==='undefined'){
+    return alert('Cargando librería PDF, intenta en unos segundos...');
+  }
+  const {jsPDF}=window.jspdf;
+  const mes=document.getElementById('stats-mes')?.value||getVEDate().slice(0,7);
+  const mesLabel=mes?mes:'Todos';
+  const data=mes?ventas.filter(v=>v.fecha.startsWith(mes)):[...ventas];
+  const cobradas=data.filter(v=>v.estado!=='pendiente');
+
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210, mg=15;
+  let y=mg;
+
+  // ── Header ──
+  doc.setFillColor(17,17,17);
+  doc.rect(0,0,W,28,'F');
+  doc.setTextColor(232,98,26);
+  doc.setFontSize(22);doc.setFont('helvetica','bold');
+  doc.text('LA FARRA APP',mg,14);
+  doc.setFontSize(10);doc.setFont('helvetica','normal');
+  doc.setTextColor(200,200,200);
+  doc.text('Reporte mensual — '+mesLabel,mg,21);
+  doc.text('Generado: '+new Date().toLocaleDateString('es-VE'),W-mg,21,{align:'right'});
+  y=36;
+
+  // ── Resumen general ──
+  const totalVentas=cobradas.reduce((a,v)=>a+(v.total||0),0);
+  const totalGan=cobradas.reduce((a,v)=>a+(v.gan||0),0);
+  const totalBs=cobradas.reduce((a,v)=>a+(v.totalBs||0),0);
+  const mermaMes=(mermas||[]).filter(m=>mes?m.fecha.startsWith(mes):true);
+  const totalMermaUSD=mermaMes.reduce((a,m)=>a+(m.costo||0),0);
+  const totalMermaBs=mermaMes.reduce((a,m)=>a+(m.costoBs||(m.costo*(m.tasa||tasa))||0),0);
+  const gastosMes=gastosOp.reduce((a,g)=>a+(g.monto||0),0);
+
+  // Summary boxes
+  const boxes=[
+    {label:'Pedidos',val:cobradas.length,sub:'',color:[26,58,26]},
+    {label:'Ventas $',val:'$'+totalVentas.toFixed(2),sub:'Bs.'+Math.round(totalBs).toLocaleString('es-VE'),color:[26,58,26]},
+    {label:'Ganancia $',val:'$'+totalGan.toFixed(2),sub:'Bs.'+Math.round(totalGan*(tasa||1)).toLocaleString('es-VE'),color:[10,40,10]},
+    {label:'Mermas',val:'$'+totalMermaUSD.toFixed(2),sub:'Bs.'+Math.round(totalMermaBs).toLocaleString('es-VE'),color:[50,15,15]},
+  ];
+  const bw=(W-mg*2-9)/4;
+  boxes.forEach((b,i)=>{
+    const x=mg+i*(bw+3);
+    doc.setFillColor(...b.color);
+    doc.roundedRect(x,y,bw,18,2,2,'F');
+    doc.setTextColor(180,180,180);doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text(b.label,x+bw/2,y+5,{align:'center'});
+    doc.setTextColor(232,98,26);doc.setFontSize(11);doc.setFont('helvetica','bold');
+    doc.text(b.val,x+bw/2,y+11,{align:'center'});
+    doc.setTextColor(140,140,140);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    if(b.sub)doc.text(b.sub,x+bw/2,y+16,{align:'center'});
+  });
+  y+=24;
+
+  // ── Productos más vendidos ──
+  doc.setTextColor(232,98,26);doc.setFontSize(12);doc.setFont('helvetica','bold');
+  doc.text('Productos más vendidos',mg,y);y+=6;
+  const prodCount={};
+  data.forEach(v=>(v.items||[]).forEach(it=>{prodCount[it.nom]=(prodCount[it.nom]||0)+(it.qty||1);}));
+  const prods=Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxP=prods.length?prods[0][1]:1;
+  prods.forEach(([nom,qty],i)=>{
+    doc.setFillColor(30,30,30);
+    doc.rect(mg,y,W-mg*2,7,'F');
+    const bar=Math.round((qty/maxP)*(W-mg*2-30));
+    const col=i===0?[76,175,80]:i===prods.length-1?[244,67,54]:[232,98,26];
+    doc.setFillColor(...col);
+    doc.rect(mg,y,bar,7,'F');
+    doc.setFillColor(20,20,20);
+    doc.rect(mg+bar,y,W-mg*2-bar,7,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica',i===0?'bold':'normal');
+    doc.text((i===0?'⬤ ':' ')+nom,mg+2,y+5);
+    doc.text(qty+' uds',W-mg-2,y+5,{align:'right'});
+    y+=8;
+  });
+  y+=4;
+
+  // ── Top clientes ──
+  if(y>220){doc.addPage();y=mg;}
+  doc.setTextColor(232,98,26);doc.setFontSize(12);doc.setFont('helvetica','bold');
+  doc.text('Top clientes',mg,y);y+=6;
+  const cliItems={};
+  data.forEach(v=>{
+    if(!v.cliente||v.cliente==='Sin nombre')return;
+    (v.items||[]).forEach(it=>{cliItems[v.cliente]=(cliItems[v.cliente]||0)+(it.qty||1);});
+  });
+  const clis=Object.entries(cliItems).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const medals=['🥇','🥈','🥉'];
+  clis.forEach(([nom,items],i)=>{
+    doc.setFillColor(i===0?[26,58,26]:i===1?[40,40,20]:i===2?[40,25,10]:[25,25,25]);
+    doc.rect(mg,y,W-mg*2,7,'F');
+    doc.setTextColor(i<3?[232,98,26]:[200,200,200]);
+    doc.setFontSize(8);doc.setFont('helvetica',i===0?'bold':'normal');
+    doc.text((medals[i]||'  ')+' '+nom,mg+2,y+5);
+    doc.text(items+' ítem'+(items>1?'s':''),W-mg-2,y+5,{align:'right'});
+    y+=8;
+  });
+  y+=4;
+
+  // ── Mermas ──
+  if(mermaMes.length>0){
+    if(y>220){doc.addPage();y=mg;}
+    doc.setTextColor(220,60,60);doc.setFontSize(12);doc.setFont('helvetica','bold');
+    doc.text('Mermas del mes',mg,y);y+=6;
+    doc.setFontSize(8);
+    mermaMes.forEach(m=>{
+      doc.setFillColor(35,15,15);
+      doc.rect(mg,y,W-mg*2,7,'F');
+      doc.setTextColor(220,120,120);doc.setFont('helvetica','normal');
+      doc.text(m.fecha+' — '+m.prod+' ('+m.cant+' '+m.unit+') ['+m.motivo+']',mg+2,y+5);
+      doc.text('$'+(m.costo||0).toFixed(4),W-mg-2,y+5,{align:'right'});
+      y+=8;
+    });
+    // Total
+    doc.setFillColor(50,10,10);
+    doc.rect(mg,y,W-mg*2,7,'F');
+    doc.setTextColor(255,80,80);doc.setFont('helvetica','bold');
+    doc.text('Total pérdidas',mg+2,y+5);
+    doc.text('$'+totalMermaUSD.toFixed(4)+' / Bs.'+Math.round(totalMermaBs).toLocaleString('es-VE'),W-mg-2,y+5,{align:'right'});
+    y+=12;
+  }
+
+  // ── Gastos operativos ──
+  if(gastosOp.length>0){
+    if(y>230){doc.addPage();y=mg;}
+    doc.setTextColor(232,98,26);doc.setFontSize(12);doc.setFont('helvetica','bold');
+    doc.text('Gastos operativos (referencia)',mg,y);y+=6;
+    gastosOp.forEach(g=>{
+      doc.setFillColor(25,25,25);
+      doc.rect(mg,y,W-mg*2,6,'F');
+      doc.setTextColor(180,180,180);doc.setFontSize(8);doc.setFont('helvetica','normal');
+      doc.text(g.desc,mg+2,y+4);
+      doc.text('$'+g.monto.toFixed(2),W-mg-2,y+4,{align:'right'});
+      y+=7;
+    });
+    doc.setFillColor(30,30,30);
+    doc.rect(mg,y,W-mg*2,7,'F');
+    doc.setTextColor(232,98,26);doc.setFont('helvetica','bold');doc.setFontSize(9);
+    doc.text('Total gastos',mg+2,y+5);
+    doc.text('$'+gastosMes.toFixed(2),W-mg-2,y+5,{align:'right'});
+    y+=12;
+  }
+
+  // ── Footer ──
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);
+    doc.setFillColor(17,17,17);
+    doc.rect(0,287,W,10,'F');
+    doc.setTextColor(100,100,100);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text('La Farra App — Reporte '+mesLabel,mg,293);
+    doc.text('Página '+i+' de '+pages,W-mg,293,{align:'right'});
+  }
+
+  doc.save('LaFarra_Reporte_'+mesLabel+'.pdf');
+}
+
+async function cerrarMes(){
+  const mes=document.getElementById('stats-mes')?.value||getVEDate().slice(0,7);
+  if(!mes)return alert('Selecciona un mes específico para cerrar');
+  if(!confirm('¿Cerrar el mes '+mes+'?\n\nEsto eliminará las ventas, movimientos y mermas de ese mes.\n\n⚠ Asegúrate de haber exportado el PDF primero.'))return;
+
+  // Archive ventas
+  const ventasAntes=ventas.filter(v=>!v.fecha.startsWith(mes));
+  const movsAntes=movs.filter(m=>!m.fecha.startsWith(mes));
+  const mermasAntes=(mermas||[]).filter(m=>!m.fecha.startsWith(mes));
+
+  ventas=ventasAntes;
+  movs=movsAntes;
+  mermas=mermasAntes;
+
+  // Delete from Supabase
+  try{
+    const {data:ventRows}=await sb.from('ventas').select('id,data');
+    if(ventRows){
+      const toDelete=ventRows.filter(r=>r.data?.fecha?.startsWith(mes)).map(r=>r.id);
+      if(toDelete.length>0) await sb.from('ventas').delete().in('id',toDelete);
+    }
+  }catch(e){console.error('Error borrando ventas:',e);}
+
+  await saveSaldo_db();
+  await saveInv_db();
+  renderStats();renderVentas();renderMovs();renderSaldoResumen();renderMermas();
+  alert('✓ Mes '+mes+' cerrado correctamente');
+}
 
 // ─── SUPABASE ───────────────────────────────────────────────
 const SUPA_URL = 'https://ljgjpmlvjnqfpstltjmy.supabase.co';
