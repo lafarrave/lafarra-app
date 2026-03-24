@@ -1535,32 +1535,11 @@ async function delComboEmp(ci,ei){combos[ci].empaque.splice(ei,1);await saveInv_
 
 // ─── PDF REPORTE MENSUAL ──────────────────────────────────────
 async function generarPDF(){
-  if(typeof window.jspdf==='undefined'){
-    return alert('Cargando librería PDF, intenta en unos segundos...');
-  }
-  const {jsPDF}=window.jspdf;
   const mes=document.getElementById('stats-mes')?.value||getVEDate().slice(0,7);
-  const mesLabel=mes?mes:'Todos';
+  const mesLabel=mes||'Todos los meses';
   const data=mes?ventas.filter(v=>v.fecha.startsWith(mes)):[...ventas];
   const cobradas=data.filter(v=>v.estado!=='pendiente');
 
-  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const W=210, mg=15;
-  let y=mg;
-
-  // ── Header ──
-  doc.setFillColor(17,17,17);
-  doc.rect(0,0,W,28,'F');
-  doc.setTextColor(232,98,26);
-  doc.setFontSize(22);doc.setFont('helvetica','bold');
-  doc.text('LA FARRA APP',mg,14);
-  doc.setFontSize(10);doc.setFont('helvetica','normal');
-  doc.setTextColor(200,200,200);
-  doc.text('Reporte mensual — '+mesLabel,mg,21);
-  doc.text('Generado: '+new Date().toLocaleDateString('es-VE'),W-mg,21,{align:'right'});
-  y=36;
-
-  // ── Resumen general ──
   const totalVentas=cobradas.reduce((a,v)=>a+(v.total||0),0);
   const totalGan=cobradas.reduce((a,v)=>a+(v.gan||0),0);
   const totalBs=cobradas.reduce((a,v)=>a+(v.totalBs||0),0);
@@ -1569,54 +1548,13 @@ async function generarPDF(){
   const totalMermaBs=mermaMes.reduce((a,m)=>a+(m.costoBs||(m.costo*(m.tasa||tasa))||0),0);
   const gastosMes=gastosOp.reduce((a,g)=>a+(g.monto||0),0);
 
-  // Summary boxes
-  const boxes=[
-    {label:'Pedidos',val:cobradas.length,sub:'',color:[26,58,26]},
-    {label:'Ventas $',val:'$'+totalVentas.toFixed(2),sub:'Bs.'+Math.round(totalBs).toLocaleString('es-VE'),color:[26,58,26]},
-    {label:'Ganancia $',val:'$'+totalGan.toFixed(2),sub:'Bs.'+Math.round(totalGan*(tasa||1)).toLocaleString('es-VE'),color:[10,40,10]},
-    {label:'Mermas',val:'$'+totalMermaUSD.toFixed(2),sub:'Bs.'+Math.round(totalMermaBs).toLocaleString('es-VE'),color:[50,15,15]},
-  ];
-  const bw=(W-mg*2-9)/4;
-  boxes.forEach((b,i)=>{
-    const x=mg+i*(bw+3);
-    doc.setFillColor(...b.color);
-    doc.roundedRect(x,y,bw,18,2,2,'F');
-    doc.setTextColor(180,180,180);doc.setFontSize(8);doc.setFont('helvetica','normal');
-    doc.text(b.label,x+bw/2,y+5,{align:'center'});
-    doc.setTextColor(232,98,26);doc.setFontSize(11);doc.setFont('helvetica','bold');
-    doc.text(b.val,x+bw/2,y+11,{align:'center'});
-    doc.setTextColor(140,140,140);doc.setFontSize(7);doc.setFont('helvetica','normal');
-    if(b.sub)doc.text(b.sub,x+bw/2,y+16,{align:'center'});
-  });
-  y+=24;
-
-  // ── Productos más vendidos ──
-  doc.setTextColor(232,98,26);doc.setFontSize(12);doc.setFont('helvetica','bold');
-  doc.text('Productos más vendidos',mg,y);y+=6;
+  // Products
   const prodCount={};
   data.forEach(v=>(v.items||[]).forEach(it=>{prodCount[it.nom]=(prodCount[it.nom]||0)+(it.qty||1);}));
   const prods=Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const maxP=prods.length?prods[0][1]:1;
-  prods.forEach(([nom,qty],i)=>{
-    doc.setFillColor(30,30,30);
-    doc.rect(mg,y,W-mg*2,7,'F');
-    const bar=Math.round((qty/maxP)*(W-mg*2-30));
-    const col=i===0?[76,175,80]:i===prods.length-1?[244,67,54]:[232,98,26];
-    doc.setFillColor(...col);
-    doc.rect(mg,y,bar,7,'F');
-    doc.setFillColor(20,20,20);
-    doc.rect(mg+bar,y,W-mg*2-bar,7,'F');
-    doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica',i===0?'bold':'normal');
-    doc.text((i===0?'⬤ ':' ')+nom,mg+2,y+5);
-    doc.text(qty+' uds',W-mg-2,y+5,{align:'right'});
-    y+=8;
-  });
-  y+=4;
 
-  // ── Top clientes ──
-  if(y>220){doc.addPage();y=mg;}
-  doc.setTextColor(232,98,26);doc.setFontSize(12);doc.setFont('helvetica','bold');
-  doc.text('Top clientes',mg,y);y+=6;
+  // Clients
   const cliItems={};
   data.forEach(v=>{
     if(!v.cliente||v.cliente==='Sin nombre')return;
@@ -1624,73 +1562,91 @@ async function generarPDF(){
   });
   const clis=Object.entries(cliItems).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const medals=['🥇','🥈','🥉'];
-  clis.forEach(([nom,items],i)=>{
-    doc.setFillColor(i===0?[26,58,26]:i===1?[40,40,20]:i===2?[40,25,10]:[25,25,25]);
-    doc.rect(mg,y,W-mg*2,7,'F');
-    doc.setTextColor(i<3?[232,98,26]:[200,200,200]);
-    doc.setFontSize(8);doc.setFont('helvetica',i===0?'bold':'normal');
-    doc.text((medals[i]||'  ')+' '+nom,mg+2,y+5);
-    doc.text(items+' ítem'+(items>1?'s':''),W-mg-2,y+5,{align:'right'});
-    y+=8;
-  });
-  y+=4;
 
-  // ── Mermas ──
-  if(mermaMes.length>0){
-    if(y>220){doc.addPage();y=mg;}
-    doc.setTextColor(220,60,60);doc.setFontSize(12);doc.setFont('helvetica','bold');
-    doc.text('Mermas del mes',mg,y);y+=6;
-    doc.setFontSize(8);
-    mermaMes.forEach(m=>{
-      doc.setFillColor(35,15,15);
-      doc.rect(mg,y,W-mg*2,7,'F');
-      doc.setTextColor(220,120,120);doc.setFont('helvetica','normal');
-      doc.text(m.fecha+' — '+m.prod+' ('+m.cant+' '+m.unit+') ['+m.motivo+']',mg+2,y+5);
-      doc.text('$'+(m.costo||0).toFixed(4),W-mg-2,y+5,{align:'right'});
-      y+=8;
-    });
-    // Total
-    doc.setFillColor(50,10,10);
-    doc.rect(mg,y,W-mg*2,7,'F');
-    doc.setTextColor(255,80,80);doc.setFont('helvetica','bold');
-    doc.text('Total pérdidas',mg+2,y+5);
-    doc.text('$'+totalMermaUSD.toFixed(4)+' / Bs.'+Math.round(totalMermaBs).toLocaleString('es-VE'),W-mg-2,y+5,{align:'right'});
-    y+=12;
-  }
+  const html=`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<title>La Farra — Reporte ${mesLabel}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,sans-serif;background:#fff;color:#111;padding:20px;font-size:12px}
+  .header{background:#111;color:#fff;padding:16px 20px;border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .header h1{color:#E8621A;font-size:22px;font-weight:900}
+  .header p{color:#aaa;font-size:11px;margin-top:2px}
+  .boxes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .box{border-radius:6px;padding:10px;text-align:center}
+  .box-green{background:#0d1a10;border:1px solid #2a5a2a}
+  .box-red{background:#1a0a0a;border:1px solid #5a2020}
+  .box label{display:block;color:#aaa;font-size:10px;margin-bottom:4px;text-transform:uppercase}
+  .box .val{color:#E8621A;font-size:16px;font-weight:700}
+  .box .sub{color:#666;font-size:10px;margin-top:2px}
+  .section-title{color:#E8621A;font-size:13px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #E8621A;padding-bottom:4px;margin-bottom:10px;margin-top:16px}
+  .bar-row{display:flex;align-items:center;margin-bottom:5px;gap:8px}
+  .bar-row .nom{width:140px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-bg{flex:1;height:14px;background:#eee;border-radius:3px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:3px}
+  .bar-qty{width:40px;text-align:right;font-size:11px;font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th{background:#f0f0f0;padding:5px 8px;text-align:left;font-weight:700}
+  td{padding:5px 8px;border-bottom:1px solid #eee}
+  .red{color:#c00}
+  .green{color:#090}
+  .orange{color:#E8621A}
+  .footer{margin-top:20px;text-align:center;color:#aaa;font-size:10px;border-top:1px solid #eee;padding-top:10px}
+  @media print{body{padding:10px}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><h1>LA FARRA APP</h1><p>Reporte mensual — ${mesLabel}</p></div>
+  <div style="text-align:right;color:#aaa;font-size:11px">Generado: ${new Date().toLocaleDateString('es-VE')}<br/>Tasa BCV: ${(tasa||0).toFixed(2)} Bs/$</div>
+</div>
 
-  // ── Gastos operativos ──
-  if(gastosOp.length>0){
-    if(y>230){doc.addPage();y=mg;}
-    doc.setTextColor(232,98,26);doc.setFontSize(12);doc.setFont('helvetica','bold');
-    doc.text('Gastos operativos (referencia)',mg,y);y+=6;
-    gastosOp.forEach(g=>{
-      doc.setFillColor(25,25,25);
-      doc.rect(mg,y,W-mg*2,6,'F');
-      doc.setTextColor(180,180,180);doc.setFontSize(8);doc.setFont('helvetica','normal');
-      doc.text(g.desc,mg+2,y+4);
-      doc.text('$'+g.monto.toFixed(2),W-mg-2,y+4,{align:'right'});
-      y+=7;
-    });
-    doc.setFillColor(30,30,30);
-    doc.rect(mg,y,W-mg*2,7,'F');
-    doc.setTextColor(232,98,26);doc.setFont('helvetica','bold');doc.setFontSize(9);
-    doc.text('Total gastos',mg+2,y+5);
-    doc.text('$'+gastosMes.toFixed(2),W-mg-2,y+5,{align:'right'});
-    y+=12;
-  }
+<div class="boxes">
+  <div class="box box-green"><label>Pedidos</label><div class="val">${cobradas.length}</div></div>
+  <div class="box box-green"><label>Ventas</label><div class="val">$${totalVentas.toFixed(2)}</div><div class="sub">Bs.${Math.round(totalBs).toLocaleString('es-VE')}</div></div>
+  <div class="box box-green"><label>Ganancia</label><div class="val green">$${totalGan.toFixed(2)}</div><div class="sub">Bs.${Math.round(totalGan*tasa).toLocaleString('es-VE')}</div></div>
+  <div class="box box-red"><label>Mermas</label><div class="val red">$${totalMermaUSD.toFixed(2)}</div><div class="sub">Bs.${Math.round(totalMermaBs).toLocaleString('es-VE')}</div></div>
+</div>
 
-  // ── Footer ──
-  const pages=doc.internal.getNumberOfPages();
-  for(let i=1;i<=pages;i++){
-    doc.setPage(i);
-    doc.setFillColor(17,17,17);
-    doc.rect(0,287,W,10,'F');
-    doc.setTextColor(100,100,100);doc.setFontSize(7);doc.setFont('helvetica','normal');
-    doc.text('La Farra App — Reporte '+mesLabel,mg,293);
-    doc.text('Página '+i+' de '+pages,W-mg,293,{align:'right'});
-  }
+<div class="section-title">Productos más vendidos</div>
+${prods.map(([nom,qty],i)=>{
+  const pct=Math.round(qty/maxP*100);
+  const col=i===0?'#4caf50':i===prods.length-1?'#f44336':'#E8621A';
+  return`<div class="bar-row"><div class="nom">${i===0?'⭐ ':''}${nom}</div><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div><div class="bar-qty" style="color:${col}">${qty}</div></div>`;
+}).join('')}
 
-  doc.save('LaFarra_Reporte_'+mesLabel+'.pdf');
+<div class="section-title">Top clientes</div>
+<table>
+<tr><th>#</th><th>Cliente</th><th>Ítems</th></tr>
+${clis.map(([nom,items],i)=>`<tr><td>${medals[i]||i+1}</td><td>${nom}</td><td style="font-weight:700;color:${i===0?'#090':'#E8621A'}">${items}</td></tr>`).join('')}
+</table>
+
+${mermaMes.length>0?`
+<div class="section-title">Mermas del mes</div>
+<table>
+<tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Motivo</th><th>Pérdida $</th></tr>
+${mermaMes.map(m=>`<tr><td>${m.fecha}</td><td>${m.prod}</td><td>${m.cant} ${m.unit}</td><td>${m.motivo}</td><td class="red">$${(m.costo||0).toFixed(4)}</td></tr>`).join('')}
+<tr style="font-weight:700"><td colspan="4">Total pérdidas</td><td class="red">$${totalMermaUSD.toFixed(4)}</td></tr>
+</table>`:''}
+
+${gastosOp.length>0?`
+<div class="section-title">Gastos operativos (referencia)</div>
+<table>
+<tr><th>Descripción</th><th>Monto $</th></tr>
+${gastosOp.map(g=>`<tr><td>${g.desc}</td><td>$${g.monto.toFixed(2)}</td></tr>`).join('')}
+<tr style="font-weight:700"><td>Total</td><td class="orange">$${gastosMes.toFixed(2)}</td></tr>
+</table>`:''}
+
+<div class="footer">La Farra App — Reporte ${mesLabel} — ${new Date().toLocaleDateString('es-VE')}</div>
+</body></html>`;
+
+  const win=window.open('','_blank','width=800,height=900');
+  if(!win){alert('Permite ventanas emergentes para generar el PDF');return;}
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>{win.focus();win.print();},500);
 }
 
 async function cerrarMes(){
