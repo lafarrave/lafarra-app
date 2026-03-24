@@ -2248,8 +2248,8 @@ function renderSaldoResumen(){
   // Build transfer boxes dynamically
   const gridEl=document.getElementById('grid-transferencias');
   if(gridEl){
-    const haBC=ventasBC.length>0;
-    const haPV=ventasPV.length>0;
+    const haBC=pendAProvincial>0.01;
+    const haPV=costosPend>0.01;
     if(!haBC&&!haPV){
       gridEl.innerHTML='';
     } else {
@@ -2275,9 +2275,9 @@ function renderSaldoResumen(){
   // GANANCIA — two info lines in transfer card
   const gpBs=tasa>0?gp*tasa:0;
   const giBC=document.getElementById('gan-inline-bc');
-  if(giBC) giBC.textContent=fBsFixed(pendAProvincialBs)+' / $'+pendAProvincial.toFixed(2);
+  if(giBC) giBC.textContent=pendAProvincial>0.001?fBsFixed(pendAProvincialBs)+' / $'+pendAProvincial.toFixed(2):'Bs.0 / $0.00';
   const giPV=document.getElementById('gan-inline-pv');
-  if(giPV) giPV.textContent=fBsFixed(costosPendBs)+' / $'+costosPend.toFixed(2);
+  if(giPV) giPV.textContent=costosPend>0.001?fBsFixed(costosPendBs)+' / $'+costosPend.toFixed(2):'Bs.0 / $0.00';
   const badgeBC=document.getElementById('com-bc-badge');
   if(badgeBC) badgeBC.innerHTML=(cfg.comBC||0)>0?`<span style="font-size:10px;color:var(--amarillo)">-${cfg.comBC}% comisión</span>`:'';
   const badgePV=document.getElementById('com-pv-badge');
