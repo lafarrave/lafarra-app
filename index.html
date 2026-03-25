@@ -3499,7 +3499,7 @@ function buildPrepCard(p,pi){
         <div style="display:flex;align-items:center;gap:5px;font-size:11px"><span style="color:var(--texto-dim)">Factor aceite:</span><input type="number" value="${p.factorAceite||''}" placeholder="0.15" step="0.01" min="0" max="1" style="width:60px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 5px;font-size:11px;text-align:right" onchange="editFactorAceite(${pi},this.value)" onclick="event.stopPropagation()"/></div>
       </div>
       <div class="fgrid" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
-        <div class="fg"><label>Producto</label><select id="pi-p-${pi}" onchange="autoPGP(${pi})"><option value="">...</option>${PRODS.map(x=>`<option value="${x}">${x}</option>`).join('')}</select></div>
+        <div class="fg"><label>Producto</label><select id="pi-p-${pi}" onchange="autoPGP(${pi})"><option value="">...</option>${getProds().map(x=>`<option value="${x}">${x}</option>`).join('')}</select></div>
         <div class="fg"><label>Cantidad (g)</label><input type="number" id="pi-c-${pi}"/></div>
         <div class="fg"><label>Precio/g</label><input type="number" id="pi-pg-${pi}" placeholder="auto"/></div>
       </div>
