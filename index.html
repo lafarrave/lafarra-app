@@ -2178,7 +2178,7 @@ function getGanPend(){
     if((v.gan||0)>0) return a+(v.gan||0);
     return a+Math.max(0,(v.total||0)-(v.costo||0));
   },0);
-  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>=fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
   return Math.max(0,ganVentasBC-totalTransfBCtoPC);
 }
 function tog(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
@@ -2468,7 +2468,7 @@ function renderSaldoResumen(){
   },0);
   // Only count actual registered transfers, not ganT (which may include old data)
   // Solo transferencias DESPUÉS del corte (las anteriores ya estaban contadas)
-  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>=fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
   const pendAProvincial=Math.max(0,ganVentasBC-totalTransfBCtoPC);
   const pendAProvincialBs=tasa>0?pendAProvincial*tasa:0;
   const spt=document.getElementById('s-pendiente-transferir');
@@ -2503,7 +2503,7 @@ function renderSaldoResumen(){
     },0);
   }
   const costosProvincial=ventasPV.reduce((a,v)=>a+getVentaCosto(v),0);
-  const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc'&&m.fecha>fechaCortePV).reduce((a,m)=>a+(m.monto||0),0);
+  const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc'&&m.fecha>=fechaCortePV).reduce((a,m)=>a+(m.monto||0),0);
   const costosPend=Math.max(0,costosProvincial-totalTransfPVtoBC);
   const costosPendBs=tasa>0?costosPend*tasa:0;
 
