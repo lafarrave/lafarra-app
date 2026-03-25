@@ -2866,6 +2866,35 @@ function calcConsumo(){
   ventas.forEach(v=>{
     v.items.forEach(item=>{
       const qty=item.qty||1;
+
+      // ── Combos ──
+      const combo=combos.find(cb=>cb.nom===item.nom);
+      if(combo){
+        // Burgers del combo
+        (combo.burgers||[]).forEach(b=>{
+          const mi2=menuItems.find(m=>m.nom===b.nom);
+          if(mi2){mi2.comps.forEach(co=>{
+            if(co.tipo==='ing') consumo[co.nom]=(consumo[co.nom]||0)+co.cant*b.qty*qty;
+            else if(co.tipo==='prep'){const p=preps.find(x=>x.nom===co.nom);if(p)p.ings.forEach(ing=>{const r=co.cant/(p.g||1);consumo[ing.prod]=(consumo[ing.prod]||0)+ing.cant*r*b.qty*qty;});}
+          });}
+        });
+        // Papas del combo
+        if(combo.papas&&combo.papas.prep&&combo.papas.gramos>0){
+          const pp=preps.find(x=>x.nom===combo.papas.prep);
+          if(pp)pp.ings.forEach(ing=>{const r=combo.papas.gramos/(pp.g||1);consumo[ing.prod]=(consumo[ing.prod]||0)+ing.cant*r*qty;});
+        }
+        // Ingredientes sueltos del combo
+        (combo.ings||[]).forEach(ing=>{consumo[ing.nom]=(consumo[ing.nom]||0)+ing.cant*qty;});
+        // Botes del combo
+        (combo.botesList||[]).forEach(b=>{
+          if(b.ingNom) consumo[b.ingNom]=(consumo[b.ingNom]||0)+(b.cantBote||1)*qty;
+          if(b.prepNom&&b.prepCant>0){const p=preps.find(x=>x.nom===b.prepNom);if(p)p.ings.forEach(ing=>{const r=b.prepCant/(p.g||1);consumo[ing.prod]=(consumo[ing.prod]||0)+ing.cant*r*qty;});}
+        });
+        // Empaque del combo
+        (combo.empaque||[]).forEach(e=>{consumo[e.prod]=(consumo[e.prod]||0)+e.cant*qty;});
+        return; // skip normal processing
+      }
+
       const mi=menuItems.find(m=>m.nom===item.nom);
       if(mi){
         // Descontar ingredientes del menú
@@ -2901,8 +2930,8 @@ function calcConsumo(){
           }
         }
       }
-    });
-  });
+    }); // end items forEach
+  }); // end ventas forEach
   return consumo;
 }
 
