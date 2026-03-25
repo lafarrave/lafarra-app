@@ -234,6 +234,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div class="tab" onclick="showTab('vidriera',this)">👁 Vidriera</div>
     <div class="tab" onclick="showTab('preparados',this)">🍳 Preparados</div>
     <div class="tab" onclick="showTab('menu',this)">🍔 Menú</div>
+    <div class="tab" onclick="showTab('produccion',this)">🧮 Producción</div>
     <div class="tab" onclick="showTab('combos',this)">🍿 Combos</div>
     <div class="tab" onclick="showTab('pos',this)">🧾 Ventas</div>
     <div class="tab" onclick="showTab('envios',this)">🚴 Envíos</div>
@@ -312,15 +313,9 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <div id="emp-papas-total" style="font-size:12px;color:var(--texto-dim);margin-top:.5rem"></div>
       </div>
       <div class="card">
-        <div class="card-title">⚖️ Calculadora de porciones (referencia)</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Define el gramaje de cada porción. El sistema calculará cuántas tienes disponibles según el stock. Solo es referencia — no afecta el sistema de ventas.</div>
-        <div id="porciones-lista"></div>
-        <div class="fgrid" style="margin-top:.5rem">
-          <div class="fg"><label>Nombre de la porción</label><input type="text" id="porc-nom" placeholder="ej: Medallón Smash"/></div>
-          <div class="fg"><label>Ingrediente base</label><select id="porc-prod"><option value="">Seleccionar...</option></select></div>
-          <div class="fg"><label>Gramos por porción</label><input type="number" id="porc-gr" placeholder="ej: 80"/></div>
-        </div>
-        <button class="btn" onclick="addPorcion()">Agregar porción</button>
+        <div class="card-title">⚖️ Porciones</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Configura aquí las porciones. La calculadora de producción está en la pestaña <strong>🧮 Producción</strong>.</div>
+        <div style="background:var(--gris-mid);border-radius:6px;padding:.5rem .7rem;font-size:12px;cursor:pointer;color:var(--naranja)" onclick="showTab('produccion',document.querySelector('.tab[onclick*=produccion]'))">→ Ir a Calculadora de Producción</div>
       </div>
       <div class="card">
         <div class="card-title">Lista de productos (ingredientes)</div>
@@ -775,6 +770,30 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <button class="btn" onclick="crearCombo()">Crear combo</button>
       </div>
       <div id="lista-combos"></div>
+    </div>
+
+
+    <!-- PRODUCCIÓN -->
+    <div id="tab-produccion" class="section">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+          <div class="card-title" style="margin:0">🧮 Calculadora de producción</div>
+          <button class="btns" style="font-size:11px;padding:4px 10px" onclick="renderProduccion()">🔄 Actualizar</button>
+        </div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.8rem">¿Cuántas burgers puedes hacer ahora mismo con el stock disponible?</div>
+        <div id="prod-calc-menu"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚖️ Porciones de ingredientes</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Cuántas porciones de cada ingrediente tienes disponibles.</div>
+        <div id="porciones-lista"></div>
+        <div class="fgrid" style="margin-top:.5rem">
+          <div class="fg"><label>Nombre</label><input type="text" id="porc-nom" placeholder="ej: Medallón Smash"/></div>
+          <div class="fg"><label>Ingrediente</label><select id="porc-prod"><option value="">Seleccionar...</option></select></div>
+          <div class="fg"><label>Gramos c/u</label><input type="number" id="porc-gr" placeholder="ej: 80"/></div>
+        </div>
+        <button class="btn" onclick="addPorcion()">Agregar</button>
+      </div>
     </div>
 
     <!-- ESTADÍSTICAS -->
@@ -1259,6 +1278,96 @@ function addPorcion(){
   document.getElementById('porc-gr').value='';
   document.getElementById('porc-prod').value='';
   const lbl=document.getElementById('porc-prod_lbl');if(lbl)lbl.textContent='Seleccionar...';
+}
+
+function renderProduccion(){
+  const cont=document.getElementById('prod-calc-menu');if(!cont)return;
+  const {stock}=calcStock();
+
+  // Calculate max units possible for each menu item
+  const items=[...menuItems,...combos.filter(cb=>cb.activo!==false)];
+  if(!items.length){cont.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Crea ítems en Menú primero.</div>';return;}
+
+  const results=items.map(item=>{
+    const isCombo=!!item.burgers; // combos have burgers array
+    let limitantes=[];
+    let maxUnits=999;
+
+    if(isCombo){
+      // Check combo burgers
+      (item.burgers||[]).forEach(b=>{
+        const mi=menuItems.find(m=>m.nom===b.nom);
+        if(mi){mi.comps.forEach(co=>{
+          if(co.tipo==='ing'){
+            const disp=stock[co.nom]||0;
+            const needed=co.cant*b.qty;
+            const posible=needed>0?Math.floor(disp/needed):999;
+            if(posible<maxUnits){maxUnits=posible;limitantes=[{prod:co.nom,disp:disp.toFixed(0),needed:needed.toFixed(1)}];}
+            else if(posible===maxUnits&&posible<999) limitantes.push({prod:co.nom,disp:disp.toFixed(0),needed:needed.toFixed(1)});
+          }
+        });}
+      });
+      // Check combo papas
+      if(item.papas&&item.papas.prep&&item.papas.gramos>0){
+        const p=preps.find(x=>x.nom===item.papas.prep);
+        if(p)p.ings.forEach(ing=>{
+          const disp=stock[ing.prod]||0;
+          const ratio=item.papas.gramos/(p.g||1);
+          const needed=ing.cant*ratio;
+          const posible=needed>0?Math.floor(disp/needed):999;
+          if(posible<maxUnits){maxUnits=posible;limitantes=[{prod:ing.prod,disp:disp.toFixed(0),needed:needed.toFixed(1)}];}
+          else if(posible===maxUnits&&posible<999) limitantes.push({prod:ing.prod,disp:disp.toFixed(0),needed:needed.toFixed(1)});
+        });
+      }
+    } else {
+      // Menu item
+      item.comps.forEach(co=>{
+        if(co.tipo==='ing'){
+          const disp=stock[co.nom]||0;
+          const posible=co.cant>0?Math.floor(disp/co.cant):999;
+          if(posible<maxUnits){maxUnits=posible;limitantes=[{prod:co.nom,disp:disp.toFixed(0),needed:co.cant.toFixed(1)}];}
+          else if(posible===maxUnits&&posible<999) limitantes.push({prod:co.nom,disp:disp.toFixed(0),needed:co.cant.toFixed(1)});
+        } else if(co.tipo==='prep'){
+          const p=preps.find(x=>x.nom===co.nom);
+          if(p)p.ings.forEach(ing=>{
+            const disp=stock[ing.prod]||0;
+            const ratio=co.cant/(p.g||1);
+            const needed=ing.cant*ratio;
+            const posible=needed>0?Math.floor(disp/needed):999;
+            if(posible<maxUnits){maxUnits=posible;limitantes=[{prod:ing.prod,disp:disp.toFixed(0),needed:needed.toFixed(1)}];}
+            else if(posible===maxUnits&&posible<999) limitantes.push({prod:ing.prod,disp:disp.toFixed(0),needed:needed.toFixed(1)});
+          });
+        }
+      });
+    }
+    if(maxUnits===999) maxUnits=0; // no ingredients configured
+    return {nom:item.nom,max:maxUnits,limitantes,isCombo};
+  });
+
+  // Sort by max units descending
+  results.sort((a,b)=>b.max-a.max);
+  const maxAll=results.length?Math.max(...results.map(r=>r.max),1):1;
+
+  cont.innerHTML=results.map(r=>{
+    const color=r.max===0?'var(--rojo)':r.max<=3?'var(--amarillo)':'var(--verde)';
+    const pct=Math.min(100,Math.round(r.max/maxAll*100));
+    const badge=r.isCombo?'<span class="badge bi" style="font-size:9px">combo</span>':'';
+    const limitText=r.max>0&&r.limitantes.length?
+      '<div style="font-size:10px;color:var(--texto-dim);margin-top:2px">Límite: '+r.limitantes.map(l=>l.prod+' ('+l.disp+'g disp / '+l.needed+'g c/u)').join(', ')+'</div>':'';
+    return`<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <div><span style="font-weight:600;font-size:13px">${r.nom}</span> ${badge}</div>
+        <div style="text-align:right">
+          <span style="font-size:22px;font-weight:900;color:${color};font-family:'Barlow Condensed',sans-serif">${r.max}</span>
+          <span style="font-size:11px;color:var(--texto-dim);margin-left:3px">unidades</span>
+        </div>
+      </div>
+      <div style="height:8px;background:var(--gris-mid);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width .4s"></div>
+      </div>
+      ${limitText}
+    </div>`;
+  }).join('');
 }
 
 function renderPorciones(){
@@ -1972,6 +2081,7 @@ async function fetchBCV(){
         try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
   try{ renderCombos(); }catch(e){}
+  try{ renderProduccion(); }catch(e){}
   try{ initMermaSelects();renderMermas(); }catch(e){}
   // One-time merge: if localStorage has items Supabase doesn't, push them up
   try{
@@ -2080,6 +2190,7 @@ function showTab(n,el){
   el.classList.add('active');
   if(n==='vidriera')renderVidriera();
   if(n==='combos')renderCombos();
+  if(n==='produccion'){renderProduccion();renderPorciones();}
   if(n==='preparados')renderPreps();
   if(n==='menu')renderMenuItems();
   if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();}
@@ -3798,6 +3909,7 @@ async function init(){
   try{ renderPOSCats(); }catch(e){}
   try{ renderPagoMovilInfo(); }catch(e){}
   try{ renderCombos(); }catch(e){}
+  try{ renderProduccion(); }catch(e){}
   try{ initMermaSelects();renderMermas(); }catch(e){}
   // One-time merge: if localStorage has items Supabase doesn't, push them up
   try{
