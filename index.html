@@ -234,7 +234,6 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div class="tab" onclick="showTab('vidriera',this)">👁 Vidriera</div>
     <div class="tab" onclick="showTab('preparados',this)">🍳 Preparados</div>
     <div class="tab" onclick="showTab('menu',this)">🍔 Menú</div>
-    <div class="tab" onclick="showTab('produccion',this)">🧮 Producción</div>
     <div class="tab" onclick="showTab('combos',this)">🍿 Combos</div>
     <div class="tab" onclick="showTab('pos',this)">🧾 Ventas</div>
     <div class="tab" onclick="showTab('envios',this)">🚴 Envíos</div>
@@ -314,8 +313,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       </div>
       <div class="card">
         <div class="card-title">⚖️ Porciones</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Configura aquí las porciones. La calculadora de producción está en la pestaña <strong>🧮 Producción</strong>.</div>
-        <div style="background:var(--gris-mid);border-radius:6px;padding:.5rem .7rem;font-size:12px;cursor:pointer;color:var(--naranja)" onclick="showTab('produccion',document.querySelector('.tab[onclick*=produccion]'))">→ Ir a Calculadora de Producción</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Define porciones de referencia por ingrediente.</div>
       </div>
       <div class="card">
         <div class="card-title">Lista de productos (ingredientes)</div>
@@ -771,31 +769,6 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       </div>
       <div id="lista-combos"></div>
     </div>
-
-
-    <!-- PRODUCCIÓN -->
-    <div id="tab-produccion" class="section">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
-          <div class="card-title" style="margin:0">🧮 Calculadora de producción</div>
-          <button class="btns" style="font-size:11px;padding:4px 10px" onclick="renderProduccion()">🔄 Actualizar</button>
-        </div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.8rem">¿Cuántas burgers puedes hacer ahora mismo con el stock disponible?</div>
-        <div id="prod-calc-menu"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">⚖️ Porciones de ingredientes</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Cuántas porciones de cada ingrediente tienes disponibles.</div>
-        <div id="porciones-lista"></div>
-        <div class="fgrid" style="margin-top:.5rem">
-          <div class="fg"><label>Nombre</label><input type="text" id="porc-nom" placeholder="ej: Medallón Smash"/></div>
-          <div class="fg"><label>Ingrediente</label><select id="porc-prod"><option value="">Seleccionar...</option></select></div>
-          <div class="fg"><label>Gramos c/u</label><input type="number" id="porc-gr" placeholder="ej: 80"/></div>
-        </div>
-        <button class="btn" onclick="addPorcion()">Agregar</button>
-      </div>
-    </div>
-
     <!-- ESTADÍSTICAS -->
     <div id="tab-stats" class="section">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;justify-content:space-between">
@@ -2155,7 +2128,7 @@ function isItemPapas(nom){
 }
 function getCPapas(g){if(!cfg.papas)return 0;const p=preps.find(x=>x.nom===cfg.papas);return p?g*getCPGP(p):0;}
 
-function calcCM(item){return item.comps.reduce((a,c)=>{if(c.tipo==='ing')return a+c.cant*(c.pg||getPG(c.nom)||0);const p=preps.find(x=>x.nom===c.nom);return p?a+c.cant*getCPGP(p):a;},0);}
+function calcCM(item){return item.comps.reduce((a,c)=>{if(c.tipo==='ing'){const lp=getPG(c.nom)||c.pg||0;return a+c.cant*lp;}const p=preps.find(x=>x.nom===c.nom);return p?a+c.cant*getCPGP(p):a;},0);}
 function getPVM(item){return item.pv||0;}
 function getCMTotal(item){
   let costo = calcCM(item);
@@ -2173,7 +2146,7 @@ function getGanPend(){
   // Same logic as the green transfer box
   const ultimaTransfBC=movs.filter(m=>m.dir==='bc_to_pv').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
   const fechaCorteBC=ultimaTransfBC?.fecha||'2000-01-01';
-  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>=fechaCorteBC);
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>fechaCorteBC);
   const ganVentasBC=ventasBC.reduce((a,v)=>{
     if((v.gan||0)>0) return a+(v.gan||0);
     return a+Math.max(0,(v.total||0)-(v.costo||0));
@@ -2190,7 +2163,7 @@ function showTab(n,el){
   el.classList.add('active');
   if(n==='vidriera')renderVidriera();
   if(n==='combos')renderCombos();
-  if(n==='produccion'){renderProduccion();renderPorciones();}
+
   if(n==='preparados')renderPreps();
   if(n==='menu')renderMenuItems();
   if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();}
@@ -2459,7 +2432,7 @@ function renderSaldoResumen(){
   // Solo ventas DESPUÉS de la última transferencia BC→Provincial
   const ultimaTransfBC=movs.filter(m=>m.dir==='bc_to_pv').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
   const fechaCorteBC=ultimaTransfBC?.fecha||'2000-01-01';
-  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>=fechaCorteBC);
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>fechaCorteBC);
   // gan = total - costo. Si costo=0 (sin receta), gan=total. Recalcular por si acaso.
   const ganVentasBC=ventasBC.reduce((a,v)=>{
     if((v.gan||0)>0) return a+(v.gan||0);
@@ -2486,7 +2459,7 @@ function renderSaldoResumen(){
   const ventasPV=ventas.filter(v=>
     v.estado==='cobrado'&&
     v.banco==='provincial'&&
-    v.fecha>=fechaCortePV
+    v.fecha>fechaCortePV
   );
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
