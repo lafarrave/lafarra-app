@@ -2155,7 +2155,7 @@ function isItemPapas(nom){
 }
 function getCPapas(g){if(!cfg.papas)return 0;const p=preps.find(x=>x.nom===cfg.papas);return p?g*getCPGP(p):0;}
 
-function calcCM(item){return item.comps.reduce((a,c)=>{if(c.tipo==='ing'){const lp=getPG(c.nom)||c.pg||0;return a+c.cant*lp;}const p=preps.find(x=>x.nom===c.nom);return p?a+c.cant*getCPGP(p):a;},0);}
+function calcCM(item){return item.comps.reduce((a,c)=>{if(c.tipo==='ing')return a+c.cant*(c.pg||getPG(c.nom)||0);const p=preps.find(x=>x.nom===c.nom);return p?a+c.cant*getCPGP(p):a;},0);}
 function getPVM(item){return item.pv||0;}
 function getCMTotal(item){
   let costo = calcCM(item);
@@ -2173,7 +2173,7 @@ function getGanPend(){
   // Same logic as the green transfer box
   const ultimaTransfBC=movs.filter(m=>m.dir==='bc_to_pv').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
   const fechaCorteBC=ultimaTransfBC?.fecha||'2000-01-01';
-  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>fechaCorteBC);
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>=fechaCorteBC);
   const ganVentasBC=ventasBC.reduce((a,v)=>{
     if((v.gan||0)>0) return a+(v.gan||0);
     return a+Math.max(0,(v.total||0)-(v.costo||0));
@@ -2459,7 +2459,7 @@ function renderSaldoResumen(){
   // Solo ventas DESPUÉS de la última transferencia BC→Provincial
   const ultimaTransfBC=movs.filter(m=>m.dir==='bc_to_pv').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
   const fechaCorteBC=ultimaTransfBC?.fecha||'2000-01-01';
-  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>fechaCorteBC);
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>=fechaCorteBC);
   // gan = total - costo. Si costo=0 (sin receta), gan=total. Recalcular por si acaso.
   const ganVentasBC=ventasBC.reduce((a,v)=>{
     if((v.gan||0)>0) return a+(v.gan||0);
@@ -2486,7 +2486,7 @@ function renderSaldoResumen(){
   const ventasPV=ventas.filter(v=>
     v.estado==='cobrado'&&
     v.banco==='provincial'&&
-    v.fecha>fechaCortePV
+    v.fecha>=fechaCortePV
   );
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
