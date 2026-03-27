@@ -1454,7 +1454,7 @@ function getCostoCombo(combo){
   }
   // Ingredientes sueltos
   (combo.ings||[]).forEach(ing=>{
-    costo+=ing.cant*(ing.pg||getPG(ing.nom)||0);
+    costo+=ing.cant*(getPG(ing.nom)||ing.pg||0);
   });
   // Botes de salsa personalizados
   (combo.botesList||[]).forEach(b=>{
@@ -2094,9 +2094,9 @@ function fBs(u){return tasa>0?'Bs.'+Math.round(u*tasa).toLocaleString('es-VE'):'
 function fUSD(u){return'$'+u.toFixed(2);}
 
 // ─── HELPERS ─────────────────────────────────────────────────
-function getPG(p){const m=compras.filter(c=>c.prod===p&&c.pg);return m.length?m[0].pg:null;}
+function getPG(p){const m=compras.filter(c=>c.prod===p&&c.pg).sort((a,b)=>b.fecha.localeCompare(a.fecha));return m.length?m[0].pg:null;}
 function getCPGP(prep){
-  const costoIngs=prep.ings.reduce((a,i)=>a+(i.cant*(i.pg||getPG(i.prod)||0)),0);
+  const costoIngs=prep.ings.reduce((a,i)=>a+(i.cant*(getPG(i.prod)||i.pg||0)),0);
   // Add oil absorption cost if factor defined
   let costoAceite=0;
   if(prep.factorAceite&&prep.factorAceite>0){
