@@ -605,15 +605,10 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <button class="btn" style="padding:5px 14px;font-size:12px" onclick="abrirVidForm()">+ Agregar precio</button>
         </div>
         <!-- Sección activa -->
-        <div style="margin-bottom:.6rem">
-          <button id="vid-inflacion-btn" class="btn" onclick="toggleVidInflacion()" style="padding:5px 12px;font-size:12px">📈 Ver índice inflación</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:.8rem;flex-wrap:wrap">
+          <div id="vid-sec-nav" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+          <div id="vid-inflacion-badge" style="font-size:11px;color:var(--texto-dim);white-space:nowrap"></div>
         </div>
-        <div id="vid-inflacion-wrap" style="display:none;margin-bottom:.8rem">
-          <div class="card" style="margin:0;padding:.7rem">
-            <div id="vid-inflacion"></div>
-          </div>
-        </div>
-        <div id="vid-sec-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.8rem"></div>
         <!-- Productos de la sección activa -->
         <div id="vid-prods-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.8rem"></div>
         <!-- Detalle del producto seleccionado -->
@@ -3532,6 +3527,21 @@ function renderVidriera(){
     </button>`;
   }).join('');
 
+  // Inflation badge
+  const badge = document.getElementById('vid-inflacion-badge');
+  if(badge){
+    const datos = calcInflacionVidriera();
+    const prods = Object.keys(datos).filter(p=>datos[p].pct!==null);
+    if(prods.length){
+      const maxMensual = Math.max(...prods.map(p=>datos[p].pctMensual||0));
+      const recProt = Math.ceil(maxMensual*1.2);
+      const protActual = cfg.proteccion||0;
+      const color = protActual>=recProt?'var(--verde)':'var(--amarillo)';
+      badge.innerHTML = `📈 Inflación: <strong style="color:${color}">${recProt}% sugerido</strong> · actual: ${protActual}%`;
+    } else {
+      badge.innerHTML = '';
+    }
+  }
   // Detail of active product
   renderVidDetalle();
 }
@@ -3555,12 +3565,24 @@ function renderVidDetalle(){
         const i=vidriera.indexOf(v);
         const mejor=v.pg&&v.pg===minPg&&registros.length>1;
         const precioBsDisplay=v.precioBs?`<span style="font-weight:700;font-size:14px">Bs.${Math.round(v.precioBs).toLocaleString('es-VE')}</span><span style="font-size:11px;color:var(--texto-dim);margin-left:4px">$${v.precio?.toFixed(2)||'—'}</span>`:`<span class="hl" style="font-size:14px;font-weight:700">$${v.precio?.toFixed(2)||'—'}</span>`;
+        // Price change display
+        const tienePrevio = v.pgAnterior && v.pgAnterior!==v.pg;
+        const pctCambio = tienePrevio ? ((v.pg-v.pgAnterior)/v.pgAnterior*100) : null;
+        const pctColor = pctCambio===null?'var(--texto-dim)':pctCambio>0?'var(--rojo)':pctCambio<0?'var(--verde)':'var(--texto-dim)';
+        const pctArrow = pctCambio===null?'':pctCambio>0?'↑':'↓';
+        const previoDisplay = tienePrevio
+          ? `<div style="font-size:10px;color:var(--texto-dim);margin-top:2px">
+              anterior: ${v.precioBsAnterior?'Bs.'+Math.round(v.precioBsAnterior).toLocaleString('es-VE')+' · ':''}<span style="text-decoration:line-through">$${v.pgAnterior.toFixed(4)}/g</span>
+              <span style="color:${pctColor};font-weight:700;margin-left:4px">${pctArrow}${Math.abs(pctCambio).toFixed(1)}%</span>
+            </div>`
+          : '';
         return`<div style="background:var(--gris-mid);border-radius:8px;padding:.6rem .8rem;margin-bottom:.4rem;border:1px solid ${mejor?'var(--verde)':'var(--gris-light)'}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px">
             <div>
               <span style="font-weight:600;font-size:13px">${v.marca||'Sin marca'}</span>
               ${mejor?'<span class="badge bm" style="margin-left:5px">⭐ mejor precio</span>':''}
               <div style="font-size:11px;color:var(--texto-dim);margin-top:1px">${v.tienda} · ${v.fecha}</div>
+              ${previoDisplay}
             </div>
             <div style="text-align:right">
               ${precioBsDisplay}
@@ -4614,15 +4636,7 @@ function renderVidInflacion(){
   el.innerHTML = html;
 }
 
-let vidInflacionOpen = false;
-function toggleVidInflacion(){
-  vidInflacionOpen = !vidInflacionOpen;
-  const panel = document.getElementById('vid-inflacion-wrap');
-  const btn = document.getElementById('vid-inflacion-btn');
-  if(panel) panel.style.display = vidInflacionOpen?'block':'none';
-  if(btn) btn.textContent = vidInflacionOpen?'📈 Ocultar inflación':'📈 Ver índice inflación';
-  if(vidInflacionOpen) renderVidInflacion();
-}
+// vid inflation toggle removed — using inline badge now
 
 // Edit existing vidriera price
 function abrirEditarVid(idx){
@@ -4658,8 +4672,10 @@ async function guardarEditVid(){
   const v = vidriera[idx];
   const pgNuevo = (precioBs/tasa)/cont;
   const precio = precioBs/tasa;
-  // Update the entry
-  vidriera[idx] = {...v, precioBs, cont, precio, pg:pgNuevo, tasa, fecha:getVEDate()};
+  // Save previous price before overwriting
+  const pgAnterior = v.pg||null;
+  const precioBsAnterior = v.precioBs||null;
+  vidriera[idx] = {...v, precioBs, cont, precio, pg:pgNuevo, tasa, fecha:getVEDate(), pgAnterior, precioBsAnterior};
   await saveInv_db();
   document.getElementById('modal-vid-edit').style.display='none';
   renderVidriera();
