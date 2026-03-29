@@ -3990,10 +3990,34 @@ function renderVentas(){
     const bancoColor=esPV?'#1a3a5a':'rgba(232,98,26,.12)';
     const bancoBorde=esPV?'#2a5a8a':'var(--naranja)';
     const bancoLabel=esPV?'<span style="font-size:10px;font-weight:700;color:#60a0d0;background:#0d1520;border:1px solid #2a5a8a;border-radius:3px;padding:1px 5px;margin-left:4px">PROV</span>':'<span style="font-size:10px;font-weight:700;color:var(--naranja);background:rgba(232,98,26,.1);border:1px solid var(--naranja);border-radius:3px;padding:1px 5px;margin-left:4px">BC</span>';
-    return`<div class="vcard" style="border-color:${bancoBorde};background:${bancoColor}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><div><span style="font-weight:600">${v.cliente}</span>${bancoLabel}<span style="color:var(--texto-dim);font-size:11px;margin-left:5px">${v.fecha}</span></div><div style="display:flex;gap:5px;align-items:center"><span class="hl">$${v.total.toFixed(2)}</span>${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}<span class="green" style="font-size:11px">+$${v.gan.toFixed(2)}</span><button class="edit-btn" title="Editar nombre" onclick="editarNombreVenta(${i})">✏</button><button class="db" onclick="delVenta(${i})">✕</button></div></div><div style="font-size:11px;color:var(--texto-dim)">${str}</div></div>`;
+    return`<div class="vcard" style="border-color:${bancoBorde};background:${bancoColor}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><div><span style="font-weight:600">${v.cliente}</span>${bancoLabel}<span style="color:var(--texto-dim);font-size:11px;margin-left:5px">${v.fecha}</span></div><div style="display:flex;gap:5px;align-items:center"><span class="hl">$${v.total.toFixed(2)}</span>${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}<span class="green" style="font-size:11px">+$${v.gan.toFixed(2)}</span><button class="edit-btn" title="Editar nombre" onclick="editarNombreVenta(${i})">✏</button><button class="db" onclick="delVenta(${i})" title="Eliminar venta">✕</button><button class="db" onclick="delVentaRevertir(${i})" title="Eliminar y revertir saldo" style="background:rgba(180,60,60,.25);border-color:#a03030;font-size:9px;padding:2px 5px">↩ saldo</button></div></div><div style="font-size:11px;color:var(--texto-dim)">${str}</div></div>`;
   }).join('');
 }
 async function delVenta(i){if(!confirm('Eliminar venta?'))return;const v=ventas[i];await deleteVenta_db(v.fecha,v.cliente);ventas.splice(i,1);renderVentas();renderPendientes();renderMetricsPOS();renderSaldoResumen();}
+
+async function delVentaRevertir(i){
+  const v=ventas[i];
+  if(!confirm('Eliminar venta de '+v.cliente+' y revertir el saldo?\nEsto descuenta $'+v.total.toFixed(2)+' del saldo de '+(v.banco==='provincial'?'Provincial':'Bancaribe')+'.')) return;
+  // Revert saldo
+  const tasaUsada=v.tasa||tasa||1;
+  const montoBs=v.totalBs||(v.total*tasaUsada);
+  if(v.banco==='provincial'){
+    saldoProvincial=Math.max(0,saldoProvincial-v.total);
+    saldoProvincialBs=Math.max(0,saldoProvincialBs-montoBs);
+    localStorage.setItem('lf_saldo_provincial',saldoProvincial);
+    localStorage.setItem('lf_saldo_provincial_bs',saldoProvincialBs);
+  } else {
+    saldo=Math.max(0,saldo-v.total);
+    saldoBs=Math.max(0,saldoBs-montoBs);
+  }
+  // Remove movement from movs
+  const movIdx=movs.findIndex(m=>m.desc&&m.desc.includes(v.cliente)&&m.monto===v.total&&m.esIngreso);
+  if(movIdx>=0) movs.splice(movIdx,1);
+  await saveSaldo_db();
+  await deleteVenta_db(v.fecha,v.cliente);
+  ventas.splice(i,1);
+  renderVentas();renderPendientes();renderMetricsPOS();renderSaldoResumen();
+}
 
 let editClienteIdx = null;
 function editarNombreVenta(i){
