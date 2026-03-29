@@ -1954,7 +1954,18 @@ async function loadAll(){
     }
     // Compras
     const {data:compData}=await sb.from('compras').select('*').order('created_at',{ascending:false});
-    if(compData) compras=compData.map(r=>r.data);
+    if(compData){
+      compras=compData.map(r=>r.data);
+      // Deduplicate: for each product, keep only the LATEST esCorreccion entry
+      // (guards against orphaned old corrections that weren't deleted from DB)
+      const seen=new Set();
+      compras=compras.filter(c=>{
+        if(!c.esCorreccion) return true;
+        if(seen.has(c.prod)) return false;
+        seen.add(c.prod);
+        return true;
+      });
+    }
     // Ventas
     const {data:ventData}=await sb.from('ventas').select('*').order('created_at',{ascending:false});
     if(ventData) ventas=ventData.map(r=>r.data);
@@ -2145,7 +2156,13 @@ function fBs(u){return tasa>0?'Bs.'+Math.round(u*tasa).toLocaleString('es-VE'):'
 function fUSD(u){return'$'+u.toFixed(2);}
 
 // ─── HELPERS ─────────────────────────────────────────────────
-function getPG(p){const m=compras.filter(c=>c.prod===p&&c.pg).sort((a,b)=>{const ta=b.fecha_ts||b.fecha||'';const tb=a.fecha_ts||a.fecha||'';return ta.localeCompare(tb);});return m.length?m[0].pg:null;}
+function getPG(p){
+  // compras comes pre-sorted by created_at DESC from Supabase.
+  // Corrections (esCorreccion) are unshifted at position 0 when applied,
+  // so they are always first. Just take the first match.
+  const m=compras.filter(c=>c.prod===p&&c.pg);
+  return m.length?m[0].pg:null;
+}
 function getCPGP(prep){
   const costoIngs=prep.ings.reduce((a,i)=>a+(i.cant*(getPG(i.prod)||i.pg||0)),0);
   // Add oil absorption cost if factor defined
@@ -3597,7 +3614,7 @@ function buildPrepCard(p,pi){
   const costoAceite=(p.factorAceite&&p.factorAceite>0)?(p.g*p.factorAceite*(getPG('Aceite')||0)):0;
   const costo=costoIngs+costoAceite;
   const cpg=p.g>0?costo/p.g:0;
-  const rows=p.ings.map((ing,ii)=>{const pg=ing.pg||getPG(ing.prod)||0;return`<div class="irow"><span>${ing.prod}</span><span>${ing.cant}g</span><span>$${pg.toFixed(4)}/g</span><span class="hl">$${(ing.cant*pg).toFixed(4)}</span><button class="db" onclick="delIngP(${pi},${ii})">✕</button></div>`;}).join('');
+  const rows=p.ings.map((ing,ii)=>{const pg=getPG(ing.prod)||ing.pg||0;return`<div class="irow"><span>${ing.prod}</span><span>${ing.cant}g</span><span>$${pg.toFixed(4)}/g</span><span class="hl">$${(ing.cant*pg).toFixed(4)}</span><button class="db" onclick="delIngP(${pi},${ii})">✕</button></div>`;}).join('');
   const aceiteRow=p.factorAceite&&p.factorAceite>0?`<div class="irow" style="opacity:.7"><span>🫙 Aceite (absorción ${(p.factorAceite*100).toFixed(0)}%)</span><span>${(p.g*p.factorAceite).toFixed(1)}g</span><span>$${(getPG('Aceite')||0).toFixed(4)}/g</span><span class="hl">$${costoAceite.toFixed(4)}</span><span></span></div>`:'';
   const catBadge=p.cat?`<span class="badge bi" style="font-size:10px">${p.cat}</span>`:'';
   return`<div class="xcard"><div class="xhead" onclick="tog('pb${p.id}')"><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:13px;font-family:Barlow Condensed,sans-serif;text-transform:uppercase">${p.nom}</span>${catBadge}</div><div style="display:flex;gap:10px;font-size:11px;color:var(--texto-dim);flex-wrap:wrap;align-items:center"><span>Costo: <strong class="hl">$${costo.toFixed(4)}</strong></span><span>${p.g}g</span><span>$/g: <strong class="hl">$${cpg.toFixed(4)}</strong></span>
