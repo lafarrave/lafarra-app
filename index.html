@@ -3533,11 +3533,12 @@ function renderVidriera(){
     const datos = calcInflacionVidriera();
     const prods = Object.keys(datos).filter(p=>datos[p].pct!==null);
     if(prods.length){
-      const maxMensual = Math.max(...prods.map(p=>datos[p].pctMensual||0));
-      const recProt = Math.ceil(maxMensual*1.2);
+      // Max % change across all edited products — use as protection suggestion
+      const maxPct = Math.max(...prods.map(p=>Math.abs(datos[p].pct||0)));
+      const recProt = Math.ceil(maxPct*1.2); // 20% safety buffer
       const protActual = cfg.proteccion||0;
       const color = protActual>=recProt?'var(--verde)':'var(--amarillo)';
-      badge.innerHTML = `📈 Inflación: <strong style="color:${color}">${recProt}% sugerido</strong> · actual: ${protActual}%`;
+      badge.innerHTML = `📈 <strong style="color:${color}">${recProt}% sugerido</strong> · actual: ${protActual}%`;
     } else {
       badge.innerHTML = '';
     }
@@ -4534,55 +4535,18 @@ function toggleStockAlert(){
 
 // ─── VIDRIERA INFLACION + EDITAR PRECIO ──────────────────────
 function calcInflacionVidriera(){
-  // For each product, compute inflation by comparing same tienda+cont over time
+  // Only use entries that have pgAnterior (edited via ✏ button) — most reliable data
+  // For each product, find edited entries and compute % change
   const prods = [...new Set(vidriera.map(v=>v.prod))];
   const resultado = {};
   prods.forEach(prod=>{
-    const todos = vidriera.filter(v=>v.prod===prod&&v.pg);
-    if(!todos.length){ resultado[prod]={pct:null}; return; }
-
-    // Group by tienda+cont to compare apples to apples
-    const grupos = {};
-    todos.forEach(v=>{
-      const key = (v.tienda||'?')+'::'+(v.cont||'?');
-      if(!grupos[key]) grupos[key]=[];
-      grupos[key].push(v);
-    });
-
-    // Find the group with most entries and at least 2 different dates
-    let mejorGrupo = null, mejorDias = 0;
-    Object.values(grupos).forEach(g=>{
-      const sorted = g.filter(v=>v.pg).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-      if(sorted.length<2) return;
-      const dias = Math.max(1,(new Date(sorted[sorted.length-1].fecha)-new Date(sorted[0].fecha))/(1000*60*60*24));
-      if(dias>mejorDias){ mejorDias=dias; mejorGrupo=sorted; }
-    });
-
-    if(!mejorGrupo){
-      // No comparable group — try same tienda regardless of cont
-      const porTienda = {};
-      todos.forEach(v=>{
-        const t=v.tienda||'?';
-        if(!porTienda[t]) porTienda[t]=[];
-        porTienda[t].push(v);
-      });
-      let bestT = null, bestD = 0;
-      Object.values(porTienda).forEach(g=>{
-        const sorted=g.filter(v=>v.pg).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-        if(sorted.length<2) return;
-        const d=Math.max(1,(new Date(sorted[sorted.length-1].fecha)-new Date(sorted[0].fecha))/(1000*60*60*24));
-        if(d>bestD){bestD=d;bestT=sorted;}
-      });
-      if(!bestT){ resultado[prod]={pct:null}; return; }
-      mejorGrupo=bestT; mejorDias=bestD;
-    }
-
-    const primero = mejorGrupo[0];
-    const ultimo = mejorGrupo[mejorGrupo.length-1];
-    const dias = Math.max(1,mejorDias);
-    const pctTotal = ((ultimo.pg-primero.pg)/primero.pg)*100;
-    const pctMensual = (pctTotal/dias)*30;
-    resultado[prod] = {pct:pctTotal, pctMensual, dias, primero, ultimo};
+    // Find entries with a previous price recorded (edited at least once)
+    const editados = vidriera.filter(v=>v.prod===prod&&v.pg&&v.pgAnterior&&v.pgAnterior!==v.pg);
+    if(!editados.length){ resultado[prod]={pct:null}; return; }
+    // Use the most recent edit
+    const ultimo = editados.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
+    const pct = ((ultimo.pg - ultimo.pgAnterior)/ultimo.pgAnterior)*100;
+    resultado[prod] = {pct, ultimo};
   });
   return resultado;
 }
