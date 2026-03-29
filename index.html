@@ -2214,7 +2214,7 @@ function getGanPend(){
   // Same logic as the green transfer box
   const ultimaTransfBC=movs.filter(m=>m.dir==='bc_to_pv').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
   const fechaCorteBC=ultimaTransfBC?.fecha||'2000-01-01';
-  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>fechaCorteBC);
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>=fechaCorteBC);
   const ganVentasBC=ventasBC.reduce((a,v)=>{
     if((v.gan||0)>0) return a+(v.gan||0);
     return a+Math.max(0,(v.total||0)-(v.costo||0));
@@ -2527,7 +2527,7 @@ function renderSaldoResumen(){
   const ventasPV=ventas.filter(v=>
     v.estado==='cobrado'&&
     v.banco==='provincial'&&
-    v.fecha>fechaCortePV
+    v.fecha>=fechaCortePV
   );
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
@@ -3978,7 +3978,7 @@ function renderMetricsPOS(){
 }
 function renderVentas(){
   const fmes=document.getElementById('fpos-mes')?.value||'';
-  let data=fmes?ventas.filter(v=>v.fecha.startsWith(fmes)):[...ventas];
+  let data=fmes?ventas.filter(v=>v.fecha.startsWith(fmes)&&v.estado!=='pendiente'):ventas.filter(v=>v.estado!=='pendiente');
   const meses=[...new Set(ventas.map(v=>v.fecha.slice(0,7)))].sort().reverse();
   const sel=document.getElementById('fpos-mes');if(sel){const cm=sel.value;sel.innerHTML='<option value="">Todos los meses</option>'+meses.map(m=>`<option ${m===cm?'selected':''} value="${m}">${m}</option>`).join('');}
   const lista=document.getElementById('ventas-lista');if(!lista)return;
