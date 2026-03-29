@@ -2503,9 +2503,9 @@ function renderSaldoResumen(){
   const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>fechaCorteBC);
   // gan = total - costo. Si costo=0 (sin receta), gan=total. Recalcular por si acaso.
   const ganVentasBC=ventasBC.reduce((a,v)=>{
-    if((v.gan||0)>0) return a+(v.gan||0);
-    const costoReal=getVentaCosto(v);
-    return a+Math.max(0,(v.total||0)-costoReal);
+    // Always use costo with inflation protection to get real ganancia
+    const costoConProt=getVentaCosto(v);
+    return a+Math.max(0,(v.total||0)-costoConProt);
   },0);
   // Only count actual registered transfers, not ganT (which may include old data)
   // Solo transferencias DESPUÉS del corte (las anteriores ya estaban contadas)
@@ -2531,17 +2531,19 @@ function renderSaldoResumen(){
   );
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
-    // If costo stored and non-zero, use it
-    if((v.costo||0)>0) return v.costo;
-    // If gan stored and total stored, derive costo = total - gan
-    if((v.gan||0)>0 && (v.total||0)>0) return Math.max(0,(v.total||0)-(v.gan||0));
-    // Last resort: recalculate from current menu
-    return (v.items||[]).reduce((a,it)=>{
+    const prot=1+(cfg.proteccion||0)/100; // apply inflation protection factor
+    // If costo stored and non-zero, use it with protection
+    if((v.costo||0)>0) return v.costo*prot;
+    // If gan stored and total stored, derive costo = total - gan, then apply prot
+    if((v.gan||0)>0 && (v.total||0)>0) return Math.max(0,(v.total||0)-(v.gan||0))*prot;
+    // Last resort: recalculate from current menu with protection
+    const costoBase=(v.items||[]).reduce((a,it)=>{
       const mi=menuItems.find(m=>m.nom===it.nom);
       const pvp=pvProds.find(p=>p.nom===it.nom);
       const costo=mi?getCMTotal(mi):(pvp?(pvp.costo||0):0);
       return a+costo*(it.qty||1);
     },0);
+    return costoBase*prot;
   }
   const costosProvincial=ventasPV.reduce((a,v)=>a+getVentaCosto(v),0);
   const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc'&&m.fecha>fechaCortePV).reduce((a,m)=>a+(m.monto||0),0);
