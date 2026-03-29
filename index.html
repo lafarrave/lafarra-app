@@ -681,11 +681,14 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
             <div id="lista-pendientes"><div style="font-size:12px;color:var(--texto-dim)">Sin cobros pendientes.</div></div>
           </div>
           <div class="card">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.6rem;align-items:center">
-              <span class="card-title" style="margin:0;flex:1">Historial de ventas</span>
-              <select class="inline" id="fpos-mes" onchange="renderVentas()"><option value="">Todos los meses</option></select>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.6rem;align-items:center;cursor:pointer" onclick="toggleHistorialVentas()">
+              <span class="card-title" style="margin:0;flex:1">📋 Historial de ventas</span>
+              <select class="inline" id="fpos-mes" onchange="event.stopPropagation();renderVentas()" onclick="event.stopPropagation()"><option value="">Todos los meses</option></select>
+              <span id="historial-arrow" style="color:var(--texto-dim);font-size:13px">▼</span>
             </div>
-            <div id="ventas-lista"></div>
+            <div id="ventas-lista-wrap" style="display:block">
+              <div id="ventas-lista"></div>
+            </div>
           </div>
         </div>
         <div>
@@ -3490,6 +3493,8 @@ function renderVidriera(){
   // Min price per product for badge
   const minG={};
   vidriera.forEach(v=>{if(v.pg&&(!minG[v.prod]||v.pg<minG[v.prod]))minG[v.prod]=v.pg;});
+  // Sort products by best (lowest) pg
+  prodsEnSec.sort((a,b)=>(minG[a]||Infinity)-(minG[b]||Infinity));
 
   prodBtns.innerHTML=prodsEnSec.map(p=>{
     const cnt=vidriera.filter(v=>v.prod===p).length;
@@ -3978,6 +3983,19 @@ function renderMetricsPOS(){
     <div class="metric green-m"><div class="ml">Ganancia hoy</div><div class="mv green">$${ganHoy.toFixed(2)}</div><div class="mv-sub">${fBs(ganHoy)}</div></div>
   `;
 }
+let historialAbierto=true;
+const historialDiasAbiertos={};
+function toggleHistorialVentas(){
+  historialAbierto=!historialAbierto;
+  const wrap=document.getElementById('ventas-lista-wrap');
+  const arrow=document.getElementById('historial-arrow');
+  if(wrap) wrap.style.display=historialAbierto?'block':'none';
+  if(arrow) arrow.textContent=historialAbierto?'▼':'▶';
+}
+function toggleHistorialDia(fecha){
+  historialDiasAbiertos[fecha]=!historialDiasAbiertos[fecha];
+  renderVentas();
+}
 function renderVentas(){
   const fmes=document.getElementById('fpos-mes')?.value||'';
   let data=fmes?ventas.filter(v=>v.fecha.startsWith(fmes)&&v.estado!=='pendiente'):ventas.filter(v=>v.estado!=='pendiente');
@@ -3985,12 +4003,37 @@ function renderVentas(){
   const sel=document.getElementById('fpos-mes');if(sel){const cm=sel.value;sel.innerHTML='<option value="">Todos los meses</option>'+meses.map(m=>`<option ${m===cm?'selected':''} value="${m}">${m}</option>`).join('');}
   const lista=document.getElementById('ventas-lista');if(!lista)return;
   if(!data.length){lista.innerHTML='<div style="font-size:12px;color:var(--texto-dim);text-align:center;padding:1rem">Sin ventas</div>';return;}
-  lista.innerHTML=data.map(v=>{const i=ventas.indexOf(v);const str=v.items.map(it=>`${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ');
-    const esPV=v.banco==='provincial';
-    const bancoColor=esPV?'#1a3a5a':'rgba(232,98,26,.12)';
-    const bancoBorde=esPV?'#2a5a8a':'var(--naranja)';
-    const bancoLabel=esPV?'<span style="font-size:10px;font-weight:700;color:#60a0d0;background:#0d1520;border:1px solid #2a5a8a;border-radius:3px;padding:1px 5px;margin-left:4px">PROV</span>':'<span style="font-size:10px;font-weight:700;color:var(--naranja);background:rgba(232,98,26,.1);border:1px solid var(--naranja);border-radius:3px;padding:1px 5px;margin-left:4px">BC</span>';
-    return`<div class="vcard" style="border-color:${bancoBorde};background:${bancoColor}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><div><span style="font-weight:600">${v.cliente}</span>${bancoLabel}<span style="color:var(--texto-dim);font-size:11px;margin-left:5px">${v.fecha}</span></div><div style="display:flex;gap:5px;align-items:center"><span class="hl">$${v.total.toFixed(2)}</span>${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}<span class="green" style="font-size:11px">+$${v.gan.toFixed(2)}</span><button class="edit-btn" title="Editar nombre" onclick="editarNombreVenta(${i})">✏</button><button class="db" onclick="delVenta(${i})" title="Eliminar venta">✕</button><button class="db" onclick="delVentaRevertir(${i})" title="Eliminar y revertir saldo" style="background:rgba(180,60,60,.25);border-color:#a03030;font-size:9px;padding:2px 5px">↩ saldo</button></div></div><div style="font-size:11px;color:var(--texto-dim)">${str}</div></div>`;
+  // Group by day
+  const porDia={};
+  data.forEach(v=>{if(!porDia[v.fecha])porDia[v.fecha]=[];porDia[v.fecha].push(v);});
+  const dias=Object.keys(porDia).sort().reverse();
+  dias.forEach((d,idx)=>{if(historialDiasAbiertos[d]===undefined)historialDiasAbiertos[d]=idx===0;});
+  lista.innerHTML=dias.map(dia=>{
+    const ventasDia=porDia[dia];
+    const totalDia=ventasDia.reduce((a,v)=>a+v.total,0);
+    const ganDia=ventasDia.reduce((a,v)=>a+(v.gan||0),0);
+    const abierto=historialDiasAbiertos[dia];
+    const ventasHtml=ventasDia.map(v=>{
+      const i=ventas.indexOf(v);
+      const str=v.items.map(it=>`${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ');
+      const esPV=v.banco==='provincial';
+      const bancoColor=esPV?'#1a3a5a':'rgba(232,98,26,.12)';
+      const bancoBorde=esPV?'#2a5a8a':'var(--naranja)';
+      const bancoLabel=esPV?'<span style="font-size:10px;font-weight:700;color:#60a0d0;background:#0d1520;border:1px solid #2a5a8a;border-radius:3px;padding:1px 5px;margin-left:4px">PROV</span>':'<span style="font-size:10px;font-weight:700;color:var(--naranja);background:rgba(232,98,26,.1);border:1px solid var(--naranja);border-radius:3px;padding:1px 5px;margin-left:4px">BC</span>';
+      return`<div class="vcard" style="border-color:${bancoBorde};background:${bancoColor}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><div><span style="font-weight:600">${v.cliente}</span>${bancoLabel}</div><div style="display:flex;gap:5px;align-items:center"><span class="hl">$${v.total.toFixed(2)}</span>${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}<span class="green" style="font-size:11px">+$${(v.gan||0).toFixed(2)}</span><button class="edit-btn" title="Editar nombre" onclick="editarNombreVenta(${i})">✏</button><button class="db" onclick="delVenta(${i})" title="Eliminar venta">✕</button><button class="db" onclick="delVentaRevertir(${i})" title="Eliminar y revertir saldo" style="background:rgba(180,60,60,.25);border-color:#a03030;font-size:9px;padding:2px 5px">↩</button></div></div><div style="font-size:11px;color:var(--texto-dim)">${str}</div></div>`;
+    }).join('');
+    return`<div style="margin-bottom:.4rem">
+      <div onclick="toggleHistorialDia('${dia}')" style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--gris-mid);border-radius:6px;cursor:pointer;margin-bottom:${abierto?'4px':'0'}">
+        <span style="font-weight:700;font-size:12px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.5px">${dia}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:11px;color:var(--texto-dim)">${ventasDia.length}v</span>
+          <span style="font-size:11px" class="hl">$${totalDia.toFixed(2)}</span>
+          <span style="font-size:11px;color:var(--verde)">+$${ganDia.toFixed(2)}</span>
+          <span style="color:var(--texto-dim);font-size:11px">${abierto?'▼':'▶'}</span>
+        </div>
+      </div>
+      ${abierto?ventasHtml:''}
+    </div>`;
   }).join('');
 }
 async function delVenta(i){if(!confirm('Eliminar venta?'))return;const v=ventas[i];await deleteVenta_db(v.fecha,v.cliente);ventas.splice(i,1);renderVentas();renderPendientes();renderMetricsPOS();renderSaldoResumen();}
@@ -4155,6 +4198,7 @@ init();
 
 // ─── DEBUG PANEL ─────────────────────────────────────────────
 const CHANGELOG=[
+    {ver:"v2.2.0",fecha:"2026-03-29",items:["💰 Precios propagados correctamente a Preparados, Menú y Combos","🧮 Calculadora de precio automática en modal de stock","👁 Botón → Aplicar al Stock desde Vidriera","🏦 Selector de banco al cobrar pagos pendientes","💵 Monto Bs en pendientes usa tasa del día actual","📊 Señal transferencias incluye protección de inflación","↩ Botón eliminar venta con reversión de saldo","📋 Historial de ventas desplegable por día","🐛 Fix: precio no se actualizaba al cambiarlo 2+ veces","🐛 Fix: ventas pendientes no aparecen en historial","🐛 Fix: renderMenu is not defined"]},
     {ver:"v2.1.0",fecha:"2026-03-24",items:["🗑 Módulo de Merma en Inventario","🛡 Protección de inflación en Menú y Combos","💸 Comisión bancaria en transferencias","🏦 Transferencias ahora en Bs","🔴 Cuadro de mermas del mes en Saldo","📦 Combos descuentan inventario correctamente","🐛 Fix: stock editado ya no suma al valor anterior","🐛 Fix: eliminación de productos del inventario"]},
     {ver:"v2.0.5",fecha:"2026-03-23",items:["🍿 Módulo Combos con soporte completo","📱 PWA instalable en Android","🏦 Logos de banco en POS (BanCaribe / BBVA)","🔄 Sincronización PC ↔ teléfono mejorada","🐛 Fix: transferencias entre cuentas","🐛 Fix: resetear contadores de saldo"]},
     {ver:"v2.0.0",fecha:"2026-03-22",items:["👁 Vidriera rediseñada por secciones","🏷 Categorías en Preparados","💰 Saldo base en Bs con lógica dual Bancaribe/Provincial","🌐 API BCV con 3 fuentes y fallback automático","📊 Productos Extra con ingredientes y costo automático"]}
