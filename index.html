@@ -808,8 +808,14 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <!-- ENVÍOS -->
     <div id="tab-produccion" class="section">
       <div class="card">
+        <div class="card-title">🍳 Stock de preparados listos</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">¿Ya tienes preparados listos en la nevera? Ingresa cuántos gramos tienes de cada uno. Esto reemplaza el cálculo por ingredientes crudos.</div>
+        <div id="prod-preps-inputs"></div>
+        <button class="btn" onclick="guardarStockPreps()" style="margin-top:.5rem">💾 Guardar cantidades</button>
+      </div>
+      <div class="card">
         <div class="card-title">🔢 ¿Cuánto puedo producir hoy?</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.8rem">Basado en el stock actual. Calcula cuántas unidades de cada ítem del menú y combos puedes preparar.</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.8rem">Basado en tu stock de ingredientes y preparados listos.</div>
         <div id="prod-resultado"></div>
       </div>
     </div>
@@ -2258,7 +2264,7 @@ function showTab(n,el){
   if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();renderPendientes();renderPagoMovilInfo();}
   if(n==='envios')renderEnvios();
   if(n==='stats')renderStats();
-  if(n==='produccion')renderProduccion();
+  if(n==='produccion'){renderProdPrepsInputs();renderProduccion();}
   if(n==='saldo'){renderSaldoResumen();renderMovs();}
   if(n==='inventario'){renderInventario();renderSI();renderInvHist();}
   if(n==='inv-merma'||n==='inventario'){initMermaSelects();renderMermas();}
@@ -2982,8 +2988,8 @@ function calcConsumo(){
         if(mi.usaBotes!==false){
           botes.forEach(b=>{ if(b.tipo==='ing') consumo[b.nom]=(consumo[b.nom]||0)+b.cant*qty; });
         }
-        // Descontar papas incluidas si configuradas
-        if(cfg.papas){
+        // Descontar papas incluidas si configuradas Y el ítem las usa
+        if(mi.usaPapas!==false && mi.cat!=='papas' && cfg.papas){
           const prep=preps.find(p=>p.nom===cfg.papas);
           if(prep){
             const grPapas=cfg.gp||150;
@@ -2992,6 +2998,8 @@ function calcConsumo(){
               consumo[ing.prod]=(consumo[ing.prod]||0)+ing.cant*r*qty;
             });
           }
+          // También descontar empaque de papas cuando la burger incluye papas
+          empaquePapas.forEach(e=>{ consumo[e.prod]=(consumo[e.prod]||0)+e.cant*qty; });
         }
       }
     }); // end items forEach
@@ -4221,6 +4229,54 @@ init();
   <script>
 
 // ─── PRODUCCION ──────────────────────────────────────────────
+// stockPreps: {prepNom: gramos} — manually entered ready-made prep stock
+let stockPreps = {};
+
+function renderProdPrepsInputs(){
+  const el = document.getElementById('prod-preps-inputs');
+  if(!el) return;
+  // Only show preps that are used in at least one menu item or combo
+  const prepsUsados = new Set();
+  menuItems.forEach(item=>{
+    item.comps.forEach(c=>{ if(c.tipo==='prep') prepsUsados.add(c.nom); });
+    if(item.usaPapas!==false && item.cat!=='papas' && cfg.papas) prepsUsados.add(cfg.papas);
+  });
+  combos.filter(c=>c.activo!==false).forEach(combo=>{
+    (combo.burgers||[]).forEach(b=>{
+      const mi=menuItems.find(m=>m.nom===b.nom);
+      if(mi) mi.comps.forEach(c=>{ if(c.tipo==='prep') prepsUsados.add(c.nom); });
+    });
+    if(combo.papas?.prep) prepsUsados.add(combo.papas.prep);
+  });
+
+  if(!prepsUsados.size){ el.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">No hay preparados configurados en el menú.</div>'; return; }
+
+  el.innerHTML = [...prepsUsados].map(nom=>{
+    const prep = preps.find(p=>p.nom===nom);
+    const val = stockPreps[nom]||0;
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:.4rem">
+      <span style="flex:1;font-size:13px;font-weight:600">${nom}</span>
+      <input type="number" id="prep-stock-${nom.replace(/\s/g,'_')}" value="${val||''}" placeholder="0 g" min="0" style="width:100px;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px 8px;font-size:12px;text-align:right"/>
+      <span style="font-size:11px;color:var(--texto-dim)">g listos</span>
+    </div>`;
+  }).join('');
+}
+
+function guardarStockPreps(){
+  const prepsUsados = new Set();
+  menuItems.forEach(item=>{
+    item.comps.forEach(c=>{ if(c.tipo==='prep') prepsUsados.add(c.nom); });
+    if(item.usaPapas!==false && item.cat!=='papas' && cfg.papas) prepsUsados.add(cfg.papas);
+  });
+  [...prepsUsados].forEach(nom=>{
+    const id = 'prep-stock-'+nom.replace(/\s/g,'_');
+    const el = document.getElementById(id);
+    if(el) stockPreps[nom] = parseFloat(el.value)||0;
+  });
+  renderProduccion();
+}
+
+
 function calcProduccionItem(item){
   // Returns how many units of this menu item can be made with current stock
   const {stock, unidades} = calcStock();
@@ -4234,30 +4290,39 @@ function calcProduccionItem(item){
     return Math.floor(s/cant);
   }
 
+  // Helper for preps: use stockPreps if available, else calculate from raw ingredients
+  function limitePrep(prepNom, cantGramos){
+    if(!cantGramos||cantGramos<=0) return Infinity;
+    const prepStockG = stockPreps[prepNom]||0;
+    if(prepStockG>0){
+      // Use ready-made prep stock
+      return Math.floor(prepStockG/cantGramos);
+    }
+    // Fall back to raw ingredients
+    const prep = preps.find(p=>p.nom===prepNom);
+    if(!prep) return 0;
+    const limsPrepRaw = prep.ings.map(ing=>{
+      const cantPorUnidad = ing.cant * (cantGramos/(prep.g||1));
+      return Math.floor((stock[ing.prod]||0)/Math.max(0.0001,cantPorUnidad));
+    });
+    return limsPrepRaw.length ? Math.min(...limsPrepRaw) : 0;
+  }
+
   // Direct ingredients
   item.comps.forEach(c=>{
     if(c.tipo==='ing'){
       limites.push({nom:c.nom, cant:c.cant, lim:limite(c.nom,c.cant)});
     } else {
-      const prep = preps.find(p=>p.nom===c.nom);
-      if(prep){
-        prep.ings.forEach(ing=>{
-          const cantPorUnidad = ing.cant * (c.cant/(prep.g||1));
-          limites.push({nom:ing.prod, cant:cantPorUnidad, lim:limite(ing.prod,cantPorUnidad)});
-        });
-      }
+      // Prep: use stockPreps or raw ingredients
+      const lim = limitePrep(c.nom, c.cant);
+      limites.push({nom:c.nom+'(prep)', cant:c.cant, lim});
     }
   });
 
   // Papas
   if(item.usaPapas!==false && item.cat!=='papas' && cfg.papas){
-    const prepPapas = preps.find(p=>p.nom===cfg.papas);
-    if(prepPapas){
-      prepPapas.ings.forEach(ing=>{
-        const cantPorUnidad = ing.cant * (cfg.gp/(prepPapas.g||1));
-        limites.push({nom:ing.prod, cant:cantPorUnidad, lim:limite(ing.prod,cantPorUnidad)});
-      });
-    }
+    const lim = limitePrep(cfg.papas, cfg.gp||150);
+    limites.push({nom:cfg.papas+'(papas)', cant:cfg.gp||150, lim});
   }
 
   // Botes
@@ -4447,19 +4512,55 @@ function toggleStockAlert(){
 
 // ─── VIDRIERA INFLACION + EDITAR PRECIO ──────────────────────
 function calcInflacionVidriera(){
-  // For each product, find price history and compute % change over time
+  // For each product, compute inflation by comparing same tienda+cont over time
   const prods = [...new Set(vidriera.map(v=>v.prod))];
   const resultado = {};
   prods.forEach(prod=>{
-    const hist = vidriera.filter(v=>v.prod===prod&&v.pg).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-    if(hist.length<2){ resultado[prod]={pct:null,hist}; return; }
-    // Group by tienda for fair comparison — use all records chronologically
-    const primero = hist[0];
-    const ultimo = hist[hist.length-1];
-    const dias = Math.max(1,(new Date(ultimo.fecha)-new Date(primero.fecha))/(1000*60*60*24));
+    const todos = vidriera.filter(v=>v.prod===prod&&v.pg);
+    if(!todos.length){ resultado[prod]={pct:null}; return; }
+
+    // Group by tienda+cont to compare apples to apples
+    const grupos = {};
+    todos.forEach(v=>{
+      const key = (v.tienda||'?')+'::'+(v.cont||'?');
+      if(!grupos[key]) grupos[key]=[];
+      grupos[key].push(v);
+    });
+
+    // Find the group with most entries and at least 2 different dates
+    let mejorGrupo = null, mejorDias = 0;
+    Object.values(grupos).forEach(g=>{
+      const sorted = g.filter(v=>v.pg).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+      if(sorted.length<2) return;
+      const dias = Math.max(1,(new Date(sorted[sorted.length-1].fecha)-new Date(sorted[0].fecha))/(1000*60*60*24));
+      if(dias>mejorDias){ mejorDias=dias; mejorGrupo=sorted; }
+    });
+
+    if(!mejorGrupo){
+      // No comparable group — try same tienda regardless of cont
+      const porTienda = {};
+      todos.forEach(v=>{
+        const t=v.tienda||'?';
+        if(!porTienda[t]) porTienda[t]=[];
+        porTienda[t].push(v);
+      });
+      let bestT = null, bestD = 0;
+      Object.values(porTienda).forEach(g=>{
+        const sorted=g.filter(v=>v.pg).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+        if(sorted.length<2) return;
+        const d=Math.max(1,(new Date(sorted[sorted.length-1].fecha)-new Date(sorted[0].fecha))/(1000*60*60*24));
+        if(d>bestD){bestD=d;bestT=sorted;}
+      });
+      if(!bestT){ resultado[prod]={pct:null}; return; }
+      mejorGrupo=bestT; mejorDias=bestD;
+    }
+
+    const primero = mejorGrupo[0];
+    const ultimo = mejorGrupo[mejorGrupo.length-1];
+    const dias = Math.max(1,mejorDias);
     const pctTotal = ((ultimo.pg-primero.pg)/primero.pg)*100;
     const pctMensual = (pctTotal/dias)*30;
-    resultado[prod] = {pct:pctTotal, pctMensual, dias, primero, ultimo, hist};
+    resultado[prod] = {pct:pctTotal, pctMensual, dias, primero, ultimo};
   });
   return resultado;
 }
