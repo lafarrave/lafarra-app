@@ -3578,7 +3578,7 @@ async function vidPrecioAStock(prod, pg){
   await addCompra_db(corrEntry);
   renderInventario();
   renderPreps && renderPreps();
-  renderMenu && renderMenu();
+  renderMenuItems && renderMenuItems();
   renderCombos && renderCombos();
   renderVidriera();
   alert('Precio actualizado. Preparados, Menu y Combos ya reflejan el nuevo costo.');
@@ -3713,8 +3713,9 @@ function renderMenuItems(){
         </div>
       </div>
       <div style="font-size:12px;padding-top:.4rem;border-top:1px solid var(--gris-mid)">
-        <div style="display:flex;justify-content:space-between;font-weight:600"><span>Costo total</span><span class="hl">$${cT.toFixed(4)}</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:600">Precio de venta</span><div style="display:flex;gap:6px;align-items:center"><input type="number" value="${pv.toFixed(2)}" onchange="actualizarPV(${mi},this.value)" style="width:80px;background:var(--gris-mid);border:1px solid var(--naranja);color:var(--texto);border-radius:4px;padding:4px 7px;font-size:12px;text-align:right" /><span style="font-size:11px;color:${ganColor};font-weight:600">${ganPct.toFixed(1)}% = $${(pv-cT).toFixed(2)}</span></div></div>
+        <div style="display:flex;justify-content:space-between;font-weight:600"><span>Costo real</span><span class="hl">$${cT.toFixed(4)}</span></div>
+        ${prot>0?`<div style="display:flex;justify-content:space-between;font-weight:600;color:var(--amarillo)"><span>+ ${prot}% protección inflación</span><span>$${cBase.toFixed(4)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:600">Precio de venta</span><div style="display:flex;gap:6px;align-items:center"><input type="number" value="${pv.toFixed(2)}" onchange="actualizarPV(${mi},this.value)" style="width:80px;background:var(--gris-mid);border:1px solid var(--naranja);color:var(--texto);border-radius:4px;padding:4px 7px;font-size:12px;text-align:right" /><span style="font-size:11px;color:${ganColor};font-weight:600">${ganPct.toFixed(1)}% = $${(pv-cBase).toFixed(2)}</span></div></div>
 
       </div>
       <div style="border-top:1px solid var(--gris-mid);margin:.5rem 0;padding-top:.5rem">
@@ -3752,17 +3753,25 @@ function renderPendientes(){
   if(card)card.style.display='block';
   el.innerHTML=pends.map(v=>{
     const str=v.items.map(it=>`${it.qty>1?it.qty+'× ':''}${it.nom}`).join(', ');
+    const bsActual=tasa>0?Math.round(v.total*tasa):null;
     return`<div style="border:1px solid var(--amarillo);border-radius:8px;padding:.6rem .8rem;margin-bottom:.5rem;font-size:12px;background:#1a1600">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
         <div><span style="font-weight:600;color:var(--texto)">${v.cliente}</span><span style="color:var(--texto-dim);font-size:11px;margin-left:5px">${v.fecha}</span></div>
         <div style="display:flex;gap:7px;align-items:center">
           <span style="color:var(--amarillo);font-weight:600;font-size:14px">$${v.total.toFixed(2)}</span>
-          ${v.totalBs?`<span style="font-size:11px;color:var(--texto-dim)">Bs.${Math.round(v.totalBs).toLocaleString('es-VE')}</span>`:''}
-          <button class="btn" style="padding:4px 10px;font-size:11px" onclick="marcarCobrado('${v.vid}')">✓ Cobrar</button>
-          <button class="db" onclick="delVentaById('${v.vid}')">✕</button>
+          ${bsActual?`<span style="font-size:11px;color:var(--verde)">Bs.${bsActual.toLocaleString('es-VE')}<span style="color:var(--texto-dim);font-size:10px"> (tasa hoy)</span></span>`:''}
         </div>
       </div>
-      <div style="color:var(--texto-dim)">${str}</div>
+      <div style="color:var(--texto-dim);margin-bottom:.5rem">${str}</div>
+      <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+        <span style="color:var(--texto-dim);font-size:11px">Cobrado en:</span>
+        <select id="banco-pend-${v.vid}" style="background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:3px 7px;font-size:11px">
+          <option value="bancaribe" ${(v.banco||'bancaribe')==='bancaribe'?'selected':''}>🏦 Bancaribe</option>
+          <option value="provincial" ${v.banco==='provincial'?'selected':''}>🏦 Provincial</option>
+        </select>
+        <button class="btn" style="padding:4px 10px;font-size:11px" onclick="marcarCobrado('${v.vid}')">✓ Confirmar cobro</button>
+        <button class="db" onclick="delVentaById('${v.vid}')">✕</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -3770,11 +3779,15 @@ function renderPendientes(){
 async function marcarCobrado(vid){
   const idx=ventas.findIndex(v=>v.vid===vid);
   if(idx<0)return;
+  // Read banco from the selector shown in the pending list
+  const bancoSel=document.getElementById('banco-pend-'+vid);
+  const bancoCob=bancoSel?bancoSel.value:(ventas[idx].banco||'bancaribe');
   ventas[idx].estado='cobrado';
+  ventas[idx].banco=bancoCob; // update banco in case it changed
   const v=ventas[idx];
-  const tasaUsada=v.tasa||tasa||1;
-  const montoBsCob=v.totalBs||(v.total*tasaUsada);
-  const bancoCob=v.banco||bancoActual||'bancaribe';
+  // Use current tasa for Bs amount (inflation protection)
+  const tasaUsada=tasa>0?tasa:(v.tasa||1);
+  const montoBsCob=Math.round(v.total*tasaUsada);
   if(bancoCob==='provincial'){
     saldoProvincial+=v.total; saldoProvincialBs+=montoBsCob;
     localStorage.setItem('lf_saldo_provincial',saldoProvincial);
@@ -3782,7 +3795,7 @@ async function marcarCobrado(vid){
   } else {
     saldo+=v.total; saldoBs+=montoBsCob;
   }
-  movs.unshift({fecha:getVEDate(),desc:'Cobro pendiente — '+v.cliente,tipo:'venta',monto:v.total,montoBs:montoBsCob,sd:saldo,tasa,esIngreso:true,banco:v.banco||'bancaribe',ganancia:v.gan||0});
+  movs.unshift({fecha:getVEDate(),desc:'Cobro pendiente — '+v.cliente+' ('+bancoCob+')',tipo:'venta',monto:v.total,montoBs:montoBsCob,sd:saldo,tasa:tasaUsada,esIngreso:true,banco:bancoCob,ganancia:v.gan||0,costoATransferir:bancoCob==='provincial'?v.costo:undefined});
   setSyncStatus('syncing');
   try{
     const {data}=await sb.from('ventas').select('*');
