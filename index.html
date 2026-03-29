@@ -3488,13 +3488,13 @@ function renderVidriera(){
     return;
   }
 
-  if(!vidProdActivo||!prodsEnSec.includes(vidProdActivo)) vidProdActivo=prodsEnSec[0];
-
-  // Min price per product for badge
+  // Min price per product for badge — compute BEFORE setting active prod
   const minG={};
   vidriera.forEach(v=>{if(v.pg&&(!minG[v.prod]||v.pg<minG[v.prod]))minG[v.prod]=v.pg;});
-  // Sort products by best (lowest) pg
+  // Sort products by best (lowest) pg first
   prodsEnSec.sort((a,b)=>(minG[a]||Infinity)-(minG[b]||Infinity));
+
+  if(!vidProdActivo||!prodsEnSec.includes(vidProdActivo)) vidProdActivo=prodsEnSec[0];
 
   prodBtns.innerHTML=prodsEnSec.map(p=>{
     const cnt=vidriera.filter(v=>v.prod===p).length;
@@ -3516,7 +3516,7 @@ function setVidProd(prod){ vidProdActivo=prod; renderVidDetalle(); }
 function renderVidDetalle(){
   const el=document.getElementById('vid-detalle'); if(!el) return;
   if(!vidProdActivo){ el.innerHTML=''; return; }
-  const registros=vidriera.filter(v=>v.prod===vidProdActivo).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const registros=vidriera.filter(v=>v.prod===vidProdActivo).sort((a,b)=>(a.pg||Infinity)-(b.pg||Infinity)||(new Date(b.fecha)-new Date(a.fecha)));
   if(!registros.length){ el.innerHTML=''; return; }
   const minPg=Math.min(...registros.filter(v=>v.pg).map(v=>v.pg));
   el.innerHTML=`
