@@ -890,17 +890,53 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     </div>
     <div style="background:var(--gris-mid);border-radius:6px;padding:.6rem .8rem;margin-bottom:.8rem">
       <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Costo por unidad</div>
-      <div class="fgrid" style="margin-bottom:0">
+      <div class="fgrid" style="margin-bottom:.5rem">
         <div class="fg">
           <label>Precio/unidad actual</label>
           <input type="text" id="modal-pg-actual" readonly style="background:var(--gris-light);color:var(--texto-dim);font-size:12px"/>
         </div>
         <div class="fg">
           <label>Nuevo precio/unidad ($)</label>
-          <input type="number" id="modal-pg-nuevo" placeholder="dejar vacío = sin cambio" step="0.0001"/>
+          <input type="number" id="modal-pg-nuevo" placeholder="dejar vacio = sin cambio" step="0.0001" oninput="syncCalcFromPg()"/>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--texto-dim);margin-top:4px">Afecta el costo de preparados y menú que usen este ingrediente.</div>
+      <div style="border-top:1px solid var(--gris-light);padding-top:.5rem;margin-top:.2rem">
+        <div style="font-size:11px;color:var(--texto-dim);margin-bottom:.4rem;cursor:pointer;display:flex;align-items:center;gap:5px" onclick="toggleCalcPrecio()">
+          <span id="calc-precio-arrow">&#9658;</span>
+          <span style="color:var(--verde);font-weight:600">&#129518; Calcular precio automaticamente</span>
+        </div>
+        <div id="calc-precio-panel" style="display:none">
+          <div style="font-size:11px;color:var(--texto-dim);margin-bottom:.5rem">Ingresa el precio del paquete y la cantidad — calcula el costo por unidad automaticamente.</div>
+          <div class="fgrid" style="margin-bottom:.4rem">
+            <div class="fg">
+              <label>Precio total pagado ($)</label>
+              <input type="number" id="calc-precio-total" placeholder="ej: 3.00" step="0.01" oninput="calcPrecioAuto()"/>
+            </div>
+            <div class="fg">
+              <label>Cantidad en el paquete</label>
+              <input type="number" id="calc-precio-cant" placeholder="ej: 8" step="any" oninput="calcPrecioAuto()"/>
+            </div>
+          </div>
+          <div class="fgrid" style="margin-bottom:.4rem">
+            <div class="fg">
+              <label>Tipo de unidad</label>
+              <select id="calc-precio-unit" onchange="calcPrecioAuto()">
+                <option value="ud">Unidades (ej: 8 panes)</option>
+                <option value="g">Gramos (ej: 500g)</option>
+                <option value="kg">Kilogramos (ej: 1kg)</option>
+                <option value="ml">Mililitros (ej: 500ml)</option>
+                <option value="l">Litros (ej: 1L)</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Resultado calculado</label>
+              <input type="text" id="calc-precio-resultado" readonly style="background:var(--gris-light);color:var(--verde);font-weight:700;font-size:13px"/>
+            </div>
+          </div>
+          <button class="btn" style="padding:4px 12px;font-size:12px;background:var(--verde);color:#000" onclick="aplicarPrecioCalculado()">&#10003; Aplicar este precio</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--texto-dim);margin-top:6px">Afecta el costo de preparados y menu que usen este ingrediente.</div>
     </div>
     <div style="background:var(--gris-mid);border-radius:6px;padding:.6rem .8rem;margin-bottom:.8rem">
       <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.5rem">Sección del inventario</div>
@@ -2094,7 +2130,7 @@ function fBs(u){return tasa>0?'Bs.'+Math.round(u*tasa).toLocaleString('es-VE'):'
 function fUSD(u){return'$'+u.toFixed(2);}
 
 // ─── HELPERS ─────────────────────────────────────────────────
-function getPG(p){const m=compras.filter(c=>c.prod===p&&c.pg).sort((a,b)=>b.fecha.localeCompare(a.fecha));return m.length?m[0].pg:null;}
+function getPG(p){const m=compras.filter(c=>c.prod===p&&c.pg).sort((a,b)=>{const ta=b.fecha_ts||b.fecha||'';const tb=a.fecha_ts||a.fecha||'';return ta.localeCompare(tb);});return m.length?m[0].pg:null;}
 function getCPGP(prep){
   const costoIngs=prep.ings.reduce((a,i)=>a+(i.cant*(getPG(i.prod)||i.pg||0)),0);
   // Add oil absorption cost if factor defined
@@ -2820,7 +2856,7 @@ async function registrarCompra(){
   if(!tienda) return alert('Falta la Tienda');
   if(!fecha) return alert('Falta la Fecha');
   const pg=cant>0?precio/cant:null;
-  const compra={fecha,prod,marca,stockunit:unit,cont:cant,precio,precioBs,pg,tienda,tasa};
+  const compra={fecha,fecha_ts:new Date().toISOString(),prod,marca,stockunit:unit,cont:cant,precio,precioBs,pg,tienda,tasa};
   compras.unshift(compra);
   if(am||ro){umbrales[prod]={amarillo:am?parseFloat(am):(umbrales[prod]?.amarillo??null),rojo:ro?parseFloat(ro):(umbrales[prod]?.rojo??null),unit};}
   if(desc){
@@ -3131,6 +3167,48 @@ async function eliminarProdInv(prod){
 }
 
 let modalProd=null;
+
+function toggleCalcPrecio(){
+  const panel=document.getElementById('calc-precio-panel');
+  const arrow=document.getElementById('calc-precio-arrow');
+  if(!panel) return;
+  const open=panel.style.display==='none';
+  panel.style.display=open?'block':'none';
+  if(arrow) arrow.textContent=open?'▼':'▶';
+}
+
+function calcPrecioAuto(){
+  const total=parseFloat(document.getElementById('calc-precio-total')?.value);
+  const cant=parseFloat(document.getElementById('calc-precio-cant')?.value);
+  const unit=document.getElementById('calc-precio-unit')?.value||'ud';
+  const res=document.getElementById('calc-precio-resultado');
+  if(!res) return;
+  if(isNaN(total)||isNaN(cant)||cant<=0){ res.value='—'; return; }
+  let pgCalc=0;
+  // Convert everything to base unit (g or ud)
+  if(unit==='ud') pgCalc=total/cant;
+  else if(unit==='g') pgCalc=total/cant;
+  else if(unit==='kg') pgCalc=total/(cant*1000);
+  else if(unit==='ml') pgCalc=total/cant;
+  else if(unit==='l') pgCalc=total/(cant*1000);
+  const unitLabel=unit==='kg'?'g':unit==='l'?'ml':unit;
+  res.value='$'+pgCalc.toFixed(6)+' / '+unitLabel;
+  res._pgCalc=pgCalc;
+}
+
+function syncCalcFromPg(){
+  // If user types directly in modal-pg-nuevo, clear calc fields
+  const el=document.getElementById('calc-precio-resultado');
+  if(el) el.value='—';
+}
+
+function aplicarPrecioCalculado(){
+  const res=document.getElementById('calc-precio-resultado');
+  if(!res||!res._pgCalc) return alert('Primero ingresa el precio y la cantidad.');
+  const pgInput=document.getElementById('modal-pg-nuevo');
+  if(pgInput){ pgInput.value=res._pgCalc.toFixed(6); }
+}
+
 function abrirModal(prod){
   modalProd=prod;
   const u=umbrales[prod]||{};
@@ -3148,6 +3226,17 @@ function abrirModal(prod){
   if(pgEl) pgEl.value=pgActual?'$'+pgActual.toFixed(6)+' / '+(unidades[prod]||'g'):'Sin precio registrado';
   const pgNuevo=document.getElementById('modal-pg-nuevo');
   if(pgNuevo) pgNuevo.value='';
+  // Reset calculator fields
+  const calcPanel=document.getElementById('calc-precio-panel');
+  if(calcPanel) calcPanel.style.display='none';
+  const calcArrow=document.getElementById('calc-precio-arrow');
+  if(calcArrow) calcArrow.textContent='▶';
+  const calcTotal=document.getElementById('calc-precio-total');
+  if(calcTotal) calcTotal.value='';
+  const calcCant=document.getElementById('calc-precio-cant');
+  if(calcCant) calcCant.value='';
+  const calcRes=document.getElementById('calc-precio-resultado');
+  if(calcRes){ calcRes.value=''; calcRes._pgCalc=null; }
   // Populate section selector
   const secSel=document.getElementById('modal-seccion');
   if(secSel){
@@ -3207,6 +3296,7 @@ async function guardarUmbrales(){
       // Add a correction entry at the top of compras so getPG picks it up (most recent first)
       const corrEntry={
         fecha:getVEDate(),
+        fecha_ts:new Date().toISOString(),
         prod:modalProd,
         marca:'Corrección manual',
         stockunit:unit,
@@ -3411,7 +3501,10 @@ function renderVidDetalle(){
               <div style="font-size:11px;color:var(--texto-dim)">${v.cont?v.cont+'g':'—'} · ${v.pg?'$'+v.pg.toFixed(4)+'/g':'—'}</div>
             </div>
           </div>
-          <button class="db" onclick="delV(${i})" style="font-size:10px;padding:2px 6px">✕ Eliminar</button>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button class="db" onclick="delV(${i})" style="font-size:10px;padding:2px 6px">✕ Eliminar</button>
+            ${v.pg?`<button class="btn" onclick="vidPrecioAStock('${v.prod.replace(/'/g,"\'")}',${v.pg})" style="font-size:10px;padding:2px 8px;background:var(--verde);color:#000">→ Aplicar al Stock</button>`:''}
+          </div>
         </div>`;
       }).join('')}
     </div>`;
@@ -3428,6 +3521,34 @@ function renderVidDetalle(){
 }
 
 async function delV(i){if(!confirm('Eliminar?'))return;vidriera.splice(i,1);await saveInv_db();renderVidriera();}
+
+async function vidPrecioAStock(prod, pg){
+  const unit = umbrales[prod]?.unit || 'g';
+  const confirm_msg = 'Aplicar $'+pg.toFixed(6)+'/'+unit+' como precio de "'+prod+'" en el Stock?\nEsto actualizara Preparados, Menu y Combos automaticamente.';
+  if(!confirm(confirm_msg)) return;
+  // Remove previous corrections for this product
+  compras = compras.filter(co=>!(co.prod===prod&&co.esCorreccion));
+  const corrEntry = {
+    fecha: getVEDate(),
+    fecha_ts: new Date().toISOString(),
+    prod,
+    marca: 'Desde Vidriera',
+    stockunit: unit,
+    cont: 1,
+    precio: pg,
+    pg,
+    tienda: 'Vidriera',
+    esCorreccion: true
+  };
+  compras.unshift(corrEntry);
+  await addCompra_db(corrEntry);
+  renderInventario();
+  renderPreps && renderPreps();
+  renderMenu && renderMenu();
+  renderCombos && renderCombos();
+  renderVidriera();
+  alert('Precio actualizado. Preparados, Menu y Combos ya reflejan el nuevo costo.');
+}
 
 // ─── PREPARADOS ──────────────────────────────────────────────
 async function agregarCatPrep(){
