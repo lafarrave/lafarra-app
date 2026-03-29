@@ -2053,6 +2053,21 @@ async function deleteVenta_db(fecha,cliente){
   }catch(e){setSyncStatus('error');}
 }
 
+async function deleteCorreccionesProd_db(prod){
+  // Delete all correction entries for a product from Supabase
+  setSyncStatus('syncing');
+  try{
+    const {data}=await sb.from('compras').select('*');
+    if(data){
+      const toDelete=data.filter(r=>r.data&&r.data.prod===prod&&r.data.esCorreccion);
+      for(const row of toDelete){
+        await sb.from('compras').delete().eq('id',row.id);
+      }
+    }
+    setSyncStatus('ok');
+  }catch(e){setSyncStatus('error');}
+}
+
 async function deleteCompra_db(idx){
   setSyncStatus('syncing');
   try{
@@ -3306,8 +3321,9 @@ async function guardarUmbrales(){
         tienda:'Ajuste manual',
         esCorreccion:true
       };
-      // Remove previous correction entries for this product
+      // Remove previous correction entries for this product (memory + DB)
       compras=compras.filter(co=>!(co.prod===modalProd&&co.esCorreccion));
+      await deleteCorreccionesProd_db(modalProd);
       // Add new one at beginning so it's picked up as most recent
       compras.unshift(corrEntry);
       await addCompra_db(corrEntry);
@@ -3526,8 +3542,9 @@ async function vidPrecioAStock(prod, pg){
   const unit = umbrales[prod]?.unit || 'g';
   const confirm_msg = 'Aplicar $'+pg.toFixed(6)+'/'+unit+' como precio de "'+prod+'" en el Stock?\nEsto actualizara Preparados, Menu y Combos automaticamente.';
   if(!confirm(confirm_msg)) return;
-  // Remove previous corrections for this product
+  // Remove previous corrections for this product (memory + DB)
   compras = compras.filter(co=>!(co.prod===prod&&co.esCorreccion));
+  await deleteCorreccionesProd_db(prod);
   const corrEntry = {
     fecha: getVEDate(),
     fecha_ts: new Date().toISOString(),
