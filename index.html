@@ -238,6 +238,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div class="tab" onclick="showTab('pos',this)">🧾 Ventas</div>
     <div class="tab" onclick="showTab('envios',this)">🚴 Envíos</div>
     <div class="tab" onclick="showTab('stats',this)">📊 Estadísticas</div>
+    <div class="tab" onclick="showTab('produccion',this)">🔢 Producción</div>
   </div>
 
   <div class="content">
@@ -604,6 +605,14 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
           <button class="btn" style="padding:5px 14px;font-size:12px" onclick="abrirVidForm()">+ Agregar precio</button>
         </div>
         <!-- Sección activa -->
+        <div style="margin-bottom:.6rem">
+          <button id="vid-inflacion-btn" class="btn" onclick="toggleVidInflacion()" style="padding:5px 12px;font-size:12px">📈 Ver índice inflación</button>
+        </div>
+        <div id="vid-inflacion-wrap" style="display:none;margin-bottom:.8rem">
+          <div class="card" style="margin:0;padding:.7rem">
+            <div id="vid-inflacion"></div>
+          </div>
+        </div>
         <div id="vid-sec-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.8rem"></div>
         <!-- Productos de la sección activa -->
         <div id="vid-prods-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.8rem"></div>
@@ -797,6 +806,13 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       </div>
     </div>
     <!-- ENVÍOS -->
+    <div id="tab-produccion" class="section">
+      <div class="card">
+        <div class="card-title">🔢 ¿Cuánto puedo producir hoy?</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.8rem">Basado en el stock actual. Calcula cuántas unidades de cada ítem del menú y combos puedes preparar.</div>
+        <div id="prod-resultado"></div>
+      </div>
+    </div>
     <div id="tab-envios" class="section">
       <div class="metrics" id="metrics-envios"></div>
       <div class="card">
@@ -1796,6 +1812,7 @@ async function cerrarMes(){
   await saveSaldo_db();
   await saveInv_db();
   renderStats();renderVentas();renderMovs();renderSaldoResumen();renderMermas();
+  renderStockAlertBtn();
   alert('✓ Mes '+mes+' cerrado correctamente');
 }
 
@@ -2241,6 +2258,7 @@ function showTab(n,el){
   if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();renderPendientes();renderPagoMovilInfo();}
   if(n==='envios')renderEnvios();
   if(n==='stats')renderStats();
+  if(n==='produccion')renderProduccion();
   if(n==='saldo'){renderSaldoResumen();renderMovs();}
   if(n==='inventario'){renderInventario();renderSI();renderInvHist();}
   if(n==='inv-merma'||n==='inventario'){initMermaSelects();renderMermas();}
@@ -3352,7 +3370,7 @@ async function guardarUmbrales(){
     }
   }
   await saveUmbrales_db();
-  renderInventario();renderSI();
+  renderInventario();renderSI();renderStockAlertBtn();
   document.getElementById('modal-umbral').style.display='none';
   modalProd=null;
 }
@@ -3541,9 +3559,10 @@ function renderVidDetalle(){
               <div style="font-size:11px;color:var(--texto-dim)">${v.cont?v.cont+'g':'—'} · ${v.pg?'$'+v.pg.toFixed(4)+'/g':'—'}</div>
             </div>
           </div>
-          <div style="display:flex;gap:6px;margin-top:4px">
+          <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
             <button class="db" onclick="delV(${i})" style="font-size:10px;padding:2px 6px">✕ Eliminar</button>
-            ${v.pg?`<button class="btn" onclick="vidPrecioAStock('${v.prod.replace(/'/g,"\'")}',${v.pg})" style="font-size:10px;padding:2px 8px;background:var(--verde);color:#000">→ Aplicar al Stock</button>`:''}
+            <button class="edit-btn" onclick="abrirEditarVid(${i})" style="font-size:10px;padding:2px 6px" title="Actualizar precio">✏ Precio</button>
+            ${v.pg?`<button class="btn" onclick="vidPrecioAStock('${v.prod.replace(/'/g,"\'")}',${v.pg})" style="font-size:10px;padding:2px 8px;background:var(--verde);color:#000">→ Stock</button>`:''}
           </div>
         </div>`;
       }).join('')}
@@ -4174,6 +4193,11 @@ async function init(){
 init();
 </script>
 <!-- BUG/CHANGELOG PANEL -->
+<div id="stock-alert-btn" onclick="toggleStockAlert()" style="position:fixed;bottom:18px;right:64px;z-index:9999;width:38px;height:38px;border-radius:50%;background:var(--gris-mid);border:1px solid var(--gris-light);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4)" title="Estado del stock">📦</div>
+<div id="stock-alert-panel-wrap" style="display:none;position:fixed;bottom:65px;right:64px;z-index:9999;width:280px;max-height:60vh;background:var(--gris-dark);border:1px solid var(--gris-light);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.6);overflow-y:auto;padding:.8rem;font-size:12px">
+  <div style="font-size:11px;color:var(--naranja);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">📦 Estado del Stock</div>
+  <div id="stock-alert-panel"></div>
+</div>
 <div id="debug-btn" onclick="toggleDebugPanel()" style="position:fixed;bottom:18px;right:18px;z-index:9999;width:38px;height:38px;border-radius:50%;background:var(--gris-mid);border:1px solid var(--gris-light);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4)" title="Bugs y versiones">🐛</div>
 <div id="debug-panel" style="display:none;position:fixed;bottom:65px;right:18px;z-index:9999;width:340px;max-height:70vh;background:var(--gris-dark);border:1px solid var(--gris-light);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.6);overflow:hidden;font-size:12px">
   <div style="display:flex;border-bottom:1px solid var(--gris-mid)">
@@ -4195,6 +4219,350 @@ init();
 </div>
 
   <script>
+
+// ─── PRODUCCION ──────────────────────────────────────────────
+function calcProduccionItem(item){
+  // Returns how many units of this menu item can be made with current stock
+  const {stock, unidades} = calcStock();
+  const prot = 1 + (cfg.proteccion||0)/100;
+  let limites = [];
+
+  // Helper: how many times can we use 'cant' of 'prod' from stock
+  function limite(prod, cant){
+    if(!cant||cant<=0) return Infinity;
+    const s = stock[prod]||0;
+    return Math.floor(s/cant);
+  }
+
+  // Direct ingredients
+  item.comps.forEach(c=>{
+    if(c.tipo==='ing'){
+      limites.push({nom:c.nom, cant:c.cant, lim:limite(c.nom,c.cant)});
+    } else {
+      const prep = preps.find(p=>p.nom===c.nom);
+      if(prep){
+        prep.ings.forEach(ing=>{
+          const cantPorUnidad = ing.cant * (c.cant/(prep.g||1));
+          limites.push({nom:ing.prod, cant:cantPorUnidad, lim:limite(ing.prod,cantPorUnidad)});
+        });
+      }
+    }
+  });
+
+  // Papas
+  if(item.usaPapas!==false && item.cat!=='papas' && cfg.papas){
+    const prepPapas = preps.find(p=>p.nom===cfg.papas);
+    if(prepPapas){
+      prepPapas.ings.forEach(ing=>{
+        const cantPorUnidad = ing.cant * (cfg.gp/(prepPapas.g||1));
+        limites.push({nom:ing.prod, cant:cantPorUnidad, lim:limite(ing.prod,cantPorUnidad)});
+      });
+    }
+  }
+
+  // Botes
+  if(item.usaBotes!==false){
+    botes.forEach(b=>{
+      if(b.tipo==='ing') limites.push({nom:b.nom, cant:b.cant, lim:limite(b.nom,b.cant)});
+    });
+  }
+
+  // Empaque burger
+  if(item.usaEmpaqueBurger!==false && item.cat!=='papas'){
+    empaque.forEach(e=>limites.push({nom:e.prod, cant:e.cant, lim:limite(e.prod,e.cant)}));
+  }
+
+  // Empaque papas
+  if(item.usaEmpaquePapas!==false && item.cat==='papas'){
+    empaquePapas.forEach(e=>limites.push({nom:e.prod, cant:e.cant, lim:limite(e.prod,e.cant)}));
+  }
+
+  const total = limites.length ? Math.min(...limites.map(l=>l.lim)) : 0;
+  const bottleneck = limites.filter(l=>l.lim===total && total<Infinity);
+  return {total, limites, bottleneck};
+}
+
+function calcProduccionCombo(combo){
+  const {stock} = calcStock();
+  let limites = [];
+
+  function limite(prod, cant){
+    if(!cant||cant<=0) return Infinity;
+    return Math.floor((stock[prod]||0)/cant);
+  }
+
+  // Burgers in combo
+  (combo.burgers||[]).forEach(b=>{
+    const item = menuItems.find(m=>m.nom===b.nom);
+    if(!item) return;
+    item.comps.forEach(c=>{
+      if(c.tipo==='ing') limites.push({nom:c.nom, cant:c.cant*b.qty, lim:limite(c.nom,c.cant*b.qty)});
+      else {
+        const prep=preps.find(p=>p.nom===c.nom);
+        if(prep) prep.ings.forEach(ing=>{
+          const cp=ing.cant*(c.cant/(prep.g||1))*b.qty;
+          limites.push({nom:ing.prod, cant:cp, lim:limite(ing.prod,cp)});
+        });
+      }
+    });
+  });
+
+  // Papas del combo
+  if(combo.papas?.prep && combo.papas?.gramos){
+    const pp=preps.find(p=>p.nom===combo.papas.prep);
+    if(pp) pp.ings.forEach(ing=>{
+      const cp=ing.cant*(combo.papas.gramos/(pp.g||1));
+      limites.push({nom:ing.prod,cant:cp,lim:limite(ing.prod,cp)});
+    });
+  }
+
+  // Ings sueltos
+  (combo.ings||[]).forEach(ing=>limites.push({nom:ing.nom,cant:ing.cant,lim:limite(ing.nom,ing.cant)}));
+
+  // Botes
+  (combo.botesList||[]).forEach(b=>{
+    if(b.ingNom) limites.push({nom:b.ingNom,cant:b.cantBote,lim:limite(b.ingNom,b.cantBote)});
+  });
+
+  // Empaque
+  (combo.empaque||[]).forEach(e=>limites.push({nom:e.prod,cant:e.cant,lim:limite(e.prod,e.cant)}));
+
+  const total = limites.length ? Math.min(...limites.map(l=>l.lim)) : 0;
+  const bottleneck = limites.filter(l=>l.lim===total && total<Infinity);
+  return {total, limites, bottleneck};
+}
+
+function renderProduccion(){
+  const el = document.getElementById('prod-resultado');
+  if(!el) return;
+  const prot = cfg.proteccion||0;
+
+  let html = '';
+
+  // Menu items
+  if(menuItems.length){
+    html += '<div style="font-size:11px;color:var(--naranja);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">🍔 Menú</div>';
+    html += menuItems.map(item=>{
+      const {total, bottleneck} = calcProduccionItem(item);
+      const cT = getCMTotal(item);
+      const cBase = cT*(1+prot/100);
+      const pv = item.pv||0;
+      const color = total===0?'var(--rojo)':total<=3?'var(--amarillo)':'var(--verde)';
+      const bnText = bottleneck.length && total<999 ? '<div style="font-size:10px;color:var(--texto-dim);margin-top:2px">⚠ Límite: '+bottleneck.map(b=>b.nom).join(', ')+'</div>' : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .7rem;background:var(--gris-mid);border-radius:6px;margin-bottom:.3rem;border-left:3px solid ${color}">
+        <div>
+          <span style="font-weight:700;font-size:13px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">${item.nom}</span>
+          ${bnText}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:900;color:${color};font-family:'Barlow Condensed',sans-serif;line-height:1">${total>=999?'∞':total}</div>
+          <div style="font-size:10px;color:var(--texto-dim)">unidades</div>
+          ${pv>0?`<div style="font-size:10px;color:var(--verde)">=$${(total*pv).toFixed(2)}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Combos activos
+  const combosActivos = combos.filter(c=>c.activo!==false);
+  if(combosActivos.length){
+    html += '<div style="font-size:11px;color:var(--naranja);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:.8rem 0 .5rem">🍿 Combos</div>';
+    html += combosActivos.map(combo=>{
+      const {total, bottleneck} = calcProduccionCombo(combo);
+      const pv = combo.pv||0;
+      const color = total===0?'var(--rojo)':total<=3?'var(--amarillo)':'var(--verde)';
+      const bnText = bottleneck.length && total<999 ? '<div style="font-size:10px;color:var(--texto-dim);margin-top:2px">⚠ Límite: '+bottleneck.map(b=>b.nom).join(', ')+'</div>' : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .7rem;background:var(--gris-mid);border-radius:6px;margin-bottom:.3rem;border-left:3px solid ${color}">
+        <div>
+          <span style="font-weight:700;font-size:13px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">${combo.nom}</span>
+          ${bnText}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:900;color:${color};font-family:'Barlow Condensed',sans-serif;line-height:1">${total>=999?'∞':total}</div>
+          <div style="font-size:10px;color:var(--texto-dim)">unidades</div>
+          ${pv>0?`<div style="font-size:10px;color:var(--verde)">=$${(total*pv).toFixed(2)}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if(!html) html = '<div style="color:var(--texto-dim);font-size:12px">No hay ítems de menú ni combos configurados.</div>';
+  el.innerHTML = html;
+}
+
+// ─── STOCK ALERT BUTTON ───────────────────────────────────────
+function renderStockAlertBtn(){
+  const {stock, unidades} = calcStock();
+  const criticos = [], bajos = [], ok = [];
+
+  stockInicial.forEach(s=>{
+    const prod = s.prod;
+    const u = umbrales[prod];
+    if(!u) return;
+    const qty = stock[prod]||0;
+    if(u.rojo!=null && qty<=u.rojo) criticos.push({prod, qty, u});
+    else if(u.amarillo!=null && qty<=u.amarillo) bajos.push({prod, qty, u});
+    else ok.push({prod, qty});
+  });
+
+  const btn = document.getElementById('stock-alert-btn');
+  if(!btn) return;
+
+  if(criticos.length){
+    btn.style.background='var(--rojo)'; btn.style.borderColor='var(--rojo)';
+    btn.textContent='📦'; btn.title=criticos.length+' crítico(s)';
+  } else if(bajos.length){
+    btn.style.background='var(--amarillo)'; btn.style.borderColor='var(--amarillo)';
+    btn.textContent='📦'; btn.title=bajos.length+' bajo(s)';
+  } else {
+    btn.style.background='var(--gris-mid)'; btn.style.borderColor='var(--gris-light)';
+    btn.textContent='📦'; btn.title='Stock OK';
+  }
+
+  // Render panel content
+  const panel = document.getElementById('stock-alert-panel');
+  if(!panel) return;
+  let html = '';
+  if(criticos.length){
+    html += '<div style="font-size:11px;color:var(--rojo);font-weight:700;margin-bottom:.3rem">🔴 CRÍTICO</div>';
+    html += criticos.map(x=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--gris-mid);font-size:12px"><span>${x.prod}</span><span style="color:var(--rojo);font-weight:700">${x.qty.toFixed(1)} ${unidades[x.prod]||'g'}</span></div>`).join('');
+  }
+  if(bajos.length){
+    html += '<div style="font-size:11px;color:var(--amarillo);font-weight:700;margin:.5rem 0 .3rem">🟡 BAJO</div>';
+    html += bajos.map(x=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--gris-mid);font-size:12px"><span>${x.prod}</span><span style="color:var(--amarillo);font-weight:700">${x.qty.toFixed(1)} ${unidades[x.prod]||'g'}</span></div>`).join('');
+  }
+  if(!criticos.length && !bajos.length){
+    html = '<div style="color:var(--verde);font-size:12px;text-align:center;padding:.5rem">✅ Todo el stock en buen estado</div>';
+  }
+  panel.innerHTML = html;
+}
+
+let stockAlertOpen = false;
+function toggleStockAlert(){
+  stockAlertOpen = !stockAlertOpen;
+  const panel = document.getElementById('stock-alert-panel-wrap');
+  if(panel) panel.style.display = stockAlertOpen ? 'block' : 'none';
+  if(stockAlertOpen) renderStockAlertBtn();
+}
+
+// ─── VIDRIERA INFLACION + EDITAR PRECIO ──────────────────────
+function calcInflacionVidriera(){
+  // For each product, find price history and compute % change over time
+  const prods = [...new Set(vidriera.map(v=>v.prod))];
+  const resultado = {};
+  prods.forEach(prod=>{
+    const hist = vidriera.filter(v=>v.prod===prod&&v.pg).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    if(hist.length<2){ resultado[prod]={pct:null,hist}; return; }
+    // Group by tienda for fair comparison — use all records chronologically
+    const primero = hist[0];
+    const ultimo = hist[hist.length-1];
+    const dias = Math.max(1,(new Date(ultimo.fecha)-new Date(primero.fecha))/(1000*60*60*24));
+    const pctTotal = ((ultimo.pg-primero.pg)/primero.pg)*100;
+    const pctMensual = (pctTotal/dias)*30;
+    resultado[prod] = {pct:pctTotal, pctMensual, dias, primero, ultimo, hist};
+  });
+  return resultado;
+}
+
+function renderVidInflacion(){
+  const el = document.getElementById('vid-inflacion');
+  if(!el) return;
+  const datos = calcInflacionVidriera();
+  const prods = Object.keys(datos).filter(p=>datos[p].pct!==null);
+  if(!prods.length){ el.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Necesitas al menos 2 registros de precio del mismo producto en distintas fechas.</div>'; return; }
+
+  // Global recommendation
+  const maxMensual = Math.max(...prods.map(p=>datos[p].pctMensual||0));
+  const recProt = Math.ceil(maxMensual*1.2); // 20% buffer over worst ingredient
+  const protActual = cfg.proteccion||0;
+  const protColor = protActual>=recProt?'var(--verde)':'var(--rojo)';
+
+  let html = `<div style="background:var(--gris-mid);border-radius:8px;padding:.7rem .9rem;margin-bottom:.8rem;border-left:4px solid ${protColor}">
+    <div style="font-size:11px;color:var(--texto-dim);margin-bottom:3px">Recomendación de protección mensual</div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <span style="font-size:22px;font-weight:900;color:${protColor};font-family:'Barlow Condensed',sans-serif">${recProt}%</span>
+        <span style="font-size:11px;color:var(--texto-dim);margin-left:5px">mínimo sugerido</span>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px">Tu protección actual: <strong style="color:${protColor}">${protActual}%</strong></div>
+        ${protActual<recProt?`<div style="font-size:11px;color:var(--rojo)">⚠ Insuficiente — subir ${recProt-protActual}%</div>`:'<div style="font-size:11px;color:var(--verde)">✅ Cubierto</div>'}
+      </div>
+    </div>
+  </div>`;
+
+  html += '<div style="font-size:11px;color:var(--naranja);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.4rem">Por ingrediente</div>';
+  // Sort by worst inflation first
+  prods.sort((a,b)=>(datos[b].pctMensual||0)-(datos[a].pctMensual||0));
+  html += prods.map(prod=>{
+    const d = datos[prod];
+    const color = d.pctMensual>15?'var(--rojo)':d.pctMensual>5?'var(--amarillo)':'var(--verde)';
+    const arrow = d.pct>0?'↑':'↓';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--gris-mid);border-radius:6px;margin-bottom:.25rem">
+      <div>
+        <span style="font-weight:600;font-size:12px">${prod}</span>
+        <span style="font-size:10px;color:var(--texto-dim);margin-left:5px">${d.dias}d de datos · $${d.primero.pg.toFixed(4)}→$${d.ultimo.pg.toFixed(4)}/g</span>
+      </div>
+      <div style="text-align:right">
+        <span style="font-weight:700;color:${color};font-size:13px">${arrow}${Math.abs(d.pct).toFixed(1)}%</span>
+        <div style="font-size:10px;color:var(--texto-dim)">${d.pctMensual>0?'+':''}${d.pctMensual.toFixed(1)}%/mes</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = html;
+}
+
+let vidInflacionOpen = false;
+function toggleVidInflacion(){
+  vidInflacionOpen = !vidInflacionOpen;
+  const panel = document.getElementById('vid-inflacion-wrap');
+  const btn = document.getElementById('vid-inflacion-btn');
+  if(panel) panel.style.display = vidInflacionOpen?'block':'none';
+  if(btn) btn.textContent = vidInflacionOpen?'📈 Ocultar inflación':'📈 Ver índice inflación';
+  if(vidInflacionOpen) renderVidInflacion();
+}
+
+// Edit existing vidriera price
+function abrirEditarVid(idx){
+  const v = vidriera[idx];
+  if(!v) return;
+  document.getElementById('vid-edit-idx').value = idx;
+  document.getElementById('vid-edit-precio-bs').value = v.precioBs||'';
+  document.getElementById('vid-edit-cont').value = v.cont||'';
+  document.getElementById('vid-edit-info').textContent = v.marca+' · '+v.tienda+' · '+v.cont+'g';
+  document.getElementById('vid-edit-pg-actual').textContent = '$'+v.pg.toFixed(4)+'/g';
+  document.getElementById('vid-edit-pg-nuevo').textContent = '—';
+  document.getElementById('modal-vid-edit').style.display='flex';
+}
+
+function calcVidEditPg(){
+  const precioBs = parseFloat(document.getElementById('vid-edit-precio-bs').value)||0;
+  const cont = parseFloat(document.getElementById('vid-edit-cont').value)||0;
+  const pgEl = document.getElementById('vid-edit-pg-nuevo');
+  if(precioBs>0 && cont>0 && tasa>0){
+    const pgNuevo = (precioBs/tasa)/cont;
+    pgEl.textContent = '$'+pgNuevo.toFixed(4)+'/g';
+    pgEl.style.color='var(--verde)';
+  } else {
+    pgEl.textContent='—'; pgEl.style.color='var(--texto-dim)';
+  }
+}
+
+async function guardarEditVid(){
+  const idx = parseInt(document.getElementById('vid-edit-idx').value);
+  const precioBs = parseFloat(document.getElementById('vid-edit-precio-bs').value)||0;
+  const cont = parseFloat(document.getElementById('vid-edit-cont').value)||0;
+  if(!precioBs||!cont||!tasa){ alert('Ingresa el precio en Bs y el contenido.'); return; }
+  const v = vidriera[idx];
+  const pgNuevo = (precioBs/tasa)/cont;
+  const precio = precioBs/tasa;
+  // Update the entry
+  vidriera[idx] = {...v, precioBs, cont, precio, pg:pgNuevo, tasa, fecha:getVEDate()};
+  await saveInv_db();
+  document.getElementById('modal-vid-edit').style.display='none';
+  renderVidriera();
+}
 
 // ─── DEBUG PANEL ─────────────────────────────────────────────
 const CHANGELOG=[
@@ -4296,5 +4664,35 @@ window.addEventListener('load',()=>{
       });
     }
   </script>
+<div id="modal-vid-edit" style="display:none" class="modal-bg" onclick="if(event.target.id==='modal-vid-edit')this.style.display='none'">
+  <div class="modal">
+    <div class="modal-title">✏ Actualizar precio</div>
+    <input type="hidden" id="vid-edit-idx"/>
+    <div style="background:var(--gris-mid);border-radius:6px;padding:.6rem .8rem;margin-bottom:.8rem;font-size:12px">
+      <div id="vid-edit-info" style="color:var(--texto-dim);margin-bottom:.3rem"></div>
+      <div style="display:flex;justify-content:space-between">
+        <span>Precio actual:</span><span class="hl" id="vid-edit-pg-actual"></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px">
+        <span>Nuevo precio:</span><span id="vid-edit-pg-nuevo" style="color:var(--verde);font-weight:700"></span>
+      </div>
+    </div>
+    <div class="fgrid">
+      <div class="fg">
+        <label>Nuevo precio total (Bs)</label>
+        <input type="number" id="vid-edit-precio-bs" placeholder="ej: 8500" oninput="calcVidEditPg()"/>
+      </div>
+      <div class="fg">
+        <label>Contenido (g)</label>
+        <input type="number" id="vid-edit-cont" placeholder="ej: 1000" oninput="calcVidEditPg()"/>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--texto-dim);margin-bottom:.8rem">La fecha se actualiza a hoy. El registro anterior queda en el historial para calcular la inflación.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="guardarEditVid()">Guardar</button>
+      <button class="btns" onclick="document.getElementById('modal-vid-edit').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
