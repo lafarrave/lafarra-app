@@ -416,7 +416,6 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
           <div class="card-title" style="margin:0">Transferir entre cuentas</div>
-          <button class="btns" style="font-size:11px;padding:4px 10px" onclick="resetearContadores()" title="Marcar todo como transferido — empieza desde hoy">🔄 Resetear contadores</button>
         </div>
         <div style="margin-bottom:.8rem;font-size:12px;display:flex;flex-direction:column;gap:4px">
           <div style="color:var(--texto-dim)">🏦 Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" class="green">Bs.— / $—</strong> <span id="com-bc-badge"></span></div>
@@ -2686,16 +2685,7 @@ function calcTransferUSD(){
   if(el) el.value=usd>0?usd.toFixed(4):'';
 }
 
-async function resetearContadores(){
-  if(!confirm('¿Marcar todo como transferido? Los contadores empezarán desde hoy.')) return;
-  const hoy = getVEDate();
-  movs.unshift({fecha:hoy, desc:'Reseteo de contadores', tipo:'transferencia', monto:0, montoBs:0, sd:saldo, tasa, esTransferencia:true, dir:'bc_to_pv'});
-  movs.unshift({fecha:hoy, desc:'Reseteo de contadores', tipo:'transferencia', monto:0, montoBs:0, sd:saldo, tasa, esTransferencia:true, dir:'pv_to_bc'});
-  await saveSaldo_db();
-  renderSaldoResumen();
-  renderMovs();
-  alert('✓ Contadores reseteados');
-}
+
 
 async function registrarTransferencia(){
   const montoBs=parseFloat(document.getElementById('transfer-monto-bs').value);
