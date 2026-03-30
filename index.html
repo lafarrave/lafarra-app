@@ -2235,12 +2235,13 @@ function getGanPend(){
   // Same logic as the green transfer box
   const ultimaTransfBC=movs.filter(m=>m.dir==='bc_to_pv').sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
   const fechaCorteBC=ultimaTransfBC?.fecha||'2000-01-01';
-  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>=fechaCorteBC);
+  const ventasBC=ventas.filter(v=>v.estado==='cobrado'&&(v.banco==='bancaribe'||!v.banco)&&v.fecha>fechaCorteBC);
+  const prot=1+(cfg.proteccion||0)/100;
   const ganVentasBC=ventasBC.reduce((a,v)=>{
-    if((v.gan||0)>0) return a+(v.gan||0);
-    return a+Math.max(0,(v.total||0)-(v.costo||0));
+    const costoConProt=(v.costo||0)>0?v.costo*prot:Math.max(0,(v.total||0)-(v.gan||0))*prot;
+    return a+Math.max(0,(v.total||0)-costoConProt);
   },0);
-  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>=fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
   return Math.max(0,ganVentasBC-totalTransfBCtoPC);
 }
 function tog(id){const el=document.getElementById(id);if(el)el.classList.toggle('open');}
@@ -2531,7 +2532,7 @@ function renderSaldoResumen(){
   },0);
   // Only count actual registered transfers, not ganT (which may include old data)
   // Solo transferencias DESPUÉS del corte (las anteriores ya estaban contadas)
-  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
+  const totalTransfBCtoPC=movs.filter(m=>m.dir==='bc_to_pv'&&m.fecha>=fechaCorteBC).reduce((a,m)=>a+(m.monto||0),0);
   const pendAProvincial=Math.max(0,ganVentasBC-totalTransfBCtoPC);
   const pendAProvincialBs=tasa>0?pendAProvincial*tasa:0;
   const spt=document.getElementById('s-pendiente-transferir');
@@ -2549,7 +2550,7 @@ function renderSaldoResumen(){
   const ventasPV=ventas.filter(v=>
     v.estado==='cobrado'&&
     v.banco==='provincial'&&
-    v.fecha>=fechaCortePV
+    v.fecha>fechaCortePV
   );
   // Recalculate costo from current menu prices (in case venta was saved with costo=0)
   function getVentaCosto(v){
@@ -2568,7 +2569,7 @@ function renderSaldoResumen(){
     return costoBase*prot;
   }
   const costosProvincial=ventasPV.reduce((a,v)=>a+getVentaCosto(v),0);
-  const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc'&&m.fecha>fechaCortePV).reduce((a,m)=>a+(m.monto||0),0);
+  const totalTransfPVtoBC=movs.filter(m=>m.dir==='pv_to_bc'&&m.fecha>=fechaCortePV).reduce((a,m)=>a+(m.monto||0),0);
   const costosPend=Math.max(0,costosProvincial-totalTransfPVtoBC);
   const costosPendBs=tasa>0?costosPend*tasa:0;
 
@@ -4253,7 +4254,7 @@ init();
 
 // ─── PRODUCCION ──────────────────────────────────────────────
 // stockPreps: {prepNom: gramos} — manually entered ready-made prep stock
-let stockPreps = {};
+let stockPreps = JSON.parse(localStorage.getItem('lf_stock_preps')||'{}');
 
 function renderProdPrepsInputs(){
   const el = document.getElementById('prod-preps-inputs');
@@ -4296,6 +4297,7 @@ function guardarStockPreps(){
     const el = document.getElementById(id);
     if(el) stockPreps[nom] = parseFloat(el.value)||0;
   });
+  localStorage.setItem('lf_stock_preps', JSON.stringify(stockPreps));
   renderProduccion();
 }
 
