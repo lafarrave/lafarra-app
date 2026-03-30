@@ -1578,6 +1578,7 @@ function buildComboCard(combo, ci){
 
       <!-- Papas -->
       <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:4px">🍟 Papas</div>
+      ${combo.papas&&combo.papas.prep&&combo.papas.gramos>0?(()=>{const pp=preps.find(x=>x.nom===combo.papas.prep);const cPapas=pp?combo.papas.gramos*getCPGP(pp):0;return`<div class="irow" style="margin-bottom:4px"><span>${combo.papas.prep}</span><span>${combo.papas.gramos}g</span><span class="hl">$${cPapas.toFixed(4)}</span></div>`;})():''}
       <div style="display:flex;gap:6px;margin-bottom:.6rem;align-items:center;font-size:12px">
         <select id="cb-papas-prep-${ci}" style="flex:1;background:var(--gris-mid);border:1px solid var(--gris-light);color:var(--texto);border-radius:4px;padding:4px 6px;font-size:12px">
           <option value="">Sin papas</option>
