@@ -239,6 +239,7 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
     <div class="tab" onclick="showTab('envios',this)">🚴 Envíos</div>
     <div class="tab" onclick="showTab('stats',this)">📊 Estadísticas</div>
     <div class="tab" onclick="showTab('produccion',this)">🔢 Producción</div>
+    <div class="tab" onclick="showTab('proyeccion',this)">📅 Proyección</div>
   </div>
 
   <div class="content">
@@ -811,6 +812,26 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
         <div class="card-title">🔢 ¿Cuánto puedo producir hoy?</div>
         <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.8rem">Basado en tu stock de ingredientes y preparados listos.</div>
         <div id="prod-resultado"></div>
+      </div>
+    </div>
+    <div id="tab-proyeccion" class="section">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div class="card-title" style="margin:0">📅 Proyección del mes</div>
+          <div style="font-size:11px;color:var(--texto-dim)" id="proy-base-info"></div>
+        </div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-top:4px;margin-bottom:.8rem">Basada en el promedio de tus meses anteriores, ajustada al ritmo actual del mes en curso.</div>
+        <div id="proy-metricas" class="metrics" style="margin-bottom:.8rem"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🛒 Ingredientes a comprar</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Lo que necesitarás para completar el mes proyectado, descontando el stock actual.</div>
+        <div id="proy-compras"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⏳ ¿Cuándo se acaba el stock?</div>
+        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Al ritmo de ventas actual, estimado de días restantes por ingrediente.</div>
+        <div id="proy-agotamiento"></div>
       </div>
     </div>
     <div id="tab-envios" class="section">
@@ -2263,6 +2284,7 @@ function showTab(n,el){
   if(n==='envios')renderEnvios();
   if(n==='stats')renderStats();
   if(n==='produccion'){renderProdPrepsInputs();renderProduccion();}
+  if(n==='proyeccion')renderProyeccion();
   if(n==='saldo'){renderSaldoResumen();renderMovs();}
   if(n==='inventario'){renderInventario();renderSI();renderInvHist();}
   if(n==='inv-merma'||n==='inventario'){initMermaSelects();renderMermas();}
@@ -4651,6 +4673,194 @@ async function guardarEditVid(){
   await saveInv_db();
   document.getElementById('modal-vid-edit').style.display='none';
   renderVidriera();
+}
+
+// ─── PROYECCION ──────────────────────────────────────────────
+function renderProyeccion(){
+  const hoy = getVEDate();
+  const mesActual = hoy.slice(0,7);
+  const diaActual = parseInt(hoy.slice(8,10));
+
+  // Get all months with data except current
+  const meses = [...new Set(ventas.map(v=>v.fecha.slice(0,7)))].sort();
+  const mesesAnteriores = meses.filter(m=>m<mesActual);
+
+  // Days in current month
+  const [anio,mes] = mesActual.split('-').map(Number);
+  const diasEnMes = new Date(anio, mes, 0).getDate();
+  const diasRestantes = diasEnMes - diaActual;
+  const pctMesTranscurrido = diaActual / diasEnMes;
+
+  // Current month data
+  const ventasMesActual = ventas.filter(v=>
+    v.fecha.startsWith(mesActual) && v.estado==='cobrado'
+  );
+  const ventasActual = ventasMesActual.length;
+  const totalActual = ventasMesActual.reduce((a,v)=>a+v.total,0);
+  const ganActual = ventasMesActual.reduce((a,v)=>a+(v.gan||0),0);
+
+  // Historical averages
+  let promedioVentas=0, promedioTotal=0, promedioGan=0;
+  let baseInfo = '';
+
+  if(mesesAnteriores.length){
+    const historico = mesesAnteriores.map(m=>{
+      const vM = ventas.filter(v=>v.fecha.startsWith(m)&&v.estado==='cobrado');
+      return {
+        ventas: vM.length,
+        total: vM.reduce((a,v)=>a+v.total,0),
+        gan: vM.reduce((a,v)=>a+(v.gan||0),0)
+      };
+    });
+    promedioVentas = historico.reduce((a,h)=>a+h.ventas,0)/historico.length;
+    promedioTotal  = historico.reduce((a,h)=>a+h.total,0)/historico.length;
+    promedioGan    = historico.reduce((a,h)=>a+h.gan,0)/historico.length;
+    baseInfo = `Basado en ${mesesAnteriores.length} mes${mesesAnteriores.length>1?'es':''} anterior${mesesAnteriores.length>1?'es':''}`;
+  } else {
+    // No history — extrapolate from current month pace
+    if(pctMesTranscurrido>0){
+      promedioVentas = ventasActual / pctMesTranscurrido;
+      promedioTotal  = totalActual  / pctMesTranscurrido;
+      promedioGan    = ganActual    / pctMesTranscurrido;
+    }
+    baseInfo = 'Sin meses anteriores — proyectando desde ritmo actual';
+  }
+
+  // Weighted projection: blend history (70%) with current pace (30%)
+  let proyVentas, proyTotal, proyGan;
+  if(mesesAnteriores.length && pctMesTranscurrido>0.05){
+    const ritmoActualVentas = ventasActual / pctMesTranscurrido;
+    const ritmoActualTotal  = totalActual  / pctMesTranscurrido;
+    const ritmoActualGan    = ganActual    / pctMesTranscurrido;
+    proyVentas = promedioVentas*0.7 + ritmoActualVentas*0.3;
+    proyTotal  = promedioTotal*0.7  + ritmoActualTotal*0.3;
+    proyGan    = promedioGan*0.7    + ritmoActualGan*0.3;
+  } else {
+    proyVentas = promedioVentas;
+    proyTotal  = promedioTotal;
+    proyGan    = promedioGan;
+  }
+
+  const faltan = {
+    ventas: Math.max(0, Math.round(proyVentas - ventasActual)),
+    total:  Math.max(0, proyTotal - totalActual),
+    gan:    Math.max(0, proyGan   - ganActual)
+  };
+
+  // Render metrics
+  const metEl = document.getElementById('proy-metricas');
+  const infoEl = document.getElementById('proy-base-info');
+  if(infoEl) infoEl.textContent = baseInfo + ' · Día '+diaActual+'/'+diasEnMes;
+  if(metEl) metEl.innerHTML = `
+    <div class="metric">
+      <div class="ml">Ventas proyectadas</div>
+      <div class="mv hl">${Math.round(proyVentas)}</div>
+      <div class="mv-sub">Ya: ${ventasActual} · Faltan: ~${faltan.ventas}</div>
+    </div>
+    <div class="metric green-m">
+      <div class="ml">Ingresos proyectados</div>
+      <div class="mv green">$${proyTotal.toFixed(2)}</div>
+      <div class="mv-sub">Ya: $${totalActual.toFixed(2)} · Faltan: ~$${faltan.total.toFixed(2)}</div>
+    </div>
+    <div class="metric accent">
+      <div class="ml">Ganancia proyectada</div>
+      <div class="mv">$${proyGan.toFixed(2)}</div>
+      <div class="mv-sub">Ya: $${ganActual.toFixed(2)} · Faltan: ~$${faltan.gan.toFixed(2)}</div>
+    </div>
+    <div class="metric">
+      <div class="ml">Días restantes</div>
+      <div class="mv">${diasRestantes}</div>
+      <div class="mv-sub">${diaActual} transcurridos</div>
+    </div>
+  `;
+
+  // ── Ingredientes a comprar ──
+  // Calculate consumption per sale from history, then multiply by remaining projected sales
+  const consumoTotal = calcConsumo(); // total consumed so far
+  const consumoPorVenta = {};
+  if(ventasActual>0){
+    Object.keys(consumoTotal).forEach(p=>{
+      consumoPorVenta[p] = consumoTotal[p]/ventasActual;
+    });
+  }
+  const {stock} = calcStock();
+  const comprasEl = document.getElementById('proy-compras');
+  if(comprasEl){
+    if(faltan.ventas===0||!Object.keys(consumoPorVenta).length){
+      comprasEl.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">No hay suficientes datos para proyectar compras aún.</div>';
+    } else {
+      const necesario = {};
+      Object.keys(consumoPorVenta).forEach(p=>{
+        const total = consumoPorVenta[p]*faltan.ventas;
+        const enStock = stock[p]||0;
+        const aComprar = Math.max(0, total-enStock);
+        if(aComprar>0.1) necesario[p] = {total:Math.ceil(total), enStock:Math.round(enStock), aComprar:Math.ceil(aComprar)};
+      });
+      const prods = Object.entries(necesario).sort((a,b)=>b[1].aComprar-a[1].aComprar);
+      if(!prods.length){
+        comprasEl.innerHTML='<div style="font-size:12px;color:var(--verde)">✅ Tu stock actual cubre el resto del mes proyectado.</div>';
+      } else {
+        comprasEl.innerHTML = prods.map(([prod,d])=>{
+          const pg = getPG(prod)||0;
+          const costoEst = pg>0?`· ~$${(d.aComprar*pg).toFixed(2)}`:'';
+          return`<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--gris-mid);border-radius:6px;margin-bottom:.25rem;font-size:12px">
+            <div>
+              <span style="font-weight:600">${prod}</span>
+              <span style="color:var(--texto-dim);font-size:11px;margin-left:5px">stock: ${d.enStock}g</span>
+            </div>
+            <div style="text-align:right">
+              <span style="color:var(--naranja);font-weight:700">+${d.aComprar}g</span>
+              <span style="color:var(--texto-dim);font-size:11px;margin-left:4px">${costoEst}</span>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+  }
+
+  // ── Agotamiento de stock ──
+  const agotEl = document.getElementById('proy-agotamiento');
+  if(agotEl){
+    if(ventasActual===0||diaActual===0){
+      agotEl.innerHTML='<div style="font-size:12px;color:var(--texto-dim)">Necesitas al menos algunas ventas este mes para calcular el ritmo.</div>';
+    } else {
+      const consumoPorDia = {};
+      Object.keys(consumoTotal).forEach(p=>{
+        consumoPorDia[p] = consumoTotal[p]/diaActual;
+      });
+      const agotamiento = [];
+      Object.keys(consumoPorDia).forEach(p=>{
+        const cpd = consumoPorDia[p];
+        if(cpd<=0) return;
+        const s = stock[p]||0;
+        const diasRestStock = s/cpd;
+        if(diasRestStock<diasEnMes){
+          const fechaAgot = new Date(new Date(hoy).getTime()+diasRestStock*86400000);
+          const fechaStr = fechaAgot.toLocaleDateString('es-VE',{day:'numeric',month:'short'});
+          agotamiento.push({prod:p, dias:Math.floor(diasRestStock), fecha:fechaStr, stock:Math.round(s), cpd:Math.round(cpd)});
+        }
+      });
+      agotamiento.sort((a,b)=>a.dias-b.dias);
+      if(!agotamiento.length){
+        agotEl.innerHTML='<div style="font-size:12px;color:var(--verde)">✅ Todo el stock dura hasta fin de mes al ritmo actual.</div>';
+      } else {
+        agotEl.innerHTML = agotamiento.map(a=>{
+          const color = a.dias<=3?'var(--rojo)':a.dias<=7?'var(--amarillo)':'var(--texto-dim)';
+          const urgencia = a.dias<=3?'🔴':a.dias<=7?'🟡':'🟢';
+          return`<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem;background:var(--gris-mid);border-radius:6px;margin-bottom:.25rem;font-size:12px">
+            <div>
+              <span style="font-weight:600">${urgencia} ${a.prod}</span>
+              <span style="color:var(--texto-dim);font-size:11px;margin-left:5px">${a.stock}g · ${a.cpd}g/día</span>
+            </div>
+            <div style="text-align:right">
+              <span style="color:${color};font-weight:700">~${a.dias} días</span>
+              <div style="font-size:10px;color:var(--texto-dim)">se acaba ~${a.fecha}</div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+  }
 }
 
 // ─── DEBUG PANEL ─────────────────────────────────────────────
