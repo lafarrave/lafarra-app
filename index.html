@@ -1631,6 +1631,7 @@ function buildComboCard(combo, ci){
 }
 
 function renderCombos(){
+  PRODS=getProds(); // refresh product list
   const cont=document.getElementById('lista-combos');if(!cont)return;
   if(!combos.length){cont.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--texto-dim);font-size:12px">Sin combos. Crea uno arriba.</div>';return;}
   cont.innerHTML=combos.map((combo,ci)=>buildComboCard(combo,ci)).join('');
@@ -1663,7 +1664,7 @@ async function addComboIng(ci){const nom=document.getElementById(`cb-ing-sel-${c
 async function delComboIng(ci,ii){combos[ci].ings.splice(ii,1);await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
 
 // Botes
-async function addComboBote(ci){const ingNom=document.getElementById(`cb-bote-ing-${ci}`).value,cantBote=parseInt(document.getElementById(`cb-bote-cant-${ci}`).value)||1,prepNom=document.getElementById(`cb-bote-prep-${ci}`).value,prepCant=parseFloat(document.getElementById(`cb-bote-pg-${ci}`).value)||0;if(!ingNom)return;if(!combos[ci].botesList)combos[ci].botesList=[];combos[ci].botesList.push({ingNom,cantBote,prepNom,prepCant});await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
+async function addComboBote(ci){const ingNom=document.getElementById(`cb-bote-ing-${ci}`).value,cantBote=parseInt(document.getElementById(`cb-bote-cant-${ci}`).value)||1,prepNom=document.getElementById(`cb-bote-prep-${ci}`).value,prepCant=parseFloat(document.getElementById(`cb-bote-pg-${ci}`).value)||0;if(!ingNom)return alert('Selecciona el ingrediente del bote físico');if(!combos[ci].botesList)combos[ci].botesList=[];combos[ci].botesList.push({ingNom,cantBote,prepNom:prepNom||null,prepCant:prepCant||0});await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
 async function delComboBote(ci,bi){combos[ci].botesList.splice(bi,1);await saveInv_db();renderCombos();setTimeout(()=>{const el=document.getElementById('cb'+combos[ci]?.id);if(el)el.classList.add('open');},50);}
 
 // Empaque
