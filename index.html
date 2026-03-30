@@ -719,8 +719,8 @@ input.inline{width:auto;font-size:11px;background:var(--gris-mid);border:1px sol
             <hr class="divider"/>
             <div style="background:var(--gris-mid);border-radius:6px;padding:6px 8px;margin-bottom:.4rem;font-size:12px">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px">
-                <button id="banco-bancaribe-btn" onclick="setBanco('bancaribe')" style="padding:8px 10px;border-radius:6px;border:2px solid var(--naranja);background:rgba(232,98,26,.15);cursor:pointer;width:100%;text-align:center">
-                  <span style="font-family:Arial,sans-serif;font-style:italic;color:#fff;font-size:15px;letter-spacing:.3px">BAN<strong style="font-weight:900">CARIBE</strong></span>
+                <button id="banco-bancaribe-btn" onclick="setBanco('bancaribe')" style="padding:8px 10px;border-radius:6px;border:1px solid var(--gris-light);background:var(--gris-dark);cursor:pointer;width:100%;text-align:center">
+                  <span style="font-family:Arial,sans-serif;font-style:italic;color:var(--texto-dim);font-size:15px;letter-spacing:.3px">BAN<strong style="font-weight:900">CARIBE</strong></span>
                 </button>
                 <button id="banco-provincial-btn" onclick="setBanco('provincial')" style="padding:8px 10px;border-radius:6px;border:1px solid var(--gris-light);background:var(--gris-dark);cursor:pointer;width:100%;text-align:center">
                   <span style="font-family:Arial,sans-serif;color:#fff;font-size:15px"><strong style="font-weight:900;color:#1a8fe3">BBVA</strong> Provincial</span>
@@ -1441,6 +1441,7 @@ function toggleBoteTipo(){
 }
 
 function addBote(){
+  toggleBoteTipo(); // ensure selects are populated
   const ingNom=document.getElementById('bote-ing-nom').value;
   const ingCant=parseFloat(document.getElementById('bote-ing-cant').value)||1;
   const prepNom=document.getElementById('bote-prep-nom').value;
@@ -2255,7 +2256,7 @@ function showTab(n,el){
 
   if(n==='preparados')renderPreps();
   if(n==='menu')renderMenuItems();
-  if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();}
+  if(n==='config'){renderEmp();renderPVPLista();renderProdsExtra();renderGastosOp();toggleBoteTipo();}
   if(n==='pos'){renderPOSCats();renderVentas();renderMetricsPOS();renderPendientes();renderPagoMovilInfo();}
   if(n==='envios')renderEnvios();
   if(n==='stats')renderStats();
@@ -3939,7 +3940,7 @@ function setDelivery(){
 function limpiarCarrito(){carrito=[];deliveryMonto=0;descuentoPct=0;const row=document.getElementById('cart-delivery-row');if(row)row.style.display='none';const drow=document.getElementById('cart-descuento-row');if(drow)drow.style.display='none';const inp=document.getElementById('delivery-monto');if(inp)inp.value='';const dinp=document.getElementById('descuento-pct');if(dinp)dinp.value='';renderCart();}
 
 // ─── BANCO SELECTOR ──────────────────────────────────────────
-let bancoActual = 'bancaribe'; // default
+let bancoActual = null; // must be explicitly selected
 
 function renderPagoMovilInfo(){
   const tel=document.getElementById('pm-tel');
@@ -3956,12 +3957,23 @@ function setBanco(banco){
   bancoActual = banco;
   const bc = document.getElementById('banco-bancaribe-btn');
   const bp = document.getElementById('banco-provincial-btn');
+  if(!banco){
+    if(bc){bc.style.borderColor='var(--gris-light)';bc.style.background='var(--gris-dark)';}
+    if(bc) bc.querySelector('span').style.color='var(--texto-dim)';
+    if(bp){bp.style.borderColor='var(--gris-light)';bp.style.background='var(--gris-dark)';}
+    if(bp) bp.querySelector('span').style.color='var(--texto-dim)';
+    return;
+  }
   if(banco==='bancaribe'){
-    if(bc){bc.style.borderColor='var(--naranja)';bc.style.background='rgba(232,98,26,.15)';bc.style.color='var(--naranja)';}
-    if(bp){bp.style.borderColor='var(--gris-light)';bp.style.background='var(--gris-dark)';bp.style.color='var(--texto-dim)';}
+    if(bc){bc.style.borderColor='var(--naranja)';bc.style.background='rgba(232,98,26,.15)';}
+    if(bc) bc.querySelector('span').style.color='#fff';
+    if(bp){bp.style.borderColor='var(--gris-light)';bp.style.background='var(--gris-dark)';}
+    if(bp) bp.querySelector('span').style.color='var(--texto-dim)';
   } else {
-    if(bc){bc.style.borderColor='var(--gris-light)';bc.style.background='var(--gris-dark)';bc.style.color='var(--texto-dim)';}
-    if(bp){bp.style.borderColor='#2196F3';bp.style.background='rgba(33,150,243,.15)';bp.style.color='#60a0d0';}
+    if(bc){bc.style.borderColor='var(--gris-light)';bc.style.background='var(--gris-dark)';}
+    if(bc) bc.querySelector('span').style.color='var(--texto-dim)';
+    if(bp){bp.style.borderColor='#2196F3';bp.style.background='rgba(33,150,243,.15)';}
+    if(bp) bp.querySelector('span').style.color='#60a0d0';
   }
 }
 
@@ -3970,6 +3982,7 @@ async function confirmarVenta(estado='cobrado'){
   const cliente=document.getElementById('pos-cliente').value.trim(),fecha=document.getElementById('pos-fecha').value;
   if(!cliente)return alert('Escribe el nombre del cliente');
   if(!fecha)return alert('Indica la fecha');
+  if(estado==='cobrado'&&!bancoActual)return alert('Selecciona el banco donde recibiste el pago');
   const totalItems=carrito.reduce((a,c)=>a+c.precio*c.qty,0);
   const costo=carrito.reduce((a,c)=>a+c.costo*c.qty,0);
   const totalConDelivery=totalItems+(deliveryMonto||0);
@@ -4012,6 +4025,7 @@ async function confirmarVenta(estado='cobrado'){
   const dinp=document.getElementById('descuento-pct');if(dinp)dinp.value='';
   carrito=[];renderCart();renderVentas();renderMetricsPOS();renderSaldoResumen();renderPendientes();
   document.getElementById('pos-cliente').value='';
+  bancoActual=null; setBanco(null);
 }
 function renderMetricsPOS(){
   const el=document.getElementById('metrics-pos');if(!el)return;
