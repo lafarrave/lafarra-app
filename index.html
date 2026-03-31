@@ -19,6 +19,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="styles.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 
@@ -41,18 +42,18 @@
   </div>
 
   <div class="tabs" id="tabs-bar">
-    <div class="tab active" onclick="showTab('config',this)"><span class="tab-icon">⚙</span><span class="tab-label">Config</span></div>
-    <div class="tab" onclick="showTab('saldo',this)"><span class="tab-icon">💰</span><span class="tab-label">Saldo</span></div>
-    <div class="tab" onclick="showTab('inventario',this)"><span class="tab-icon">📦</span><span class="tab-label">Inventario</span></div>
-    <div class="tab" onclick="showTab('vidriera',this)"><span class="tab-icon">👁</span><span class="tab-label">Vidriera</span></div>
-    <div class="tab" onclick="showTab('preparados',this)"><span class="tab-icon">🍳</span><span class="tab-label">Preparados</span></div>
-    <div class="tab" onclick="showTab('menu',this)"><span class="tab-icon">🍔</span><span class="tab-label">Menú</span></div>
-    <div class="tab" onclick="showTab('combos',this)"><span class="tab-icon">🍿</span><span class="tab-label">Combos</span></div>
-    <div class="tab" onclick="showTab('pos',this)"><span class="tab-icon">🧾</span><span class="tab-label">Ventas</span></div>
-    <div class="tab" onclick="showTab('envios',this)"><span class="tab-icon">🚴</span><span class="tab-label">Envíos</span></div>
-    <div class="tab" onclick="showTab('stats',this)"><span class="tab-icon">📊</span><span class="tab-label">Estadísticas</span></div>
-    <div class="tab" onclick="showTab('produccion',this)"><span class="tab-icon">🔢</span><span class="tab-label">Producción</span></div>
-    <div class="tab" onclick="showTab('proyeccion',this)"><span class="tab-icon">📅</span><span class="tab-label">Proyección</span></div>
+    <div class="tab active" onclick="showTab('config',this)"><span class="tab-icon"><i data-lucide="settings"></i></span><span class="tab-label">Config</span></div>
+    <div class="tab" onclick="showTab('saldo',this)"><span class="tab-icon"><i data-lucide="dollar-sign"></i></span><span class="tab-label">Saldo</span></div>
+    <div class="tab" onclick="showTab('inventario',this)"><span class="tab-icon"><i data-lucide="package"></i></span><span class="tab-label">Inventario</span></div>
+    <div class="tab" onclick="showTab('vidriera',this)"><span class="tab-icon"><i data-lucide="glasses"></i></span><span class="tab-label">Vidriera</span></div>
+    <div class="tab" onclick="showTab('preparados',this)"><span class="tab-icon"><i data-lucide="flame"></i></span><span class="tab-label">Preparados</span></div>
+    <div class="tab" onclick="showTab('menu',this)"><span class="tab-icon"><i data-lucide="beef"></i></span><span class="tab-label">Menú</span></div>
+    <div class="tab" onclick="showTab('combos',this)"><span class="tab-icon"><i data-lucide="sandwich"></i></span><span class="tab-label">Combos</span></div>
+    <div class="tab" onclick="showTab('pos',this)"><span class="tab-icon"><i data-lucide="receipt"></i></span><span class="tab-label">Ventas</span></div>
+    <div class="tab" onclick="showTab('envios',this)"><span class="tab-icon"><i data-lucide="bike"></i></span><span class="tab-label">Envíos</span></div>
+    <div class="tab" onclick="showTab('stats',this)"><span class="tab-icon"><i data-lucide="bar-chart-2"></i></span><span class="tab-label">Estadísticas</span></div>
+    <div class="tab" onclick="showTab('produccion',this)"><span class="tab-icon"><i data-lucide="package-check"></i></span><span class="tab-label">Producción</span></div>
+    <div class="tab" onclick="showTab('proyeccion',this)"><span class="tab-icon"><i data-lucide="calendar-range"></i></span><span class="tab-label">Proyección</span></div>
   </div>
 
   <div class="content">
@@ -2136,6 +2137,7 @@ function getVEDate(){
   const ve=new Date(now.getTime()-4*60*60*1000);
   return ve.toISOString().split('T')[0];
 }
+function initLucideIcons(){ if(window.lucide) window.lucide.createIcons(); }
 function setToday(){
   const t=getVEDate();
   ['v-fecha','c-fecha','gasto-fecha','env-fecha','pos-fecha','transfer-fecha','merma-fecha'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
@@ -4060,7 +4062,7 @@ async function init(){
   fetchBCV();
   if(tasa>0){const el=document.getElementById("tasa-manual");if(el)el.value=tasa.toFixed(2);}
   try{ document.getElementById('loading-screen').style.display='none'; }catch(e){}
-  try{ document.getElementById('main-app').style.display='flex'; }catch(e){}
+  try{ document.getElementById('main-app').style.display='flex'; setTimeout(initLucideIcons,50); }catch(e){}
 }
 
 init();
