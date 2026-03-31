@@ -241,3 +241,70 @@ tr:hover td { background:rgba(255,255,255,.03); }
 .autocomplete-item{padding:7px 10px;font-size:13px;cursor:pointer;color:var(--texto);transition:background .1s}
 .autocomplete-item:hover{background:var(--negro-ele);color:var(--naranja)}
 select.inline,input.inline{width:auto;font-size:11px;background:var(--negro-ele);border:1px solid var(--negro-borde);color:var(--texto);border-radius:4px;padding:4px 7px}
+
+/* ── CONFIG SECTIONS ─────────────────────────────────────────── */
+.cfg-section {
+  border-radius: 0 8px 0 8px;
+  margin-bottom: .5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+.cfg-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .75rem 1rem;
+  background: var(--negro-ele);
+  cursor: pointer;
+  transition: background .15s;
+  user-select: none;
+}
+.cfg-head:hover { background: var(--negro-borde); }
+.cfg-head-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: #fff;
+}
+.cfg-head-inner i,
+.cfg-head-inner svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; flex-shrink: 0; }
+.cfg-chevron { width: 18px; height: 18px; stroke: var(--naranja); fill: none; stroke-width: 2.5; transition: transform .2s; }
+.cfg-body {
+  display: none;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(135deg, var(--naranja) 0%, var(--rojo) 100%);
+}
+.cfg-section.open .cfg-body { display: block; }
+.cfg-section.open .cfg-chevron { transform: rotate(180deg); }
+.cfg-section.open .cfg-head {
+  background: linear-gradient(135deg, var(--naranja-dark) 0%, var(--rojo-dark) 100%);
+}
+
+/* Inputs inside open cfg-section — dark on gradient */
+.cfg-body .fg label { color: rgba(255,255,255,.85); }
+.cfg-body .fg input,
+.cfg-body .fg select,
+.cfg-body .fg textarea {
+  background: #1a1a1a;
+  border-color: rgba(255,255,255,.15);
+  color: #fff;
+}
+.cfg-body .fg input:focus,
+.cfg-body .fg select:focus {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.15);
+}
+
+/* Save button inside cfg — dark grey */
+.cfg-btn-save {
+  background: #2a2a2a !important;
+  box-shadow: none !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.15) !important;
+}
+.cfg-btn-save:hover { background: #3a3a3a !important; }

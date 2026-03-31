@@ -60,120 +60,165 @@
 
     <!-- CONFIG -->
     <div id="tab-config" class="section visible">
-      <div class="card">
-        <div class="card-title">📱 Pago Móvil</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Se muestra en el carrito para que el cliente vea a dónde transferir.</div>
-        <div class="fgrid">
-          <div class="fg"><label>📞 Teléfono</label><input type="text" id="cfg-tel" placeholder="ej: 0424-1234567"/></div>
-          <div class="fg"><label>🪪 Cédula</label><input type="text" id="cfg-ci" placeholder="ej: V-12345678"/></div>
-          <div class="fg"><label>💸 Comisión Bancaribe (%)</label><input type="number" id="cfg-com-bc" placeholder="ej: 0.30" step="0.01" min="0"/></div>
-          <div class="fg"><label>💸 Comisión Provincial (%)</label><input type="number" id="cfg-com-pv" placeholder="ej: 0.25" step="0.01" min="0"/></div>
+
+      <div class="cfg-section" id="cfgs-pagomovil">
+        <div class="cfg-head" onclick="togCfg('cfgs-pagomovil')">
+          <span class="cfg-head-inner"><i data-lucide="smartphone"></i> Pago Móvil</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
         </div>
-        <div style="font-size:11px;color:var(--texto-dim);margin-bottom:.6rem">La comisión se descuenta del banco origen al registrar una transferencia.</div>
-        <button class="btn" onclick="savePagoMovil()">Guardar</button>
+        <div class="cfg-body">
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:.6rem">Se muestra en el carrito para que el cliente vea a dónde transferir.</div>
+          <div class="fgrid">
+            <div class="fg"><label>Teléfono</label><input type="text" id="cfg-tel" placeholder="ej: 0424-1234567"/></div>
+            <div class="fg"><label>Cédula</label><input type="text" id="cfg-ci" placeholder="ej: V-12345678"/></div>
+            <div class="fg"><label>Comisión Bancaribe (%)</label><input type="number" id="cfg-com-bc" placeholder="ej: 0.30" step="0.01" min="0"/></div>
+            <div class="fg"><label>Comisión Provincial (%)</label><input type="number" id="cfg-com-pv" placeholder="ej: 0.25" step="0.01" min="0"/></div>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:.6rem">La comisión se descuenta del banco origen al registrar una transferencia.</div>
+          <button class="btn cfg-btn-save" onclick="savePagoMovil()">Guardar</button>
+        </div>
       </div>
-      <div class="card">
-        <div class="card-title">🍟 Papas por defecto</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Configuración de papas que se incluyen por defecto en los ítems del menú que lo tengan activado.</div>
-        <div class="fgrid">
-          <div class="fg"><label>Preparado de papas</label><select id="cfg-papas"><option value="">Sin papas</option></select></div>
-          <div class="fg"><label>Gramos papas incluidas</label><input type="number" id="cfg-gp" placeholder="150"/></div>
+
+      <div class="cfg-section" id="cfgs-papas">
+        <div class="cfg-head" onclick="togCfg('cfgs-papas')">
+          <span class="cfg-head-inner"><i data-lucide="zap"></i> Papas por defecto</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
         </div>
-        <div class="fg" style="margin-top:.6rem">
-          <label>🛡 Protección de inflación (%)</label>
-          <div style="display:flex;align-items:center;gap:8px">
-            <input type="number" id="cfg-proteccion" placeholder="ej: 15" min="0" max="100" step="1" style="width:100px"/>
-            <span style="font-size:11px;color:var(--texto-dim)">Se suma al costo como colchón de reposición</span>
+        <div class="cfg-body">
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:.6rem">Papas que se incluyen por defecto en los ítems del menú.</div>
+          <div class="fgrid">
+            <div class="fg"><label>Preparado de papas</label><select id="cfg-papas"><option value="">Sin papas</option></select></div>
+            <div class="fg"><label>Gramos papas incluidas</label><input type="number" id="cfg-gp" placeholder="150"/></div>
+          </div>
+          <div class="fg" style="margin-top:.6rem">
+            <label>Protección de inflación (%)</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="number" id="cfg-proteccion" placeholder="ej: 15" min="0" max="100" step="1" style="width:100px"/>
+              <span style="font-size:11px;color:rgba(255,255,255,.6)">Se suma al costo como colchón de reposición</span>
+            </div>
+          </div>
+          <button class="btn cfg-btn-save" onclick="saveConfig()">Guardar</button>
+        </div>
+      </div>
+
+      <div class="cfg-section" id="cfgs-botes">
+        <div class="cfg-head" onclick="togCfg('cfgs-botes')">
+          <span class="cfg-head-inner"><i data-lucide="flask-conical"></i> Botes de salsa por defecto</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body">
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:.6rem">Salsas que se incluyen por defecto en los ítems del menú.</div>
+          <div id="botes-lista"></div>
+          <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:.5rem;align-items:end">
+            <div class="fg" style="margin:0"><label>Ingrediente (bote físico)</label><select id="bote-ing-nom"><option value="">Seleccionar ingrediente...</option></select></div>
+            <div class="fg" style="margin:0"><label>Cantidad</label><input type="number" id="bote-ing-cant" placeholder="1" min="1"/></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:.5rem;align-items:end">
+            <div class="fg" style="margin:0"><label>Preparado (salsa del bote)</label><select id="bote-prep-nom"><option value="">Seleccionar preparado...</option></select></div>
+            <div class="fg" style="margin:0"><label>Gramos</label><input type="number" id="bote-prep-cant" placeholder="30"/></div>
+          </div>
+          <button class="btn cfg-btn-save" onclick="addBote()">Agregar salsa</button>
+          <div id="botes-total" style="font-size:12px;color:rgba(255,255,255,.7);margin-top:.4rem"></div>
+        </div>
+      </div>
+
+      <div class="cfg-section" id="cfgs-empburger">
+        <div class="cfg-head" onclick="togCfg('cfgs-empburger')">
+          <span class="cfg-head-inner"><i data-lucide="package-open"></i> Empaque fijo por burger</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body">
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:.6rem">Bolsa kraft, papel envoltura, servilletas, stickers, etc.</div>
+          <div id="emp-lista"></div>
+          <div class="fgrid" style="margin-top:.5rem">
+            <div class="fg"><label>Producto</label><select id="emp-prod"><option value="">Seleccionar...</option></select></div>
+            <div class="fg"><label>Cantidad (g/ud)</label><input type="number" id="emp-cant" placeholder="1"/></div>
+            <div class="fg"><label>Precio/ud (auto)</label><input type="number" id="emp-pg" placeholder="auto"/></div>
+          </div>
+          <button class="btn cfg-btn-save" onclick="addEmp('burger')">Agregar ítem</button>
+          <div id="emp-total" style="font-size:12px;color:rgba(255,255,255,.7);margin-top:.5rem"></div>
+        </div>
+      </div>
+
+      <div class="cfg-section" id="cfgs-emppapas">
+        <div class="cfg-head" onclick="togCfg('cfgs-emppapas')">
+          <span class="cfg-head-inner"><i data-lucide="archive"></i> Empaque fijo por papas</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body">
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:.6rem">Cono, bandeja, servilletas, etc.</div>
+          <div id="emp-papas-lista"></div>
+          <div class="fgrid" style="margin-top:.5rem">
+            <div class="fg"><label>Producto</label><select id="emp-papas-prod"><option value="">Seleccionar...</option></select></div>
+            <div class="fg"><label>Cantidad (g/ud)</label><input type="number" id="emp-papas-cant" placeholder="1"/></div>
+            <div class="fg"><label>Precio/ud (auto)</label><input type="number" id="emp-papas-pg" placeholder="auto"/></div>
+          </div>
+          <button class="btn cfg-btn-save" onclick="addEmp('papas')">Agregar ítem</button>
+          <div id="emp-papas-total" style="font-size:12px;color:rgba(255,255,255,.7);margin-top:.5rem"></div>
+        </div>
+      </div>
+
+      <div class="cfg-section" id="cfgs-prods">
+        <div class="cfg-head" onclick="togCfg('cfgs-prods')">
+          <span class="cfg-head-inner"><i data-lucide="list"></i> Lista de productos (ingredientes)</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body">
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:.6rem">Agrega nuevos ingredientes o insumos a la lista global.</div>
+          <div id="prods-extra-lista"></div>
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:.5rem">
+            <div class="fg"><label>Nombre del nuevo producto</label><input type="text" id="nuevo-prod-nom" placeholder="ej: Jalapeños" style="width:200px"/></div>
+            <button class="btn cfg-btn-save" onclick="agregarProducto()">Agregar producto</button>
           </div>
         </div>
-        <button class="btn" onclick="saveConfig()">Guardar</button>
       </div>
-      <div class="card">
-        <div class="card-title">🫙 Botes de salsa por defecto</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Salsas que se incluyen por defecto en los ítems del menú que lo tengan activado.</div>
-        <div id="botes-lista"></div>
-        <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:.5rem;align-items:end">
-          <div class="fg" style="margin:0"><label>🫙 Ingrediente (bote físico)</label><select id="bote-ing-nom"><option value="">Seleccionar ingrediente...</option></select></div>
-          <div class="fg" style="margin:0"><label>Cantidad</label><input type="number" id="bote-ing-cant" placeholder="1" min="1"/></div>
+
+      <div class="cfg-section" id="cfgs-pvp">
+        <div class="cfg-head" onclick="togCfg('cfgs-pvp')">
+          <span class="cfg-head-inner"><i data-lucide="shopping-bag"></i> Productos extra del POS</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:.5rem;align-items:end">
-          <div class="fg" style="margin:0"><label>🥣 Preparado (salsa del bote)</label><select id="bote-prep-nom"><option value="">Seleccionar preparado...</option></select></div>
-          <div class="fg" style="margin:0"><label>Gramos</label><input type="number" id="bote-prep-cant" placeholder="30"/></div>
-        </div>
-        <button class="btn" onclick="addBote()">Agregar salsa</button>
-        <div id="botes-total" style="font-size:12px;color:var(--texto-dim);margin-top:.4rem"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">🍔 Empaque fijo por burger</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Bolsa kraft, papel envoltura, servilletas, stickers, botes de salsa, etc.</div>
-        <div id="emp-lista"></div>
-        <div class="fgrid" style="margin-top:.5rem">
-          <div class="fg"><label>Producto</label><select id="emp-prod"><option value="">Seleccionar...</option></select></div>
-          <div class="fg"><label>Cantidad (g/ud)</label><input type="number" id="emp-cant" placeholder="1"/></div>
-          <div class="fg"><label>Precio/ud (auto)</label><input type="number" id="emp-pg" placeholder="auto"/></div>
-        </div>
-        <button class="btn" onclick="addEmp('burger')">Agregar ítem</button>
-        <div id="emp-total" style="font-size:12px;color:var(--texto-dim);margin-top:.5rem"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">🍟 Empaque fijo por papas</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Cono, bandeja, servilletas, etc. Se aplica a ítems de categoría "Papas" en el POS.</div>
-        <div id="emp-papas-lista"></div>
-        <div class="fgrid" style="margin-top:.5rem">
-          <div class="fg"><label>Producto</label><select id="emp-papas-prod"><option value="">Seleccionar...</option></select></div>
-          <div class="fg"><label>Cantidad (g/ud)</label><input type="number" id="emp-papas-cant" placeholder="1"/></div>
-          <div class="fg"><label>Precio/ud (auto)</label><input type="number" id="emp-papas-pg" placeholder="auto"/></div>
-        </div>
-        <button class="btn" onclick="addEmp('papas')">Agregar ítem</button>
-        <div id="emp-papas-total" style="font-size:12px;color:var(--texto-dim);margin-top:.5rem"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">⚖️ Porciones</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Define porciones de referencia por ingrediente.</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Lista de productos (ingredientes)</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Agrega nuevos ingredientes o insumos a la lista global. Los productos base no se pueden eliminar.</div>
-        <div id="prods-extra-lista"></div>
-        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:.5rem">
-          <div class="fg"><label>Nombre del nuevo producto</label><input type="text" id="nuevo-prod-nom" placeholder="ej: Jalapeños" style="width:200px"/></div>
-          <button class="btn" onclick="agregarProducto()">Agregar producto</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Productos extra del POS</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.6rem">Refrescos, extras y cualquier producto. El costo se calcula automático desde los ingredientes.</div>
-        <div id="pvp-lista"></div>
-        <div class="fgrid" style="margin-top:.5rem">
-          <div class="fg"><label>Nombre</label><input type="text" id="pvp-nom" placeholder="ej: E - Tocineta"/></div>
-          <div class="fg"><label>Precio venta ($)</label><input type="number" id="pvp-precio" placeholder="1.00"/></div>
-          <div class="fg"><label>Categoría</label>
-            <select id="pvp-cat">
-              <option value="extra">Extras</option>
-              <option value="bebida">Bebidas</option>
-              <option value="papas">Papas</option>
-              <option value="otro">Otro</option>
-            </select>
+        <div class="cfg-body">
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:.6rem">Refrescos, extras y cualquier producto con costo automático.</div>
+          <div id="pvp-lista"></div>
+          <div class="fgrid" style="margin-top:.5rem">
+            <div class="fg"><label>Nombre</label><input type="text" id="pvp-nom" placeholder="ej: E - Tocineta"/></div>
+            <div class="fg"><label>Precio venta ($)</label><input type="number" id="pvp-precio" placeholder="1.00"/></div>
+            <div class="fg"><label>Categoría</label>
+              <select id="pvp-cat">
+                <option value="extra">Extras</option>
+                <option value="bebida">Bebidas</option>
+                <option value="papas">Papas</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
           </div>
+          <button class="btn cfg-btn-save" onclick="addPVP()">Agregar producto</button>
         </div>
-        <button class="btn" onclick="addPVP()">Agregar producto</button>
       </div>
-      <div class="card">
-        <div class="card-title">💡 Gastos operativos mensuales</div>
-        <div style="font-size:12px;color:var(--texto-dim);margin-bottom:.7rem">Gas, internet, empaques extras, etc. Se muestran en Estadísticas como referencia para tu punto de equilibrio.</div>
-        <div id="gastos-op-lista"></div>
-        <div class="fgrid" style="margin-top:.5rem">
-          <div class="fg"><label>Descripción</label><input type="text" id="gop-desc" placeholder="ej: Bombona de gas"/></div>
-          <div class="fg"><label>Monto mensual estimado ($)</label><input type="number" id="gop-monto" placeholder="ej: 3.50"/></div>
-          <div class="fg"><label>¿Incluir en costo burger?</label>
-            <select id="gop-incluir">
-              <option value="no">No (solo referencia)</option>
-              <option value="si">Sí (dividir entre burgers del mes)</option>
-            </select>
+
+      <div class="cfg-section" id="cfgs-gastos">
+        <div class="cfg-head" onclick="togCfg('cfgs-gastos')">
+          <span class="cfg-head-inner"><i data-lucide="lightbulb"></i> Gastos operativos mensuales</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body">
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:.7rem">Gas, internet, empaques extras, etc.</div>
+          <div id="gastos-op-lista"></div>
+          <div class="fgrid" style="margin-top:.5rem">
+            <div class="fg"><label>Descripción</label><input type="text" id="gop-desc" placeholder="ej: Bombona de gas"/></div>
+            <div class="fg"><label>Monto mensual estimado ($)</label><input type="number" id="gop-monto" placeholder="ej: 3.50"/></div>
+            <div class="fg"><label>¿Incluir en costo burger?</label>
+              <select id="gop-incluir">
+                <option value="no">No (solo referencia)</option>
+                <option value="si">Sí (dividir entre burgers del mes)</option>
+              </select>
+            </div>
           </div>
+          <button class="btn cfg-btn-save" onclick="addGastoOp()">Agregar gasto</button>
         </div>
-        <button class="btn" onclick="addGastoOp()">Agregar gasto</button>
       </div>
+
     </div>
 
     <!-- SALDO -->
@@ -2138,6 +2183,17 @@ function getVEDate(){
   return ve.toISOString().split('T')[0];
 }
 function initLucideIcons(){ if(window.lucide) window.lucide.createIcons(); }
+
+function togCfg(id){
+  const sec = document.getElementById(id);
+  if(!sec) return;
+  const isOpen = sec.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.cfg-section.open').forEach(s=>s.classList.remove('open'));
+  // Open clicked if it was closed
+  if(!isOpen) sec.classList.add('open');
+  setTimeout(initLucideIcons, 50);
+}
 function setToday(){
   const t=getVEDate();
   ['v-fecha','c-fecha','gasto-fecha','env-fecha','pos-fecha','transfer-fecha','merma-fecha'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
