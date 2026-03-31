@@ -223,85 +223,121 @@
 
     <!-- SALDO -->
     <div id="tab-saldo" class="section">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
-        <div class="sbox">
-          <div class="slbl">🏦 Bancaribe (insumos)</div>
+
+      <!-- Cuadros de saldo fijos -->
+      <div class="saldo-boxes">
+        <div class="sbox sbox-bc">
+          <div class="sbox-logo">
+            <span class="logo-bancaribe">BAN<strong>CARIBE</strong></span>
+            <svg viewBox="0 0 40 40" style="height:22px;width:22px;margin-left:6px"><polygon points="20,2 38,20 20,38 2,20" fill="#0066cc"/><polygon points="20,8 32,20 20,32 8,20" fill="#fff"/></svg>
+          </div>
           <div class="sval-bs" id="s-bs">Bs. —</div>
           <div class="sval-usd" id="s-usd">$—</div>
         </div>
-        <div class="sbox" style="border-color:#1a3a5a;background:#0d1520">
-          <div class="slbl" style="color:#60a0d0">🏦 Provincial (personal)</div>
-          <div class="sval-bs" id="p-bs" style="color:#60a0d0">Bs. —</div>
-          <div class="sval-usd" id="p-usd" style="color:#4080b0">$—</div>
+        <div class="sbox sbox-pv">
+          <div class="sbox-logo">
+            <span class="logo-bbva"><span style="color:#004a97;font-weight:900">BBVA</span></span>
+            <span class="logo-provincial">Provincial</span>
+          </div>
+          <div class="sval-bs" id="p-bs">Bs. —</div>
+          <div class="sval-usd" id="p-usd">$—</div>
         </div>
       </div>
-      <div id="grid-transferencias" style="margin-bottom:1rem"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem" id="saldo-metrics-mes"></div>
-      <div id="saldo-merma-mes" style="margin-bottom:1rem;display:none"></div>
-      <div class="card">
-        <div class="card-title">Actualizar saldos manualmente</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div>
-            <div style="font-size:11px;color:var(--naranja);font-weight:600;text-transform:uppercase;margin-bottom:5px">🏦 Bancaribe (insumos)</div>
-            <div style="display:flex;gap:6px;align-items:flex-end">
-              <div class="fg" style="flex:1"><label>Nuevo saldo (Bs)</label><input type="number" id="nuevo-saldo" placeholder="ej: 22000"/></div>
-              <button class="btn" onclick="actualizarSaldo('bancaribe')">OK</button>
+
+      <!-- Señales de transferencia -->
+      <div id="grid-transferencias" style="margin-bottom:.8rem"></div>
+
+      <!-- Métricas del mes -->
+      <div id="saldo-metrics-mes" style="margin-bottom:.8rem"></div>
+      <div id="saldo-merma-mes" style="margin-bottom:.8rem;display:none"></div>
+
+      <!-- Secciones plegables -->
+      <div class="cfg-section" id="cfgs-actualizarsaldo">
+        <div class="cfg-head" onclick="togCfg('cfgs-actualizarsaldo')">
+          <span class="cfg-head-inner"><i data-lucide="sliders-horizontal"></i> Actualizar saldos manualmente</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <div style="font-size:11px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;margin-bottom:5px">Bancaribe (insumos)</div>
+              <div style="display:flex;gap:6px;align-items:flex-end">
+                <div class="fg" style="flex:1"><label>Nuevo saldo (Bs)</label><input type="number" id="nuevo-saldo" placeholder="ej: 22000"/></div>
+                <button class="btn cfg-btn-save" onclick="actualizarSaldo('bancaribe')">OK</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;margin-bottom:5px">Provincial (personal)</div>
+              <div style="display:flex;gap:6px;align-items:flex-end">
+                <div class="fg" style="flex:1"><label>Nuevo saldo (Bs)</label><input type="number" id="nuevo-saldo-provincial" placeholder="ej: 5000"/></div>
+                <button class="btn cfg-btn-save" onclick="actualizarSaldo('provincial')">OK</button>
+              </div>
             </div>
           </div>
-          <div>
-            <div style="font-size:11px;color:#60a0d0;font-weight:600;text-transform:uppercase;margin-bottom:5px">🏦 Provincial (personal)</div>
-            <div style="display:flex;gap:6px;align-items:flex-end">
-              <div class="fg" style="flex:1"><label>Nuevo saldo (Bs)</label><input type="number" id="nuevo-saldo-provincial" placeholder="ej: 5000"/></div>
-              <button class="btn" style="background:#1565C0" onclick="actualizarSaldo('provincial')">OK</button>
+        </div>
+      </div>
+
+      <div class="cfg-section" id="cfgs-gasto">
+        <div class="cfg-head" onclick="togCfg('cfgs-gasto')">
+          <span class="cfg-head-inner"><i data-lucide="trending-down"></i> Registrar gasto / inversión</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body">
+          <div class="fgrid">
+            <div class="fg"><label>Descripción</label><input type="text" id="gasto-desc"/></div>
+            <div class="fg"><label>Monto ($)</label><input type="number" id="gasto-monto"/></div>
+            <div class="fg"><label>Tipo</label>
+              <select id="gasto-tipo">
+                <option value="compra">Compra insumo</option>
+                <option value="inversion">Inversión</option>
+                <option value="otro">Otro</option>
+              </select>
             </div>
+            <div class="fg"><label>Fecha</label><input type="date" id="gasto-fecha"/></div>
           </div>
+          <button class="btn cfg-btn-save" onclick="registrarGasto()">Registrar</button>
         </div>
       </div>
-      <div class="card">
-        <div class="card-title">Registrar gasto / inversión</div>
-        <div class="fgrid">
-          <div class="fg"><label>Descripción</label><input type="text" id="gasto-desc"/></div>
-          <div class="fg"><label>Monto ($)</label><input type="number" id="gasto-monto"/></div>
-          <div class="fg"><label>Tipo</label>
-            <select id="gasto-tipo">
-              <option value="compra">Compra insumo</option>
-              <option value="inversion">Inversión</option>
-              <option value="otro">Otro</option>
-            </select>
+
+      <div class="cfg-section" id="cfgs-transferir">
+        <div class="cfg-head" onclick="togCfg('cfgs-transferir')">
+          <span class="cfg-head-inner"><i data-lucide="arrow-left-right"></i> Transferir entre cuentas</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body">
+          <div style="margin-bottom:.8rem;font-size:12px;display:flex;flex-direction:column;gap:4px">
+            <div style="color:rgba(255,255,255,.8)">Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" style="color:#fff">Bs.— / $—</strong> <span id="com-bc-badge"></span></div>
+            <div style="color:rgba(255,255,255,.8)">Provincial → Bancaribe (insumos): <strong id="gan-inline-pv" style="color:#fff">Bs.— / $—</strong> <span id="com-pv-badge"></span></div>
           </div>
-          <div class="fg"><label>Fecha</label><input type="date" id="gasto-fecha"/></div>
-        </div>
-        <button class="btn" onclick="registrarGasto()">Registrar</button>
-      </div>
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-          <div class="card-title" style="margin:0">Transferir entre cuentas</div>
-        </div>
-        <div style="margin-bottom:.8rem;font-size:12px;display:flex;flex-direction:column;gap:4px">
-          <div style="color:var(--texto-dim)">🏦 Bancaribe → Provincial (ganancia): <strong id="gan-inline-bc" class="green">Bs.— / $—</strong> <span id="com-bc-badge"></span></div>
-          <div style="color:var(--texto-dim)">🏦 Provincial → Bancaribe (insumos): <strong id="gan-inline-pv" style="color:#4caf7d">Bs.— / $—</strong> <span id="com-pv-badge"></span></div>
-        </div>
-        <div id="gan-inline" style="display:none"></div>
-        <div class="fgrid">
-          <div class="fg"><label>Dirección</label>
-            <select id="transfer-dir">
-              <option value="bc_to_pv">🏦 Bancaribe → Provincial (ganancia)</option>
-              <option value="pv_to_bc">🏦 Provincial → Bancaribe (insumos)</option>
-            </select>
+          <div id="gan-inline" style="display:none"></div>
+          <div class="fgrid">
+            <div class="fg"><label>Dirección</label>
+              <select id="transfer-dir">
+                <option value="bc_to_pv">Bancaribe → Provincial (ganancia)</option>
+                <option value="pv_to_bc">Provincial → Bancaribe (insumos)</option>
+              </select>
+            </div>
+            <div class="fg"><label>Monto (Bs)</label><input type="number" id="transfer-monto-bs" placeholder="0.00" oninput="calcTransferUSD()"/></div>
+            <div class="fg"><label>Equivalente ($)</label><input type="text" id="transfer-monto" readonly placeholder="auto"/></div>
+            <div class="fg"><label>Fecha</label><input type="date" id="transfer-fecha"/></div>
           </div>
-          <div class="fg"><label>Monto (Bs)</label><input type="number" id="transfer-monto-bs" placeholder="0.00" oninput="calcTransferUSD()"/></div>
-          <div class="fg"><label>Equivalente ($)</label><input type="text" id="transfer-monto" readonly style="background:var(--gris-light)" placeholder="auto"/></div>
-          <div class="fg"><label>Fecha</label><input type="date" id="transfer-fecha"/></div>
+          <button class="btn cfg-btn-save" onclick="registrarTransferencia()">Registrar transferencia</button>
         </div>
-        <button class="btn-green" onclick="registrarTransferencia()">Registrar transferencia</button>
       </div>
-      <div class="card">
-        <div class="card-title">Historial</div>
-        <div class="tw"><table>
-          <thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th>$ Monto</th><th>Bs</th><th>Saldo</th><th></th></tr></thead>
-          <tbody id="tabla-movs"></tbody>
-        </table></div>
+
+      <div class="cfg-section" id="cfgs-historial">
+        <div class="cfg-head" onclick="togCfg('cfgs-historial')">
+          <span class="cfg-head-inner"><i data-lucide="clock"></i> Historial</span>
+          <i data-lucide="chevron-down" class="cfg-chevron"></i>
+        </div>
+        <div class="cfg-body" style="padding:.5rem">
+          <div class="tw"><table>
+            <thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th>$ Monto</th><th>Bs</th><th>Saldo</th><th></th></tr></thead>
+            <tbody id="tabla-movs"></tbody>
+          </table></div>
+        </div>
       </div>
+
     </div>
 
     <!-- INVENTARIO -->

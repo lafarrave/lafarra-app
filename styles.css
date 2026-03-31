@@ -308,3 +308,60 @@ select.inline,input.inline{width:auto;font-size:11px;background:var(--negro-ele)
   border: 1px solid rgba(255,255,255,.15) !important;
 }
 .cfg-btn-save:hover { background: #3a3a3a !important; }
+
+/* ── SALDO BOXES (siempre visibles) ──────────────────────────── */
+.saldo-boxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: .8rem;
+}
+@media(max-width:480px){ .saldo-boxes { grid-template-columns: 1fr; } }
+
+.sbox-bc {
+  background: #0a0a0a;
+  border: 2px solid var(--naranja);
+  border-radius: 0 12px 0 12px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 4px 20px rgba(211,70,0,.25);
+}
+.sbox-pv {
+  background: #0a0a0a;
+  border: 2px solid var(--rojo);
+  border-radius: 0 12px 0 12px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 4px 20px rgba(235,41,58,.2);
+}
+.sbox-bc .sval-bs { color: #fff; }
+.sbox-bc .sval-usd { color: var(--naranja); font-weight: 700; font-size: 13px; }
+.sbox-pv .sval-bs { color: #fff; }
+.sbox-pv .sval-usd { color: var(--rojo); font-weight: 700; font-size: 13px; }
+
+.sbox-logo {
+  display: flex;
+  align-items: center;
+  margin-bottom: .5rem;
+}
+.logo-bancaribe {
+  font-family: Arial, sans-serif;
+  font-style: italic;
+  font-size: 16px;
+  color: #fff;
+  letter-spacing: .5px;
+}
+.logo-bancaribe strong { font-weight: 900; }
+.logo-bbva {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  margin-right: 6px;
+}
+.logo-provincial {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  color: #fff;
+  font-weight: 400;
+}
+
+/* Metrics override for saldo */
+#saldo-metrics-mes .metric { border-radius: 0 8px 0 8px; }
