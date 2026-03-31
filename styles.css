@@ -365,3 +365,50 @@ select.inline,input.inline{width:auto;font-size:11px;background:var(--negro-ele)
 
 /* Metrics override for saldo */
 #saldo-metrics-mes .metric { border-radius: 0 8px 0 8px; }
+
+/* ── SALDO METRIC BOXES ──────────────────────────────────────── */
+#saldo-metrics-mes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+#saldo-merma-mes { display: block; }
+#saldo-merma-mes .sbox-merma { width: 100%; }
+
+.sbox-ventas {
+  background: #0d1a3a !important;
+  border: 2px solid #1a3a8a !important;
+  border-radius: 0 12px 0 12px;
+  padding: 1rem 1.2rem;
+}
+.sbox-ventas .sval-bs { color: #fff; }
+.sbox-ventas .sval-sub { color: #6090d0; font-weight: 700; font-size: 13px; }
+
+.sbox-ganancia {
+  background: #7ec800 !important;
+  border: 2px solid #5a9000 !important;
+  border-radius: 0 12px 0 12px;
+  padding: 1rem 1.2rem;
+}
+.sbox-ganancia .sval-bs { color: #fff; }
+.sbox-ganancia .sval-sub { color: rgba(0,0,0,.6); font-weight: 700; font-size: 13px; }
+
+.sbox-merma {
+  background: var(--rojo) !important;
+  border: 2px solid var(--rojo-dark) !important;
+  border-radius: 0 12px 0 12px;
+  padding: 1rem 1.2rem;
+}
+.sbox-merma .sval-bs { color: #fff; }
+.sbox-merma .sval-sub { color: rgba(255,255,255,.7); font-weight: 700; font-size: 13px; }
+
+.slbl-metric {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+  margin-bottom: 4px;
+}
+.sbox-ganancia .slbl-metric { color: rgba(0,0,0,.5); }

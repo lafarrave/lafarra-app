@@ -229,7 +229,6 @@
         <div class="sbox sbox-bc">
           <div class="sbox-logo">
             <span class="logo-bancaribe">BAN<strong>CARIBE</strong></span>
-            <svg viewBox="0 0 40 40" style="height:22px;width:22px;margin-left:6px"><polygon points="20,2 38,20 20,38 2,20" fill="#0066cc"/><polygon points="20,8 32,20 20,32 8,20" fill="#fff"/></svg>
           </div>
           <div class="sval-bs" id="s-bs">Bs. —</div>
           <div class="sval-usd" id="s-usd">$—</div>
@@ -2551,15 +2550,15 @@ function renderSaldoResumen(){
     const ganMesBs=tasa>0?ganMes*tasa:0;
     const el=document.getElementById('saldo-metrics-mes');
     if(el) el.innerHTML=`
-      <div class="sbox">
-        <div class="slbl">📊 Ventas del mes</div>
-        <div class="sval-bs" style="font-size:20px">${vM.length} pedido${vM.length!==1?'s':''}</div>
-        <div class="sval-usd">$${totalMes.toFixed(2)}</div>
+      <div class="sbox sbox-ventas">
+        <div class="slbl-metric">VENTAS DEL MES</div>
+        <div class="sval-bs" style="font-size:22px">${vM.length} Pedido${vM.length!==1?'s':''}</div>
+        <div class="sval-usd sval-sub">$${totalMes.toFixed(2)}</div>
       </div>
-      <div class="sbox" style="border-color:#1a3a2a;background:#0d1a10">
-        <div class="slbl" style="color:var(--verde)">💰 Ganancia del mes</div>
-        <div class="sval-bs" style="font-size:20px;color:var(--verde)">${fBsFixed(ganMesBs)}</div>
-        <div class="sval-usd" style="color:#4caf7d">$${ganMes.toFixed(2)}</div>
+      <div class="sbox sbox-ganancia">
+        <div class="slbl-metric">GANANCIA DEL MES</div>
+        <div class="sval-bs" style="font-size:22px">${fBsFixed(ganMesBs)}</div>
+        <div class="sval-usd sval-sub">$${ganMes.toFixed(2)}</div>
       </div>`;
 
     // Mermas del mes — cuadro rojo
@@ -2573,10 +2572,10 @@ function renderSaldoResumen(){
     if(elMerma){
       if(mermaMes.length>0){
         elMerma.style.display='block';
-        elMerma.innerHTML=`<div class="sbox" style="border-color:#8b2020;background:#1a0a0a">
-          <div class="slbl" style="color:var(--rojo)">🗑 Mermas del mes</div>
-          <div class="sval-bs" style="font-size:20px;color:var(--rojo)">${fBsFixed(totalMermaBs)}</div>
-          <div class="sval-usd" style="color:#c04040">$${totalMermaUSD.toFixed(2)} · ${mermaMes.length} registro${mermaMes.length!==1?'s':''}</div>
+        elMerma.innerHTML=`<div class="sbox sbox-merma">
+          <div class="slbl-metric">MERMAS DEL MES</div>
+          <div class="sval-bs" style="font-size:22px">${fBsFixed(totalMermaBs)}</div>
+          <div class="sval-usd sval-sub">$${totalMermaUSD.toFixed(2)} · ${mermaMes.length} registro${mermaMes.length!==1?'s':''}</div>
         </div>`;
       } else {
         elMerma.style.display='none';
