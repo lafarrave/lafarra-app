@@ -300,14 +300,6 @@ select.inline,input.inline{width:auto;font-size:11px;background:var(--negro-ele)
   box-shadow: 0 0 0 2px rgba(255,255,255,.15);
 }
 
-/* Text colors inside open cfg-body — white over gradient */
-.cfg-body .hl { color: #fff !important; }
-.cfg-body .red { color: #ffcccc !important; }
-.cfg-body table th { color: rgba(255,255,255,.7); border-color: rgba(255,255,255,.2); }
-.cfg-body table td { color: #fff; border-color: rgba(255,255,255,.15); }
-.cfg-body table tr:hover td { background: rgba(0,0,0,.15); }
-.cfg-body .texto-dim { color: rgba(255,255,255,.6) !important; }
-
 /* Save button inside cfg — dark grey */
 .cfg-btn-save {
   background: #2a2a2a !important;
@@ -420,79 +412,3 @@ select.inline,input.inline{width:auto;font-size:11px;background:var(--negro-ele)
   margin-bottom: 4px;
 }
 .sbox-ganancia .slbl-metric { color: rgba(0,0,0,.5); }
-
-/* ── HEADER CALENDAR ─────────────────────────────────────────── */
-.header {
-  background: linear-gradient(135deg, #3a0800 0%, #8b1a00 40%, #3a0800 100%);
-  border-bottom: 2px solid var(--naranja);
-}
-.header-calendar {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  margin: 0 auto;
-}
-.cal-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 3px 8px;
-  border-radius: 0 5px 0 5px;
-  min-width: 36px;
-}
-.cal-dn {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  color: rgba(255,255,255,.5);
-  text-transform: uppercase;
-}
-.cal-dd {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 20px;
-  font-weight: 900;
-  color: rgba(255,255,255,.5);
-  line-height: 1;
-}
-.cal-today {
-  background: var(--rojo);
-}
-.cal-today .cal-dn { color: #fff; }
-.cal-today .cal-dd { color: #fff; font-size: 24px; }
-
-/* ── BCV redesign ────────────────────────────────────────────── */
-.header-bcv {
-  display: flex;
-  align-items: center;
-  background: #0a0a0a;
-  border: 1px solid #333;
-  border-radius: 0 8px 0 8px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: border-color .15s;
-  flex-shrink: 0;
-}
-.header-bcv:hover { border-color: var(--naranja); }
-.bcv-status {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-right: 1px solid #333;
-}
-.bcv-label {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 700;
-  font-size: 13px;
-  color: #fff;
-  letter-spacing: 1px;
-}
-.bcv-value {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 16px;
-  color: #fff;
-  padding: 5px 12px;
-  letter-spacing: .5px;
-}
