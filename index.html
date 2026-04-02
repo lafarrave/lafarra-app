@@ -1747,7 +1747,7 @@ const PRODS_BASE=["Aceite","Aceituna M","Ajo","Ajo Polvo","Ajonjoli","Azucar","B
 let productosExtra=[];
 function getProds(){return[...PRODS_BASE,...productosExtra].sort((a,b)=>a.localeCompare(b,'es'));}
 let PRODS=getProds();
-const CATS=[{key:'burger',label:'🍔 Burgers'},{key:'papas',label:'🍟 Papas'},{key:'bebida',label:'🥤 Bebidas'},{key:'extra',label:'➕ Extras'},{key:'otro',label:'📦 Otros'},{key:'combo',label:'🍿 Combos'}];
+const CATS=[{key:'burger',label:'<i data-lucide="beef"></i> Burgers'},{key:'papas',label:'<i data-lucide="flame"></i> Papas'},{key:'bebida',label:'<i data-lucide="cup-soda"></i> Bebidas'},{key:'extra',label:'<i data-lucide="plus-circle"></i> Extras'},{key:'otro',label:'<i data-lucide="package"></i> Otros'},{key:'combo',label:'<i data-lucide="sandwich"></i> Combos'}];
 
 let cfg={gan:50,papas:'',gp:150,gp2:250,tel:'',ci:'',bancopm:'',proteccion:0,comBC:0,comPV:0};
 let empaque=[], empaquePapas=[], pvProds=[], porciones=[];
