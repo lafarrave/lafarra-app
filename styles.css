@@ -443,6 +443,7 @@ select.inline,input.inline{width:auto;font-size:11px;background:var(--negro-ele)
 }
 .cal-today {
   background: var(--rojo);
+  border-radius: 0 5px 0 5px;
 }
 .cal-today .cal-dn { color: #fff; }
 .cal-today .cal-dd { color: #fff; font-size: 24px; }
