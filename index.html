@@ -4153,7 +4153,7 @@ async function init(){
   fetchBCV();
   if(tasa>0){const el=document.getElementById("tasa-manual");if(el)el.value=tasa.toFixed(2);}
   try{ document.getElementById('loading-screen').style.display='none'; }catch(e){}
-  try{ document.getElementById('main-app').style.display='flex'; setTimeout(initLucideIcons,50); }catch(e){}
+  try{ document.getElementById('main-app').style.display='flex'; setTimeout(initLucideIcons,50); renderHeaderCalendar(); }catch(e){}
 }
 
 init();
