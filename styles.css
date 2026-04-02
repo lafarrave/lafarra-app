@@ -412,3 +412,68 @@ select.inline,input.inline{width:auto;font-size:11px;background:var(--negro-ele)
   margin-bottom: 4px;
 }
 .sbox-ganancia .slbl-metric { color: rgba(0,0,0,.5); }
+
+/* HEADER CALENDAR */
+.header-calendar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin: 0 auto;
+}
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  min-width: 36px;
+}
+.cal-dn {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: rgba(255,255,255,.5);
+  text-transform: uppercase;
+}
+.cal-dd {
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(255,255,255,.5);
+  line-height: 1;
+}
+.cal-today {
+  background: var(--rojo);
+}
+.cal-today .cal-dn { color: #fff; }
+.cal-today .cal-dd { color: #fff; font-size: 24px; }
+
+/* BCV REDISEÑADO */
+.header-bcv {
+  display: flex;
+  align-items: center;
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.header-bcv:hover { border-color: var(--naranja); }
+.bcv-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-right: 1px solid #333;
+}
+.bcv-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  letter-spacing: 1px;
+}
+.bcv-value {
+  font-weight: 900;
+  font-size: 16px;
+  color: #fff;
+  padding: 5px 12px;
+}
