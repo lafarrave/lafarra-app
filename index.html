@@ -3807,6 +3807,7 @@ function renderPOSCats(){
   let html='';
   CATS.forEach(cat=>{const items=prods.filter(p=>p.cat===cat.key);if(!items.length)return;html+=`<div class="cat-label">${cat.label}</div><div class="prod-grid">`;items.forEach(p=>{html+=`<div class="pbtn" onclick="addToCart('${p.nom.replace(/'/g,"\\'")}',${p.precio},${p.costo})"><div class="pn">${p.nom}</div><div class="pp">$${p.precio.toFixed(2)}</div></div>`;});html+=`</div>`;});
   cont.innerHTML=html;
+if(window.lucide) window.lucide.createIcons();
 }
 function addToCart(nom,precio,costo){const ex=carrito.find(c=>c.nom===nom);if(ex)ex.qty++;else carrito.push({nom,precio,costo,qty:1});renderCart();}
 function changeQty(i,d){carrito[i].qty+=d;if(carrito[i].qty<=0)carrito.splice(i,1);renderCart();}
