@@ -4155,7 +4155,27 @@ async function init(){
   try{ document.getElementById('loading-screen').style.display='none'; }catch(e){}
   try{ document.getElementById('main-app').style.display='flex'; setTimeout(initLucideIcons,50); renderHeaderCalendar(); }catch(e){}
 }
-
+function renderHeaderCalendar(){
+  const el = document.getElementById('header-calendar');
+  if(!el) return;
+  const hoy = new Date();
+  const ve = new Date(hoy.getTime() - 4*60*60*1000);
+  const days = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+  let html = '';
+  for(let i = -2; i <= 2; i++){
+    const d = new Date(ve);
+    d.setDate(d.getDate() + i);
+    const isToday = i === 0;
+    const dayName = days[d.getDay()];
+    const dayNum = d.getDate();
+    html += `<div class="cal-day ${isToday?'cal-today':''}">
+      <div class="cal-dn">${dayName}</div>
+      <div class="cal-dd">${dayNum}</div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+  
 init();
 </script>
 <!-- BUG/CHANGELOG PANEL -->
